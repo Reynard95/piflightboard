@@ -19,6 +19,9 @@ ADS-B flight tracker running on a Raspberry Pi Zero 2W with NooElec RTL-SDR v5.
 On a clean Raspberry Pi OS Lite (64-bit):
 
 ```bash
+# Install git first
+sudo apt update && sudo apt install -y git
+
 # Clone the repo as your user (NOT sudo — ownership matters for git pull)
 git clone https://github.com/YOUR_USERNAME/piflightboard.git /opt/flighttracker
 
@@ -94,4 +97,3 @@ piflightboard/
 │   └── flightboard.html        # full-screen display board
 └── README.md
 ```
-
