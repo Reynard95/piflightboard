@@ -1,12 +1,13 @@
 #!/bin/bash
 # install.sh — Full clean install of the flighttracker stack
 # Run once on a fresh Raspberry Pi OS Lite (64-bit) install
-# Usage: sudo bash install.sh
+# Usage: sudo bash scripts/install.sh
 
 set -e
 
 REPO_DIR="/opt/flighttracker"
 WEB_DIR="/usr/local/share/tar1090/html"
+DEPLOY_USER="${SUDO_USER:-$(whoami)}"
 
 echo "============================================"
 echo "  Flighttracker Clean Install"
@@ -20,7 +21,48 @@ apt update && apt upgrade -y
 echo "[2/10] Installing dependencies..."
 apt install -y \
   build-essential git librtlsdr-dev pkg-config \
-  zlib1g-dev libzstd-dev lighttpd curl wget
+  zlib1g-dev libzstd-dev zstd lighttpd curl wget
+
+# ── 2b. Fix repo ownership so deploy user can git pull ─────
+echo "[2b/10] Setting repo ownership..."
+chown -R "$DEPLOY_USER:$DEPLOY_USER" "$REPO_DIR"
+
+# ── 2c. Tailscale ──────────────────────────────────────────
+echo "[2c/10] Installing Tailscale..."
+curl -fsSL https://tailscale.com/install.sh | sh
+echo ""
+echo ">>> ACTION REQUIRED after this script finishes:"
+echo "    1. Run: sudo tailscale up"
+echo "    2. Note your IP: tailscale ip -4"
+echo "    3. Add PI_TAILSCALE_IP to GitHub secrets"
+echo ""
+
+# ── 2d. Deploy SSH key ─────────────────────────────────────
+echo "[2d/10] Setting up deploy SSH key..."
+USER_HOME=$(getent passwd "$DEPLOY_USER" | cut -d: -f6)
+DEPLOY_KEY="$USER_HOME/.ssh/deploy_key"
+mkdir -p "$USER_HOME/.ssh"
+chmod 700 "$USER_HOME/.ssh"
+if [ ! -f "$DEPLOY_KEY" ]; then
+  ssh-keygen -t ed25519 -C "github-actions-deploy" -f "$DEPLOY_KEY" -N ""
+  cat "$DEPLOY_KEY.pub" >> "$USER_HOME/.ssh/authorized_keys"
+  chmod 600 "$USER_HOME/.ssh/authorized_keys"
+  chown -R "$DEPLOY_USER:$DEPLOY_USER" "$USER_HOME/.ssh"
+  echo ""
+  echo ">>> ACTION REQUIRED: Copy the private key below into GitHub secret DEPLOY_SSH_KEY:"
+  echo "--------------------------------------------------------------------"
+  cat "$DEPLOY_KEY"
+  echo "--------------------------------------------------------------------"
+else
+  echo "    Deploy key already exists, skipping."
+fi
+
+# ── 2e. Sudoers for deploy script ──────────────────────────
+echo "[2e/10] Configuring sudoers for deploy..."
+cat > /etc/sudoers.d/flighttracker-deploy << EOF
+$DEPLOY_USER ALL=(ALL) NOPASSWD: /bin/cp, /bin/chmod, /usr/bin/systemctl, /usr/sbin/lighttpd
+EOF
+chmod 440 /etc/sudoers.d/flighttracker-deploy
 
 # ── 3. Blacklist DVB driver ────────────────────────────────
 echo "[3/10] Blacklisting DVB driver..."
@@ -41,7 +83,6 @@ rm -rf readsb
 git clone --depth 1 https://github.com/wiedehopf/readsb.git
 cd readsb
 make AIRCRAFT_HASH_BITS=12 RTLSDR=yes
-
 cp readsb /usr/local/bin/readsb
 cp viewadsb /usr/local/bin/viewadsb
 
@@ -49,12 +90,9 @@ cp viewadsb /usr/local/bin/viewadsb
 echo "[6/10] Setting up readsb user and directories..."
 useradd -r -s /usr/sbin/nologin readsb 2>/dev/null || true
 usermod -a -G plugdev readsb
-
 mkdir -p /run/readsb
 chown readsb:readsb /run/readsb
 chmod 755 /run/readsb
-
-# tmpfiles so /run/readsb survives reboot
 cat > /etc/tmpfiles.d/readsb.conf << 'EOF'
 d /run/readsb 0755 readsb readsb -
 EOF
@@ -63,30 +101,35 @@ EOF
 echo "[7/10] Installing readsb service..."
 cp /tmp/readsb/debian/readsb.service /etc/systemd/system/
 sed -i 's|/usr/bin/readsb|/usr/local/bin/readsb|g' /etc/systemd/system/readsb.service
-
-# Copy config from repo
 cp "$REPO_DIR/config/readsb.conf" /etc/default/readsb
-
 systemctl daemon-reload
 systemctl enable readsb
 systemctl start readsb
 
 # ── 8. tar1090 web UI ─────────────────────────────────────
 echo "[8/10] Installing tar1090..."
-sudo bash -c "$(wget -nv -O - https://github.com/wiedehopf/tar1090/raw/master/install.sh)" || true
+bash -c "$(wget -nv -O - https://github.com/wiedehopf/tar1090/raw/master/install.sh)" || {
+  echo "    tar1090 install script failed or unavailable."
+  echo "    Install manually: https://github.com/wiedehopf/tar1090"
+}
 
-# Decompress aircraft db
-echo "[8/10b] Decompressing aircraft database..."
-apt install -y zstd
-cd /usr/local/share/tar1090/git-db/db/
-for f in *.js; do
-  zstd -d "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
-done
+# Decompress aircraft db if tar1090 installed successfully
+if [ -d /usr/local/share/tar1090/git-db/db/ ]; then
+  echo "[8b/10] Decompressing aircraft database..."
+  cd /usr/local/share/tar1090/git-db/db/
+  for f in *.js; do
+    zstd -d "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
+  done
+else
+  echo "    Skipping db decompress — tar1090 not installed."
+fi
 
 # ── 9. lighttpd ────────────────────────────────────────────
 echo "[9/10] Configuring lighttpd..."
 cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/tar1090.conf
-cp "$REPO_DIR/www/flightboard.html" "$WEB_DIR/flightboard.html"
+if [ -d "$WEB_DIR" ]; then
+  cp "$REPO_DIR/www/flightboard.html" "$WEB_DIR/flightboard.html"
+fi
 systemctl enable lighttpd
 systemctl restart lighttpd
 
@@ -102,6 +145,13 @@ systemctl start route-proxy
 echo ""
 echo "============================================"
 echo "  Install complete!"
-echo "  Open: http://$(hostname).local/tar1090"
-echo "  Board: http://$(hostname).local/tar1090/flightboard.html"
+echo ""
+echo "  Next steps:"
+echo "  1. sudo tailscale up        (authenticate Tailscale)"
+echo "  2. tailscale ip -4          (note IP for GitHub secrets)"
+echo "  3. Add GitHub secrets — see README.md"
+echo ""
+echo "  Web UI:   http://$(hostname).local/tar1090"
+echo "  Board:    http://$(hostname).local/tar1090/flightboard.html"
 echo "============================================"
+
