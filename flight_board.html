@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Board</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        .led-board {
+            width: 95vw;
+            height: 85vh;
+            background: radial-gradient(circle at 20% 50%, rgba(20, 30, 60, 0.8) 0%, #0a0e27 100%);
+            border: 3px solid #333;
+            border-radius: 8px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.8),
+                0 0 30px rgba(0, 0, 0, 0.9),
+                0 0 60px rgba(15, 150, 200, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .led-board::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 0, 0, 0.15) 0px,
+                    rgba(0, 0, 0, 0.15) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 60px;
+        }
+
+        .airline-logo-section {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .airline-logo {
+            height: 200px;
+            max-width: 400px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(100, 200, 255, 0.5));
+        }
+
+        .flight-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: baseline;
+            gap: 20px;
+            font-size: 3.5rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(100, 200, 255, 0.8);
+            min-height: 80px;
+        }
+
+        .info-row.callsign {
+            font-size: 4.5rem;
+            color: #fff;
+            text-shadow: 0 0 15px rgba(100, 200, 255, 1),
+                         0 0 30px rgba(100, 200, 255, 0.5);
+        }
+
+        .info-label {
+            color: #888;
+            font-size: 2rem;
+            min-width: 200px;
+            font-weight: normal;
+            letter-spacing: 2px;
+        }
+
+        .info-value {
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+        }
+
+        .route {
+            color: #64c8ff;
+            text-shadow: 0 0 8px rgba(100, 200, 255, 0.8);
+        }
+
+        .status {
+            color: #ffaa00;
+            text-shadow: 0 0 8px rgba(255, 170, 0, 0.8);
+        }
+
+        .location {
+            color: #ff66ff;
+            text-shadow: 0 0 8px rgba(255, 102, 255, 0.8);
+            font-size: 2.2rem;
+        }
+
+        .details-row {
+            display: flex;
+            gap: 40px;
+            font-size: 2rem;
+            margin-top: 15px;
+        }
+
+        .detail {
+            display: flex;
+            gap: 10px;
+        }
+
+        .detail-label {
+            color: #888;
+        }
+
+        .detail-value {
+            color: #00ff00;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+        }
+
+        .no-data {
+            color: #ff6666;
+            font-size: 2.5rem;
+            text-align: center;
+            width: 100%;
+            text-shadow: 0 0 10px rgba(255, 100, 100, 0.5);
+        }
+
+        .timestamp {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 0.9rem;
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 2560px) {
+            .info-row {
+                font-size: 2.8rem;
+            }
+
+            .info-label {
+                font-size: 1.6rem;
+            }
+
+            .airline-logo {
+                height: 150px;
+                max-width: 300px;
+            }
+        }
+
+        /* Glowing effect animation */
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 10px rgba(100, 200, 255, 0.8);
+            }
+            50% {
+                text-shadow: 0 0 20px rgba(100, 200, 255, 1),
+                             0 0 30px rgba(100, 200, 255, 0.5);
+            }
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="led-board">
+        <div class="content" id="content">
+            <div class="airline-logo-section">
+                <img id="airline-logo" class="airline-logo" src="" alt="Airline Logo" style="display: none;">
+            </div>
+            <div class="flight-info">
+                <div class="info-row callsign">
+                    <span id="callsign">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">ROUTE</span>
+                    <span class="info-value route" id="route">-- > --</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">AIRCRAFT</span>
+                    <span class="info-value" id="aircraft">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">STATUS</span>
+                    <span class="info-value status" id="status">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">DISTANCE</span>
+                    <span class="info-value" id="distance">-- km</span>
+                </div>
+                <div class="details-row">
+                    <div class="detail">
+                        <span class="detail-label">ALT:</span>
+                        <span class="detail-value" id="altitude">-----</span>
+                        <span class="detail-label">ft</span>
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">SPD:</span>
+                        <span class="detail-value" id="speed">---</span>
+                        <span class="detail-label">kt</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="no-data-msg" class="no-data" style="display: none;">
+            ✈ No aircraft detected
+        </div>
+
+        <div class="timestamp" id="timestamp">Updated: --:--:--</div>
+    </div>
+
+    <script>
+        const LOGO_REPO_URL = 'https://raw.githubusercontent.com/Jxck-S/airline-logos/main';
+        const API_ENDPOINT = '/api/closest-aircraft';
+        const UPDATE_INTERVAL = 2000; // Update every 2 seconds
+
+        // Map of airline codes to logo paths in the repo
+        const AIRLINE_LOGO_MAP = {
+            'BAW': 'flightaware_logos/BA.png',
+            'DLH': 'flightaware_logos/LH.png',
+            'AFR': 'flightaware_logos/AF.png',
+            'KLM': 'flightaware_logos/KL.png',
+            'UAL': 'flightaware_logos/UA.png',
+            'DAL': 'flightaware_logos/DL.png',
+            'SWR': 'flightaware_logos/LX.png',
+            'RYR': 'flightaware_logos/FR.png',
+            'EZY': 'flightaware_logos/U2.png',
+            'IBE': 'flightaware_logos/IB.png',
+            'AZA': 'flightaware_logos/AZ.png',
+            'VIR': 'flightaware_logos/VS.png',
+            'SVA': 'flightaware_logos/SV.png',
+            'EIN': 'flightaware_logos/IE.png',
+            'TAP': 'flightaware_logos/TP.png',
+            'ELY': 'flightaware_logos/EL.png',
+            'HVN': 'flightaware_logos/HV.png',
+            'JBU': 'flightaware_logos/B6.png',
+            'AWE': 'flightaware_logos/US.png',
+            'NAX': 'flightaware_logos/NA.png',
+            'NKS': 'flightaware_logos/NK.png',
+            'SKW': 'flightaware_logos/S5.png',
+            'THA': 'flightaware_logos/TG.png',
+            'CCA': 'flightaware_logos/CI.png',
+            'CES': 'flightaware_logos/MU.png',
+            'ACA': 'flightaware_logos/AC.png',
+            'ABB': 'flightaware_logos/AC.png',
+        };
+
+        function getLogoUrl(airlineCode) {
+            const path = AIRLINE_LOGO_MAP[airlineCode] || `flightaware_logos/${airlineCode}.png`;
+            return `${LOGO_REPO_URL}/${path}`;
+        }
+
+        function formatCoordinates(lat, lon) {
+            const latDir = lat >= 0 ? 'N' : 'S';
+            const lonDir = lon >= 0 ? 'E' : 'W';
+            return `${Math.abs(lat).toFixed(2)}°${latDir} ${Math.abs(lon).toFixed(2)}°${lonDir}`;
+        }
+
+        function updateDisplay(data) {
+            const contentDiv = document.getElementById('content');
+            const noDataDiv = document.getElementById('no-data-msg');
+            const timestamp = document.getElementById('timestamp');
+
+            timestamp.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+
+            if (!data || data.error) {
+                contentDiv.style.display = 'none';
+                noDataDiv.style.display = 'block';
+                return;
+            }
+
+            contentDiv.style.display = 'flex';
+            noDataDiv.style.display = 'none';
+
+            // Update callsign
+            document.getElementById('callsign').textContent = data.callsign || '---';
+
+            // Update aircraft type
+            document.getElementById('aircraft').textContent = data.aircraft_type || 'Unknown';
+
+            // Update status
+            document.getElementById('status').textContent = data.status || '---';
+
+            // Update distance
+            document.getElementById('distance').textContent = `${data.distance.toFixed(1)} km`;
+
+            // Update altitude
+            document.getElementById('altitude').textContent = data.altitude.toString().padStart(5, ' ');
+
+            // Update speed
+            document.getElementById('speed').textContent = data.speed.toString().padStart(3, ' ');
+
+            // Update route (simplified - just show distance since we don't have departure/arrival)
+            const coords = formatCoordinates(data.latitude, data.longitude);
+            document.getElementById('route').textContent = coords;
+
+            // Update logo
+            const logoImg = document.getElementById('airline-logo');
+            const airlineCode = data.airline_code || 'UNKNOWN';
+            const logoUrl = getLogoUrl(airlineCode);
+            
+            logoImg.src = logoUrl;
+            logoImg.style.display = 'block';
+            logoImg.onerror = function() {
+                // Fallback if logo not found
+                this.style.display = 'none';
+            };
+        }
+
+        async function fetchFlightData() {
+            try {
+                const response = await fetch(API_ENDPOINT);
+                const data = await response.json();
+                updateDisplay(data);
+            } catch (error) {
+                console.error('Error fetching flight data:', error);
+                document.getElementById('content').style.display = 'none';
+                document.getElementById('no-data-msg').style.display = 'block';
+                document.getElementById('no-data-msg').textContent = '⚠ Connection Error';
+            }
+        }
+
+        // Initial fetch
+        fetchFlightData();
+
+        // Update every 2 seconds
+        setInterval(fetchFlightData, UPDATE_INTERVAL);
+
+        // Fullscreen on load (optional)
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
