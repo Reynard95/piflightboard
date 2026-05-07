@@ -1,165 +1,107 @@
 #!/bin/bash
-
-# Flight Board Display - Quick Setup Script
-# Run on Raspberry Pi Zero 2W with sudo privileges
+# install.sh — Full clean install of the flighttracker stack
+# Run once on a fresh Raspberry Pi OS Lite (64-bit) install
+# Usage: sudo bash install.sh
 
 set -e
 
-echo "🚀 Flight Board Display - Setup Script"
-echo "========================================"
-echo ""
+REPO_DIR="/opt/flighttracker"
+WEB_DIR="/usr/local/share/tar1090/html"
 
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ This script must be run with sudo"
-   exit 1
-fi
+echo "============================================"
+echo "  Flighttracker Clean Install"
+echo "============================================"
 
-# Get the current user
-CURRENT_USER=$(who am i | awk '{print $1}')
-HOME_DIR="/home/$CURRENT_USER"
+# ── 1. System update ───────────────────────────────────────
+echo "[1/10] Updating system..."
+apt update && apt upgrade -y
 
-echo "📝 Configuration:"
-echo "  User: $CURRENT_USER"
-echo "  Home: $HOME_DIR"
-echo ""
+# ── 2. Dependencies ────────────────────────────────────────
+echo "[2/10] Installing dependencies..."
+apt install -y \
+  build-essential git librtlsdr-dev pkg-config \
+  zlib1g-dev libzstd-dev lighttpd curl wget
 
-# Create directories
-echo "📁 Creating directories..."
-mkdir -p $HOME_DIR/flight-board/templates
-cd $HOME_DIR/flight-board
+# ── 3. Blacklist DVB driver ────────────────────────────────
+echo "[3/10] Blacklisting DVB driver..."
+echo 'blacklist dvb_usb_rtl28xxu' > /etc/modprobe.d/rtlsdr.conf
 
-# Copy files if they exist in current directory
-if [ -f "flight_board.py" ]; then
-    cp flight_board.py $HOME_DIR/flight-board/
-fi
-if [ -f "requirements.txt" ]; then
-    cp requirements.txt $HOME_DIR/flight-board/
-fi
-if [ -f "templates/flight_board.html" ]; then
-    cp templates/flight_board.html $HOME_DIR/flight-board/templates/
-fi
-if [ -f "config.ini" ]; then
-    cp config.ini $HOME_DIR/flight-board/
-fi
-if [ -f "SETUP.md" ]; then
-    cp SETUP.md $HOME_DIR/flight-board/
-fi
+# ── 4. RTL-SDR udev rules ──────────────────────────────────
+echo "[4/10] Setting up udev rules..."
+cat > /etc/udev/rules.d/rtl-sdr.rules << 'EOF'
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", GROUP="plugdev", MODE="0664"
+EOF
+udevadm control --reload-rules
+udevadm trigger
 
-chown -R $CURRENT_USER:$CURRENT_USER $HOME_DIR/flight-board
+# ── 5. Build readsb ────────────────────────────────────────
+echo "[5/10] Building readsb from source..."
+cd /tmp
+rm -rf readsb
+git clone --depth 1 https://github.com/wiedehopf/readsb.git
+cd readsb
+make AIRCRAFT_HASH_BITS=12 RTLSDR=yes
 
-echo "✅ Directories created"
-echo ""
+cp readsb /usr/local/bin/readsb
+cp viewadsb /usr/local/bin/viewadsb
 
-# Install Python packages
-echo "📦 Installing Python dependencies..."
-apt-get update
-apt-get install -y python3-pip python3-venv
+# ── 6. readsb user and directories ────────────────────────
+echo "[6/10] Setting up readsb user and directories..."
+useradd -r -s /usr/sbin/nologin readsb 2>/dev/null || true
+usermod -a -G plugdev readsb
 
-# Create virtual environment
-echo "🐍 Creating Python virtual environment..."
-su - $CURRENT_USER << EOF
-cd $HOME_DIR/flight-board
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-deactivate
+mkdir -p /run/readsb
+chown readsb:readsb /run/readsb
+chmod 755 /run/readsb
+
+# tmpfiles so /run/readsb survives reboot
+cat > /etc/tmpfiles.d/readsb.conf << 'EOF'
+d /run/readsb 0755 readsb readsb -
 EOF
 
-echo "✅ Python environment ready"
-echo ""
+# ── 7. readsb systemd service ─────────────────────────────
+echo "[7/10] Installing readsb service..."
+cp /tmp/readsb/debian/readsb.service /etc/systemd/system/
+sed -i 's|/usr/bin/readsb|/usr/local/bin/readsb|g' /etc/systemd/system/readsb.service
 
-# Install Chromium for display
-echo "🖥️  Installing Chromium browser..."
-apt-get install -y chromium-browser xserver-xorg x11-xserver-utils xinit
-
-# Create startup script
-echo "📜 Creating browser startup script..."
-cat > $HOME_DIR/start-flightboard.sh << 'EOF'
-#!/bin/bash
-sleep 5
-DISPLAY=:0 /usr/bin/chromium-browser --kiosk --no-sandbox http://localhost:5000
-EOF
-
-chmod +x $HOME_DIR/start-flightboard.sh
-chown $CURRENT_USER:$CURRENT_USER $HOME_DIR/start-flightboard.sh
-
-echo "✅ Browser startup script created"
-echo ""
-
-# Setup systemd service
-echo "⚙️  Setting up systemd service..."
-cat > /etc/systemd/system/flight-board.service << EOF
-[Unit]
-Description=Flight Board Display Service
-After=network-online.target readsb.service
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=$CURRENT_USER
-WorkingDirectory=$HOME_DIR/flight-board
-Environment="PATH=$HOME_DIR/flight-board/venv/bin"
-ExecStart=$HOME_DIR/flight-board/venv/bin/python3 $HOME_DIR/flight-board/flight_board.py
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# Copy config from repo
+cp "$REPO_DIR/config/readsb.conf" /etc/default/readsb
 
 systemctl daemon-reload
-systemctl enable flight-board.service
+systemctl enable readsb
+systemctl start readsb
 
-echo "✅ Systemd service configured"
-echo ""
+# ── 8. tar1090 web UI ─────────────────────────────────────
+echo "[8/10] Installing tar1090..."
+sudo bash -c "$(wget -nv -O - https://github.com/wiedehopf/tar1090/raw/master/install.sh)" || true
 
-# Verify readsb
-echo "🔍 Checking readsb..."
-if systemctl is-active --quiet readsb; then
-    echo "✅ readsb is running"
-    
-    # Test API
-    if curl -s http://localhost:8080/aircraft.json > /dev/null; then
-        echo "✅ readsb API is responding"
-    else
-        echo "⚠️  readsb API not responding on port 8080"
-        echo "   Make sure readsb is configured with --net-api-port 8080"
-    fi
-else
-    echo "⚠️  readsb is not running"
-    echo "   Start it with: sudo systemctl start readsb"
-fi
+# Decompress aircraft db
+echo "[8/10b] Decompressing aircraft database..."
+apt install -y zstd
+cd /usr/local/share/tar1090/git-db/db/
+for f in *.js; do
+  zstd -d "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
+done
+
+# ── 9. lighttpd ────────────────────────────────────────────
+echo "[9/10] Configuring lighttpd..."
+cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/tar1090.conf
+cp "$REPO_DIR/www/flightboard.html" "$WEB_DIR/flightboard.html"
+systemctl enable lighttpd
+systemctl restart lighttpd
+
+# ── 10. Route proxy ────────────────────────────────────────
+echo "[10/10] Installing route proxy..."
+cp "$REPO_DIR/scripts/route-proxy.py" /usr/local/bin/route-proxy.py
+chmod +x /usr/local/bin/route-proxy.py
+cp "$REPO_DIR/config/route-proxy.service" /etc/systemd/system/route-proxy.service
+systemctl daemon-reload
+systemctl enable route-proxy
+systemctl start route-proxy
 
 echo ""
-echo "========================================"
-echo "✅ Setup Complete!"
-echo "========================================"
-echo ""
-echo "📝 Next Steps:"
-echo ""
-echo "1. Edit your location in flight_board.py:"
-echo "   RECEIVER_LAT = <your latitude>"
-echo "   RECEIVER_LON = <your longitude>"
-echo ""
-echo "2. Start the service:"
-echo "   sudo systemctl start flight-board"
-echo ""
-echo "3. Check service status:"
-echo "   sudo systemctl status flight-board"
-echo ""
-echo "4. View logs:"
-echo "   journalctl -u flight-board -f"
-echo ""
-echo "5. Access the display:"
-echo "   http://localhost:5000"
-echo "   or http://<pi-ip>:5000"
-echo ""
-echo "6. For fullscreen browser display:"
-echo "   startx $HOME_DIR/start-flightboard.sh"
-echo ""
-echo "📚 Documentation: $HOME_DIR/flight-board/SETUP.md"
-echo ""
+echo "============================================"
+echo "  Install complete!"
+echo "  Open: http://$(hostname).local/tar1090"
+echo "  Board: http://$(hostname).local/tar1090/flightboard.html"
+echo "============================================"

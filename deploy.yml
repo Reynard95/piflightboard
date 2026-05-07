@@ -1,0 +1,33 @@
+name: Deploy to Flighttracker Pi
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Deploy to Pi
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PI_TAILSCALE_IP }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/flighttracker
+            git pull origin main
+            bash scripts/deploy.sh
+          timeout: 120s
