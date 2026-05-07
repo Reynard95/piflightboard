@@ -17,9 +17,10 @@ echo "[deploy] Copying web files..."
 sudo cp "$REPO_DIR/www/flightboard.html" "$WEB_DIR/flightboard.html"
 
 # ── lighttpd config ────────────────────────────────────────
-echo "[deploy] Updating lighttpd config..."
-sudo cp "$REPO_DIR/config/lighttpd-tar1090.conf" "$CONFIG_DIR/tar1090.conf"
-sudo lighttpd -tt -f /etc/lighttpd/lighttpd.conf && sudo systemctl reload lighttpd
+# Note: lighttpd aliases are patched into 88-tar1090.conf by install.sh
+# Only restart if flightboard.html changed
+echo "[deploy] Reloading lighttpd..."
+sudo systemctl reload lighttpd
 
 # ── readsb config (only if changed) ───────────────────────
 if ! diff -q "$REPO_DIR/config/readsb.conf" "$READSB_DEFAULT" > /dev/null 2>&1; then
