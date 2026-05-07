@@ -21,7 +21,7 @@ apt update && apt upgrade -y
 echo "[2/10] Installing dependencies..."
 apt install -y \
   build-essential git librtlsdr-dev pkg-config \
-  zlib1g-dev libzstd-dev zstd lighttpd curl wget
+  zlib1g-dev libzstd-dev zstd lighttpd curl wget libncurses-dev
 
 # ── 2b. Fix repo ownership so deploy user can git pull ─────
 echo "[2b/10] Setting repo ownership..."
@@ -154,4 +154,3 @@ echo ""
 echo "  Web UI:   http://$(hostname).local/tar1090"
 echo "  Board:    http://$(hostname).local/tar1090/flightboard.html"
 echo "============================================"
-
