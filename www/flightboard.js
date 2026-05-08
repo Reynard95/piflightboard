@@ -187,9 +187,9 @@ async function showIndex(idx) {
   const flagHtml     = flagUrl
     ? `<img src="${flagUrl}" alt="${countryCode}" style="height:42px;width:auto;vertical-align:middle;border-radius:2px;" onerror="this.style.display='none'">`
     : '';
-  const logoFallback = `<div>
-                          <span class="tlogo-fallback">✈︎</span>
-                          <span class="tlogo-fallback">✈${(icaoCode || '?')}</span>
+  const logoFallback = `<div class="tlogo-fallback">
+                          <div>✈︎</div>
+                          <div>${(icaoCode || '?')}</div>
                         </div>`;
 
   const squawkClass = ['7700','7500'].includes(squawk) ? 'v-red' : squawk === '7600' ? 'v-blue' : '';
