@@ -204,9 +204,13 @@ async function showIndex(idx) {
   const origin = route?.origin?.iata_code || route?.origin?.iata || '';
   const dest   = route?.destination?.iata_code || route?.destination?.iata || '';
 
-  /* IATA flight number: only show real data returned by the API, never derived */
-  const rawCallsign = (ac.flight || '').trim();
-  const iataFlight  = route?.callsign_iata || '';
+  /* IATA flight number */
+  const rawCallsign  = (ac.flight || '').trim();
+  const airlineIata  = route?.airline?.iata || ICAO_TO_IATA[icaoCode] || '';
+  const flightSuffix = icaoCode ? rawCallsign.replace(new RegExp('^' + icaoCode, 'i'), '').trim() : '';
+  const derived      = (airlineIata && airlineIata !== icaoCode && flightSuffix) ? airlineIata + flightSuffix : '';
+  const apiIata      = route?.callsign_iata || '';
+  const iataFlight   = (apiIata && apiIata !== rawCallsign) ? apiIata : derived;
 
   /* ETA + route duration — derived from airport lat/lon + current ground speed */
   let etaStr = '---', routeDurStr = '---';
@@ -241,27 +245,31 @@ async function showIndex(idx) {
           ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
         </div>
         <div class="ac-identity">
-          <div class="ac-topinfo">
-            <span class="typecode-val">${typeCode || '—'}</span>
-            <span class="reg-val">${reg}</span>
-            ${flagHtml}
-          </div>
-          <div class="ac-route-wrap">
-            <div class="ac-route">
-              <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
-              <span class="route-arrow"> &#x25B6; </span>
-              <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+          <div class="ac-route-col">
+            <div class="ac-topinfo">
+              <span class="typecode-val">${typeCode || '—'}</span>
+              <span class="reg-val">${reg}</span>
+              ${flagHtml}
             </div>
-            ${(etaStr !== '---' || routeDurStr !== '---') ? `
-            <div class="route-duration">
-              ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
-              ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
-            </div>` : ''}
+            <div class="ac-route-wrap">
+              <div class="ac-route">
+                <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
+                <span class="route-arrow"> &#x25B6; </span>
+                <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+              </div>
+              ${(etaStr !== '---' || routeDurStr !== '---') ? `
+              <div class="route-duration">
+                ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
+                ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
+              </div>` : ''}
+            </div>
           </div>
-          <div class="airline-val">${airlineName}</div>
-          <div class="callsign-val">${rawCallsign}</div>
-          <div class="ac-type-line">${typeName || '—'}</div>
-          ${iataFlight ? `<div class="ac-flight-line">FLIGHT: ${iataFlight}</div>` : ''}
+          <div class="ac-info-col">
+            <div class="airline-val">${airlineName}</div>
+            <div class="callsign-val">${rawCallsign}</div>
+            <div class="ac-type-line">${typeName || '—'}</div>
+            ${iataFlight ? `<div class="ac-flight-line">FLIGHT: ${iataFlight}</div>` : ''}
+          </div>
         </div>
       </div>
 
