@@ -97,7 +97,10 @@ cat > /etc/tmpfiles.d/readsb.conf << 'EOF'
 d /run/readsb 0755 readsb readsb -
 EOF
 
-# ── 7. readsb systemd service ─────────────────────────────
+# ── Aircraft database for readsb ──────────────────────────
+echo "[6b/10] Downloading aircraft database..."
+wget -O /usr/local/share/aircraft.csv.gz \
+  https://github.com/wiedehopf/tar1090-db/raw/csv/aircraft.csv.gz
 echo "[7/10] Installing readsb service..."
 cp /tmp/readsb/debian/readsb.service /etc/systemd/system/
 sed -i 's|/usr/bin/readsb|/usr/local/bin/readsb|g' /etc/systemd/system/readsb.service
