@@ -202,18 +202,17 @@ async function lookupHex(hex) {
   if (dbCache[h] !== undefined) return dbCache[h];
   dbCache[h] = null;
 
-  /* tar1090 db: try 3-char prefix, then 2-char, then 1-char */
+  /* tar1090 db files use variable-length prefixes.
+     Try longest first: 3-char, 2-char, 1-char.
+     Files are plain JSON objects: {"HEXCODE":["reg","type","flags","desc"]} */
   const prefixes = [h.slice(0,3), h.slice(0,2), h.slice(0,1)];
   for (const pfx of prefixes) {
     try {
-      const rows = await loadDbFile(pfx);
-      if (rows) {
-        for (const row of rows) {
-          if (row[0] && row[0].toUpperCase() === h) {
-            dbCache[h] = { reg: row[1] || '', type: row[2] || '', flags: row[3] || 0 };
-            return dbCache[h];
-          }
-        }
+      const data = await loadDbFile(pfx);
+      if (data && data[h]) {
+        const row = data[h];
+        dbCache[h] = { reg: row[0] || '', type: row[1] || '', desc: row[3] || '' };
+        return dbCache[h];
       }
     } catch(e) {}
   }
@@ -228,12 +227,10 @@ async function loadDbFile(prefix) {
     const res = await fetch(`${DB_PATH}${prefix}.js?_=1`);
     if (!res.ok) return null;
     const text = await res.text();
-    /* Files contain: addRows("prefix", [...rows...]) */
-    const match = text.match(/addRows\([^,]+,\s*(\[[\s\S]*\])\s*\)/);
-    if (!match) return null;
-    const rows = JSON.parse(match[1]);
-    fileCache[prefix] = rows;
-    return rows;
+    /* Format is plain JSON object: {"HEXCODE":["reg","type","flags","desc"],...} */
+    const data = JSON.parse(text);
+    fileCache[prefix] = data;
+    return data;
   } catch(e) { return null; }
 }
 
@@ -326,13 +323,12 @@ async function showIndex(idx) {
   const icaoCode   = getAirlineCode(ac.flight);
   const countryCode = ICAO_TO_COUNTRY[icaoCode] || '';
   const airlineName = AIRLINES[icaoCode] || icaoCode || (ac.flight || '').trim();
-  const flag       = FLAGS[icaoCode] || '✈';
 
   /* DB lookup for registration and type */
   const dbRow  = await lookupHex(ac.hex);
   const reg    = (ac.r || '').trim() || (dbRow?.reg || '').trim() || ac.hex.toUpperCase();
   const typeCode = (ac.t || '').trim() || (dbRow?.type || '').trim();
-  const typeName = getTypeName(typeCode);
+  const typeName = dbRow?.desc ? dbRow.desc.toUpperCase() : getTypeName(typeCode);
 
   const route = await fetchRoute(ac);
 
