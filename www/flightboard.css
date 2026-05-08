@@ -1,6 +1,6 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --amber: #FFA040; --amber-dim: #6B3A00; --amber-mid: #B06018; --amber-bright: #FFD080;
+  --amber: #FFA040; --amber-dim: #B06018; --amber-mid: #B06018; --amber-bright: #FFD080;
   --bg: #000; --red: #FF4040; --green: #40FF80;
 }
 html, body { width: 100%; height: 100%; background: var(--bg); color: var(--amber); font-family: 'Share Tech Mono', monospace; overflow: hidden; }
