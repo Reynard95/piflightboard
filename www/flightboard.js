@@ -179,8 +179,8 @@ async function showIndex(idx) {
   const flightSuffix = icaoCode
     ? rawCallsign.replace(new RegExp('^' + icaoCode, 'i'), '')
     : rawCallsign.replace(/^[A-Z]{2,3}/i, '');
-  const iataFlight   = iataPrefix && flightSuffix ? (iataPrefix + flightSuffix) : rawCallsign || '—';
-
+  const iataFlight   = iataPrefix && flightSuffix ? (iataPrefix + flightSuffix) : '—--';
+  
   /* Local assets */
   const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
   const flagUrl      = countryCode ? `/tar1090/country_flags/country_flag_${countryCode}.png` : '';
@@ -207,7 +207,7 @@ async function showIndex(idx) {
             </div>
             <div class="ac-route">
               <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
-              <span class="route-arrow">&#x2014;&#x2014;&#x25B6;</span>
+              <span class="route-arrow"> &#x25B6; </span>
               <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
             </div>
           </div>
