@@ -255,9 +255,8 @@ async function showIndex(idx) {
               </div>
               ${(etaStr !== '---' || routeDurStr !== '---') ? `
               <div class="route-duration">
-                ${etaStr !== '---' ? `<span>ETA <span class="v-gold">${etaStr}</span></span>` : ''}
-                ${etaStr !== '---' && routeDurStr !== '---' ? `<span class="route-dur-sep">·</span>` : ''}
-                ${routeDurStr !== '---' ? `<span>${routeDurStr} TOTAL</span>` : ''}
+                ${etaStr !== '---' ? `<div>ETA <span class="v-gold">${etaStr}</span></div>` : ''}
+                ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
               </div>` : ''}
             </div>
           </div>
