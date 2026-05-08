@@ -187,7 +187,7 @@ async function showIndex(idx) {
   const flagHtml     = flagUrl
     ? `<img src="${flagUrl}" alt="${countryCode}" style="height:42px;width:auto;vertical-align:middle;border-radius:2px;" onerror="this.style.display='none'">`
     : '';
-  const logoFallback = `<div class="tlogo-fallback">
+  const logoFallback = `<div class="logo-fallback">
                           <div>✈︎</div>
                           <div>${(icaoCode || '?')}</div>
                         </div>`;
