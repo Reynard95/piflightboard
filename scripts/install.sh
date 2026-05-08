@@ -133,7 +133,7 @@ sudo sed -i 's|"/tar1090/" => "/usr/local/share/tar1090/html/"|"/tar1090/airline
 echo "[9/10] Configuring lighttpd..."
 cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/tar1090.conf
 if [ -d "$WEB_DIR" ]; then
-  cp "$REPO_DIR/www/flightboard.html" "$WEB_DIR/flightboard.html"
+  cp "$REPO_DIR"/www/* "$WEB_DIR/"
 fi
 systemctl enable lighttpd
 systemctl restart lighttpd

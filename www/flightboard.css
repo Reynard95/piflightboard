@@ -1,0 +1,87 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --amber: #FFA040; --amber-dim: #6B3A00; --amber-bright: #FFD080;
+  --bg: #000; --red: #FF4040; --green: #40FF80;
+}
+html, body { width: 100%; height: 100%; background: var(--bg); color: var(--amber); font-family: 'Share Tech Mono', monospace; overflow: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(circle, rgba(255,160,64,0.06) 1px, transparent 1px); background-size: 6px 6px; pointer-events: none; z-index: 200; }
+body::after  { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px); pointer-events: none; z-index: 201; }
+
+.board { width: 100vw; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 24px 48px; }
+
+/* ── TOP BAR ── */
+.topbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--amber-dim); padding-bottom: 12px; margin-bottom: 16px; }
+.topbar-left { font-size: 15px; color: var(--amber-dim); letter-spacing: 0.2em; line-height: 1.7; }
+.topbar-title { font-family: 'VT323', monospace; font-size: 26px; letter-spacing: 0.3em; text-shadow: 0 0 20px var(--amber); }
+.topbar-right { text-align: right; }
+.clock { font-family: 'VT323', monospace; font-size: 30px; color: var(--amber); text-shadow: 0 0 15px var(--amber); }
+.date-line { font-size: 12px; color: var(--amber-dim); letter-spacing: 0.12em; margin-top: 2px; }
+
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; gap: 16px; justify-content: center; }
+
+/* ── AIRCRAFT HEADER ── */
+.ac-header { display: flex; align-items: center; gap: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--amber-dim); }
+.logo-box { width: 180px; height: 88px; flex-shrink: 0; border: 1px solid var(--amber-dim); border-radius: 4px; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logo-box img { max-width: 168px; max-height: 76px; object-fit: contain; }
+.logo-fallback { font-family: 'VT323', monospace; font-size: 40px; color: var(--amber-dim); background: transparent; }
+
+.ac-identity { flex: 1; min-width: 0; }
+.ac-top-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.ac-topinfo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.typecode-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
+.reg-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
+.airline-call-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.airline-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber); text-shadow: 0 0 20px var(--amber); letter-spacing: 0.06em; white-space: nowrap; }
+.sep-val { font-family: 'VT323', monospace; font-size: 36px; color: var(--amber-dim); }
+.callsign-val { font-family: 'VT323', monospace; font-size: 38px; color: var(--amber-bright); letter-spacing: 0.12em; }
+.ac-type-line { font-family: 'VT323', monospace; font-size: 28px; color: var(--amber-dim); letter-spacing: 0.12em; margin-top: 4px; }
+.ac-flight-line { font-size: 14px; color: var(--amber-dim); letter-spacing: 0.22em; margin-top: 4px; text-transform: uppercase; }
+
+/* ── ROUTE ── */
+.ac-route { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
+.route-apt { font-family: 'VT323', monospace; font-size: 68px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 24px var(--amber); letter-spacing: 0.04em; white-space: nowrap; }
+.route-apt.unknown { color: var(--amber-dim); text-shadow: none; }
+.route-arrow { font-family: 'VT323', monospace; font-size: 48px; color: var(--amber-dim); letter-spacing: 0; }
+
+/* ── DATA GRID — 3 columns ── */
+.data-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 36px; }
+.data-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--amber-dim); }
+.data-label { font-size: 18px; color: var(--amber-dim); letter-spacing: 0.25em; white-space: nowrap; }
+.data-value { font-family: 'VT323', monospace; font-size: 56px; line-height: 1; text-shadow: 0 0 20px var(--amber); letter-spacing: 0.04em; text-align: right; }
+.data-value .unit { font-size: 22px; color: var(--amber-dim); margin-left: 4px; }
+.v-blue  { color: #64C8FF; text-shadow: 0 0 20px rgba(100,200,255,0.8); }
+.v-gold  { color: #FFAA00; text-shadow: 0 0 20px rgba(255,170,0,0.8); }
+.v-pink  { color: #FF66FF; text-shadow: 0 0 20px rgba(255,102,255,0.8); }
+.v-green { color: var(--green); text-shadow: 0 0 20px var(--green); }
+.v-red   { color: var(--red);   text-shadow: 0 0 20px var(--red); }
+
+/* ── EXTENDED TELEMETRY ── */
+.telem-row { display: flex; gap: 0; border-top: 1px solid var(--amber-dim); padding-top: 12px; flex-wrap: wrap; }
+.telem-cell { flex: 1; min-width: 100px; display: flex; flex-direction: column; gap: 3px; padding: 0 16px 0 0; }
+.telem-cell:first-child { padding-left: 0; }
+.telem-cell + .telem-cell { border-left: 1px solid var(--amber-dim); padding-left: 16px; }
+.telem-lbl  { font-size: 12px; color: var(--amber-dim); letter-spacing: 0.22em; text-transform: uppercase; }
+.telem-val  { font-family: 'VT323', monospace; font-size: 30px; text-shadow: 0 0 10px var(--amber); letter-spacing: 0.08em; line-height: 1.1; }
+.telem-unit { font-size: 12px; color: var(--amber-dim); }
+
+/* ── NO SIGNAL ── */
+.no-signal { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 24px; animation: blink 1.5s step-end infinite; }
+.no-signal-title { font-family: 'VT323', monospace; font-size: 72px; letter-spacing: 0.3em; color: var(--amber-dim); }
+.no-signal-sub   { font-size: 18px; letter-spacing: 0.2em; color: var(--amber-dim); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.fade-in { animation: fadeIn 0.6s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── FOOTER ── */
+.footer { border-top: 1px solid var(--amber-dim); padding-top: 12px; margin-top: 12px; display: flex; align-items: center; gap: 24px; overflow: hidden; }
+.ticker-label { font-size: 12px; color: var(--amber-dim); letter-spacing: 0.2em; white-space: nowrap; }
+.ticker-track { flex: 1; overflow: hidden; }
+.ticker-inner { display: flex; gap: 48px; white-space: nowrap; animation: ticker 30s linear infinite; }
+.ticker-item  { font-family: 'VT323', monospace; font-size: 24px; color: var(--amber-dim); letter-spacing: 0.15em; cursor: pointer; transition: color 0.2s; }
+.ticker-item:hover  { color: var(--amber); }
+.ticker-item.active { color: var(--amber-bright); text-shadow: 0 0 10px var(--amber); }
+.ticker-sep { color: var(--amber-dim); opacity: 0.3; }
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ac-count { font-size: 12px; color: var(--amber-dim); letter-spacing: 0.15em; white-space: nowrap; }
+.progress-bar { position: fixed; bottom: 0; left: 0; height: 2px; background: var(--amber); box-shadow: 0 0 8px var(--amber); transition: width linear; }

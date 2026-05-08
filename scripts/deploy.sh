@@ -14,7 +14,7 @@ echo "[deploy] Starting deployment..."
 
 # ── Web files ──────────────────────────────────────────────
 echo "[deploy] Copying web files..."
-sudo cp "$REPO_DIR/www/flightboard.html" "$WEB_DIR/flightboard.html"
+sudo cp "$REPO_DIR"/www/* "$WEB_DIR/"
 
 # ── lighttpd aliases for local assets ─────────────────────
 echo "[deploy] Patching lighttpd aliases for logos and flags..."
