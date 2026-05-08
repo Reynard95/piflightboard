@@ -173,3 +173,26 @@ html::before {
 .c-red    { color: var(--red);    text-shadow: 0 0 6px var(--red); }
 .c-gold   { color: var(--gold);   text-shadow: 0 0 6px var(--gold); }
 .c-blue   { color: var(--blue);   text-shadow: 0 0 6px var(--blue); }
+
+/* ── HEADER RIGHT GROUP ── */
+.hdr-right {
+  display: flex; align-items: center;
+  gap: clamp(10px,1vw,28px);
+}
+
+/* ── THEME BUTTON ── */
+.theme-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(9px,0.65vw,15px);
+  color: var(--amber-dim);
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--amber-dim);
+  padding: 2px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.theme-btn:hover { color: var(--amber); border-color: var(--amber); }

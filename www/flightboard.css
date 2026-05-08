@@ -96,3 +96,20 @@ html::after  { content: ''; position: fixed; inset: 0; background: radial-gradie
 @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 .ac-count    { font-size: clamp(9px, 0.65vw, 15px); color: var(--amber-dim); letter-spacing: 0.15em; white-space: nowrap; }
 .progress-bar { position: fixed; bottom: 0; left: 0; height: 2px; background: var(--amber); box-shadow: 0 0 8px var(--amber); transition: width linear; }
+
+/* ── THEME BUTTON ── */
+.theme-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(9px,0.65vw,15px);
+  color: var(--amber-dim);
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--amber-dim);
+  padding: 2px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.theme-btn:hover { color: var(--amber); border-color: var(--amber); }
