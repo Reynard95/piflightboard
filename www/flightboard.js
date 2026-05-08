@@ -241,28 +241,10 @@ async function showIndex(idx) {
     <div class="fade-in">
 
       <div class="ac-header">
-        <div class="logo-box" id="logo-wrap">
-          ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
-        </div>
-        <div class="ac-identity">
-          <div class="ac-route-col">
-            <div class="ac-topinfo">
-              <span class="typecode-val">${typeCode || '—'}</span>
-              <span class="reg-val">${reg}</span>
-              ${flagHtml}
-            </div>
-            <div class="ac-route-wrap">
-              <div class="ac-route">
-                <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
-                <span class="route-arrow"> &#x25B6; </span>
-                <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
-              </div>
-              ${(etaStr !== '---' || routeDurStr !== '---') ? `
-              <div class="route-duration">
-                ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
-                ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
-              </div>` : ''}
-            </div>
+
+        <div class="ac-left">
+          <div class="logo-box" id="logo-wrap">
+            ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
           </div>
           <div class="ac-info-col">
             <div class="airline-val">${airlineName}</div>
@@ -271,6 +253,27 @@ async function showIndex(idx) {
             ${iataFlight ? `<div class="ac-flight-line">FLIGHT: ${iataFlight}</div>` : ''}
           </div>
         </div>
+
+        <div class="ac-right">
+          <div class="ac-topinfo">
+            <span class="typecode-val">${typeCode || '—'}</span>
+            ${flagHtml}
+            <span class="reg-val">${reg}</span>
+          </div>
+          <div class="ac-route-wrap">
+            <div class="ac-route">
+              <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
+              <span class="route-arrow"> &#x25B6; </span>
+              <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+            </div>
+            ${(etaStr !== '---' || routeDurStr !== '---') ? `
+            <div class="route-duration">
+              ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
+              ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
+            </div>` : ''}
+          </div>
+        </div>
+
       </div>
 
       <div class="data-grid">
