@@ -44,6 +44,11 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 .route-apt.unknown { color: var(--amber-dim); text-shadow: none; }
 .route-arrow { font-family: 'VT323', monospace; font-size: 48px; color: var(--amber-dim); letter-spacing: 0; }
 
+/* ── ROUTE DURATION ── */
+.ac-route-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.route-duration { display: flex; align-items: center; gap: 10px; font-family: 'VT323', monospace; font-size: 22px; color: var(--amber-dim); letter-spacing: 0.1em; }
+.route-dur-sep { opacity: 0.5; }
+
 /* ── DATA GRID — 3 columns ── */
 .data-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 36px; }
 .data-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--amber-dim); }

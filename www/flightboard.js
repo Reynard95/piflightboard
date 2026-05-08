@@ -247,10 +247,18 @@ async function showIndex(idx) {
               <span class="reg-val">${reg}</span>
               ${flagHtml}
             </div>
-            <div class="ac-route">
-              <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
-              <span class="route-arrow"> &#x25B6; </span>
-              <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+            <div class="ac-route-wrap">
+              <div class="ac-route">
+                <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
+                <span class="route-arrow"> &#x25B6; </span>
+                <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+              </div>
+              ${(etaStr !== '---' || routeDurStr !== '---') ? `
+              <div class="route-duration">
+                ${etaStr !== '---' ? `<span>ETA <span class="v-gold">${etaStr}</span></span>` : ''}
+                ${etaStr !== '---' && routeDurStr !== '---' ? `<span class="route-dur-sep">·</span>` : ''}
+                ${routeDurStr !== '---' ? `<span>${routeDurStr} TOTAL</span>` : ''}
+              </div>` : ''}
             </div>
           </div>
           <div class="airline-call-row">
@@ -315,4 +323,69 @@ async function showIndex(idx) {
           <div class="telem-lbl">SQUAWK</div>
           <div class="telem-val ${squawkClass}">${squawk}</div>
         </div>
-        <div class="te
+        <div class="telem-cell">
+          <div class="telem-lbl">IAS</div>
+          <div class="telem-val">${ias}</div>
+        </div>
+        <div class="telem-cell">
+          <div class="telem-lbl">MACH</div>
+          <div class="telem-val">${mach}</div>
+        </div>
+        <div class="telem-cell">
+          <div class="telem-lbl">WIND</div>
+          <div class="telem-val">${wind}</div>
+        </div>
+        <div class="telem-cell">
+          <div class="telem-lbl">OAT</div>
+          <div class="telem-val">${oat}</div>
+        </div>
+        <div class="telem-cell">
+          <div class="telem-lbl">NAV HDG</div>
+          <div class="telem-val">${navHdg}</div>
+        </div>
+        <div class="telem-cell">
+          <div class="telem-lbl">MSGS</div>
+          <div class="telem-val">${msgCount}</div>
+        </div>
+        <div class="telem-cell">
+          <div class="telem-lbl">LAST SEEN</div>
+          <div class="telem-val">${seen}</div>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  if (logoUrl) {
+    const img  = document.getElementById('alogo');
+    const wrap = document.getElementById('logo-wrap');
+    if (img) img.onerror = () => { wrap.innerHTML = logoFallback; };
+  }
+
+  updateTicker();
+  resetProgress();
+}
+
+/* ── CYCLE ── */
+function resetProgress() {
+  const bar = document.getElementById('progress');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  requestAnimationFrame(() => {
+    bar.style.transition = `width ${CYCLE_MS}ms linear`;
+    bar.style.width = '100%';
+  });
+}
+
+function startCycle() {
+  showIndex(0);
+  cycleTimer = setInterval(() => {
+    if (!allAircraft.length) return;
+    currentIndex = (currentIndex + 1) % Math.min(allAircraft.length, 30);
+    showIndex(currentIndex);
+  }, CYCLE_MS);
+}
+
+/* ── INIT ── */
+setInterval(fetchAircraft, FETCH_MS);
+fetchAircraft();
