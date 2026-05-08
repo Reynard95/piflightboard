@@ -250,8 +250,16 @@ async function showIndex(idx) {
           <div class="data-value ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
         </div>
         <div class="data-row">
-          <div class="data-label">LAT / LON</div>
-          <div class="data-value">${lat} / ${lon}</div>
+          <div class="data-label">MACH</div>
+          <div class="data-value">${mach}</div>
+        </div>
+        <div class="data-row">
+          <div class="data-label">LAT</div>
+          <div class="data-value">${lat}</div>
+        </div>
+        <div class="data-row">
+          <div class="data-label">LON</div>
+          <div class="data-value">${lon}</div>
         </div>
       </div>
 
