@@ -153,7 +153,7 @@ async function showIndex(idx) {
   const ias      = ac.ias      != null ? fmt(ac.ias) + ' KTS'          : '---';
   const mach     = ac.mach     != null ? ac.mach.toFixed(3)            : '---';
   const track    = ac.track    != null ? fmt(ac.track) + '°'           : '---';
-  const dist     = ac.r_dst               ? ac.r_dst.toFixed(1) + ' KM': '---';
+  const dist     = ac.r_dst               ? ac.r_dst.toFixed(1)        : '---';
   const lat      = ac.lat      != null ? ac.lat.toFixed(3) + '°'       : '--°';
   const lon      = ac.lon      != null ? ac.lon.toFixed(3) + '°'       : '--°';
   const rssi     = ac.rssi     != null ? ac.rssi.toFixed(1) + ' dBFS'  : '---';
@@ -243,7 +243,7 @@ async function showIndex(idx) {
         </div>
         <div class="data-row">
           <div class="data-label">DISTANCE</div>
-          <div class="data-value v-pink">${dist}</div>
+          <div class="data-value v-pink">${dist} <span class="unit">KM</span></div>
         </div>
         <div class="data-row">
           <div class="data-label">SPEED</div>
