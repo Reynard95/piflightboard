@@ -12,8 +12,6 @@ let allAircraft = [], currentIndex = 0, routeCache = {}, cycleTimer = null;
 function tick() {
   const n = new Date();
   document.getElementById('clock').textContent = n.toTimeString().slice(0, 8);
-  document.getElementById('date-line').textContent =
-    n.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).toUpperCase();
 }
 setInterval(tick, 1000); tick();
 
