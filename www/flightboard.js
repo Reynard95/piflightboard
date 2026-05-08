@@ -152,7 +152,7 @@ async function showIndex(idx) {
   const speed    = fmt(ac.gs);
   const ias      = ac.ias      != null ? fmt(ac.ias) + ' KTS'          : '---';
   const mach     = ac.mach     != null ? 'M' + ac.mach.toFixed(3)      : '---';
-  const heading  = ac.track    != null ? fmt(ac.track) + '°'           : '---';
+  const track    = ac.track    != null ? fmt(ac.track) + '°'           : '---';
   const dist     = ac.r_dst               ? ac.r_dst.toFixed(1) + ' KM': '---';
   const lat      = ac.lat      != null ? ac.lat.toFixed(3) + '°'       : '--°';
   const lon      = ac.lon      != null ? ac.lon.toFixed(3) + '°'       : '--°';
@@ -226,8 +226,8 @@ async function showIndex(idx) {
 
       <div class="data-grid">
         <div class="data-row">
-          <div class="data-label">HEADING</div>
-          <div class="data-value v-blue">${heading}</div>
+          <div class="data-label">TRACK</div>
+          <div class="data-value v-blue">${track}</div>
         </div>
         <div class="data-row">
           <div class="data-label">ALTITUDE</div>
@@ -248,6 +248,10 @@ async function showIndex(idx) {
         <div class="data-row">
           <div class="data-label">VERT RATE</div>
           <div class="data-value ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
+        </div>
+        <div class="data-row">
+          <div class="data-label">LAT / LON</div>
+          <div class="data-value">${lat} / ${lon}</div>
         </div>
       </div>
 
@@ -291,10 +295,6 @@ async function showIndex(idx) {
         <div class="telem-cell">
           <div class="telem-lbl">LAST SEEN</div>
           <div class="telem-val">${seen}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">LAT / LON</div>
-          <div class="telem-val" style="font-size:20px">${lat} / ${lon}</div>
         </div>
       </div>
 
