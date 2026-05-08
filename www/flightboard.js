@@ -154,8 +154,8 @@ async function showIndex(idx) {
   const mach     = ac.mach     != null ? ac.mach.toFixed(3)            : '---';
   const track    = ac.track    != null ? fmt(ac.track) + '°'           : '---';
   const dist     = ac.r_dst               ? ac.r_dst.toFixed(1) + ' KM': '---';
-  const lat      = ac.lat      != null ? ac.lat.toFixed(3)             : '--°';
-  const lon      = ac.lon      != null ? ac.lon.toFixed(3)             : '--°';
+  const lat      = ac.lat      != null ? ac.lat.toFixed(3) + '°'       : '--°';
+  const lon      = ac.lon      != null ? ac.lon.toFixed(3) + '°'       : '--°';
   const rssi     = ac.rssi     != null ? ac.rssi.toFixed(1) + ' dBFS'  : '---';
   const source   = srcLabel(ac.type);
   const squawk   = ac.squawk || '----';
@@ -238,6 +238,10 @@ async function showIndex(idx) {
           <div class="data-value v-gold">${status}</div>
         </div>
         <div class="data-row">
+          <div class="data-label">LAT</div>
+          <div class="data-value">${lat}</div>
+        </div>
+        <div class="data-row">
           <div class="data-label">DISTANCE</div>
           <div class="data-value v-pink">${dist}</div>
         </div>
@@ -246,20 +250,16 @@ async function showIndex(idx) {
           <div class="data-value">${speed} <span class="unit">KTS</span></div>
         </div>
         <div class="data-row">
+          <div class="data-label">LON</div>
+          <div class="data-value">${lon}</div>
+        </div>
+        <div class="data-row">
           <div class="data-label">VERT RATE</div>
           <div class="data-value ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
         </div>
         <div class="data-row">
           <div class="data-label">MACH</div>
           <div class="data-value">${mach}</div>
-        </div>
-        <div class="data-row">
-          <div class="data-label">LAT</div>
-          <div class="data-value">${lat}<span class="unit">°</span></div></div>
-        </div>
-        <div class="data-row">
-          <div class="data-label">LON</div>
-          <div class="data-value">${lon}<span class="unit">°</span></div></div>
         </div>
       </div>
 
