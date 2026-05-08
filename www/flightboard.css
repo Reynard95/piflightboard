@@ -23,9 +23,9 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 
 /* ── AIRCRAFT HEADER ── */
 .ac-header   { display: flex; align-items: stretch; gap: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--amber-dim); }
-.logo-box    { width: 260px; height: 260px; flex-shrink: 0; align-self: center; border-radius: 4px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.logo-box img { max-width: 260px; max-height: 260px; object-fit: fill; border-radius: 4px; }
-.logo-fallback { font-family: 'VT323', monospace; font-size: 72px; color: var(--amber-dim); background: transparent; }
+.logo-box    { width: 160px; height: 160px; flex-shrink: 0; align-self: center; border-radius: 4px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logo-box img { max-width: 160px; max-height: 160px; object-fit: contain; border-radius: 4px; }
+.logo-fallback { font-family: 'VT323', monospace; font-size: 56px; color: var(--amber-dim); background: transparent; }
 .ac-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ac-topinfo  { display: flex; align-items: center; gap: 12px; justify-content: flex-end; margin-bottom: 4px; }
 .ac-row      { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; }
