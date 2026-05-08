@@ -1,0 +1,128 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ── E-INK PALETTE: pure black and white only ── */
+:root {
+  --blk: #000000;
+  --wht: #ffffff;
+  --mid: #888888;   /* mid-grey for secondary text */
+  --lgt: #dddddd;   /* light grey for dividers on white rows */
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--wht);
+  color: var(--blk);
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+}
+
+/* ── BOARD ── */
+.board {
+  width: 100vw; height: 100vh;
+  display: flex; flex-direction: column;
+  padding: clamp(10px,1.2vh,28px) clamp(18px,2vw,56px);
+}
+
+/* ── HEADER ── */
+.hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: clamp(6px,0.7vh,14px);
+  border-bottom: 3px solid var(--blk);
+  flex-shrink: 0;
+}
+.hdr-title {
+  font-family: 'VT323', monospace;
+  font-size: clamp(24px,2.6vw,64px);
+  letter-spacing: 0.3em;
+  color: var(--blk);
+  font-weight: bold;
+}
+.hdr-clock {
+  font-family: 'VT323', monospace;
+  font-size: clamp(20px,2vw,50px);
+  color: var(--mid);
+  letter-spacing: 0.1em;
+}
+
+/* ── COLUMN HEADERS ── */
+.col-hdrs {
+  display: grid;
+  grid-template-columns: 3fr 1.2fr 1.2fr 1.4fr 1.2fr 2.6fr;
+  background: var(--blk);
+  padding: clamp(4px,0.5vh,10px) 0;
+  flex-shrink: 0;
+}
+.ch {
+  font-size: clamp(8px,0.58vw,13px);
+  color: var(--wht);
+  letter-spacing: 0.28em;
+  padding: 0 clamp(6px,0.6vw,18px);
+}
+
+/* ── ROWS CONTAINER ── */
+.rows {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── ROW — alternating white/black ── */
+.brow {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 3fr 1.2fr 1.2fr 1.4fr 1.2fr 2.6fr;
+  border-bottom: 1px solid var(--lgt);
+  align-items: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Even rows: black background, white text */
+.brow:nth-child(even) {
+  background: var(--blk);
+  color: var(--wht);
+  border-bottom-color: #333;
+}
+
+/* Odd rows: white background, black text */
+.brow:nth-child(odd) {
+  background: var(--wht);
+  color: var(--blk);
+}
+
+.brow:last-child { border-bottom: none; }
+
+/* ── CELL ── */
+.bcell {
+  padding: 0 clamp(4px,0.45vw,12px);
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'VT323', monospace;
+  font-size: clamp(18px,2.1vh,58px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Separator between cells — adapts to row background */
+.brow:nth-child(odd) .bcell + .bcell  { border-left: 1px solid var(--lgt); }
+.brow:nth-child(even) .bcell + .bcell { border-left: 1px solid #333; }
+
+/* ── SECONDARY TEXT (from/to airports) ── */
+.brow:nth-child(odd)  .c-dim { color: var(--mid); }
+.brow:nth-child(even) .c-dim { color: #aaa; }
+
+/* ── STATUS COLOURS ─ bold only, no glow ── */
+.brow:nth-child(odd)  .c-green { color: #006600; font-weight: bold; }
+.brow:nth-child(even) .c-green { color: #40FF80; font-weight: bold; }
+
+.brow:nth-child(odd)  .c-red   { color: #880000; font-weight: bold; }
+.brow:nth-child(even) .c-red   { color: #FF6060; font-weight: bold; }
+
+.brow:nth-child(odd)  .c-gold  { color: var(--blk); }
+.brow:nth-child(even) .c-gold  { color: var(--wht); }
+
+/* ── EMPTY ROW INDICATOR ── */
+.brow.empty .bcell { opacity: 0.15; }
