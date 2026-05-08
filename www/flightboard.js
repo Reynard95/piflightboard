@@ -23,6 +23,23 @@ function fmt(v, d = 0) {
   return Number(v).toLocaleString('en-GB', { maximumFractionDigits: d, minimumFractionDigits: d });
 }
 
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+            Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function fmtDuration(minutes) {
+  if (minutes == null || isNaN(minutes) || minutes < 0) return '---';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h > 0 ? `${h}H ${String(m).padStart(2, '0')}M` : `${m}M`;
+}
+
 function srcLabel(t) {
   if (!t) return '---';
   if (t.startsWith('adsb')) return 'ADS-B';
@@ -190,6 +207,18 @@ async function showIndex(idx) {
   /* IATA flight number: only show real data returned by the API, never derived */
   const rawCallsign = (ac.flight || '').trim();
   const iataFlight  = route?.callsign_iata || '';
+
+  /* ETA + route duration — derived from airport lat/lon + current ground speed */
+  let etaStr = '---', routeDurStr = '---';
+  const oLat = route?.origin?.latitude,      oLon = route?.origin?.longitude;
+  const dLat = route?.destination?.latitude, dLon = route?.destination?.longitude;
+  const gsKmh = (ac.gs || 0) * 1.852;  // knots → km/h
+  if (oLat != null && dLat != null && ac.lat != null && gsKmh > 50) {
+    const distRemain = haversineKm(ac.lat, ac.lon, dLat, dLon);
+    const distTotal  = haversineKm(oLat, oLon, dLat, dLon);
+    etaStr      = fmtDuration((distRemain / gsKmh) * 60);
+    routeDurStr = fmtDuration((distTotal  / gsKmh) * 60);
+  }
   
   /* Local assets */
   const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
@@ -286,69 +315,4 @@ async function showIndex(idx) {
           <div class="telem-lbl">SQUAWK</div>
           <div class="telem-val ${squawkClass}">${squawk}</div>
         </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">IAS</div>
-          <div class="telem-val">${ias}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">MACH</div>
-          <div class="telem-val">${mach}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">WIND</div>
-          <div class="telem-val">${wind}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">OAT</div>
-          <div class="telem-val">${oat}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">NAV HDG</div>
-          <div class="telem-val">${navHdg}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">MSGS</div>
-          <div class="telem-val">${msgCount}</div>
-        </div>
-        <div class="telem-cell">
-          <div class="telem-lbl">LAST SEEN</div>
-          <div class="telem-val">${seen}</div>
-        </div>
-      </div>
-
-    </div>
-  `;
-
-  if (logoUrl) {
-    const img  = document.getElementById('alogo');
-    const wrap = document.getElementById('logo-wrap');
-    if (img) img.onerror = () => { wrap.innerHTML = logoFallback; };
-  }
-
-  updateTicker();
-  resetProgress();
-}
-
-/* ── CYCLE ── */
-function resetProgress() {
-  const bar = document.getElementById('progress');
-  bar.style.transition = 'none';
-  bar.style.width = '0%';
-  requestAnimationFrame(() => {
-    bar.style.transition = `width ${CYCLE_MS}ms linear`;
-    bar.style.width = '100%';
-  });
-}
-
-function startCycle() {
-  showIndex(0);
-  cycleTimer = setInterval(() => {
-    if (!allAircraft.length) return;
-    currentIndex = (currentIndex + 1) % Math.min(allAircraft.length, 30);
-    showIndex(currentIndex);
-  }, CYCLE_MS);
-}
-
-/* ── INIT ── */
-setInterval(fetchAircraft, FETCH_MS);
-fetchAircraft();
+        <div class="te
