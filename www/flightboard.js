@@ -151,18 +151,18 @@ async function showIndex(idx) {
   const altBaro  = ac.alt_baro === 'ground' ? 'GND' : fmt(ac.alt_baro);
   const speed    = fmt(ac.gs);
   const ias      = ac.ias      != null ? fmt(ac.ias) + ' KTS'          : '---';
-  const mach     = ac.mach     != null ? 'M' + ac.mach.toFixed(3)      : '---';
+  const mach     = ac.mach     != null ? ac.mach.toFixed(3)            : '---';
   const track    = ac.track    != null ? fmt(ac.track) + '°'           : '---';
   const dist     = ac.r_dst               ? ac.r_dst.toFixed(1) + ' KM': '---';
-  const lat      = ac.lat      != null ? ac.lat.toFixed(3) + '°'       : '--°';
-  const lon      = ac.lon      != null ? ac.lon.toFixed(3) + '°'       : '--°';
+  const lat      = ac.lat      != null ? ac.lat.toFixed(3)             : '--°';
+  const lon      = ac.lon      != null ? ac.lon.toFixed(3)             : '--°';
   const rssi     = ac.rssi     != null ? ac.rssi.toFixed(1) + ' dBFS'  : '---';
   const source   = srcLabel(ac.type);
   const squawk   = ac.squawk || '----';
   const wind     = (ac.wd != null && ac.ws != null) ? `${fmt(ac.wd)}° / ${fmt(ac.ws)} KTS` : '---';
   const oat      = ac.oat      != null ? ac.oat.toFixed(1) + ' °C'     : '---';
   const navHdg   = ac.nav_heading != null ? fmt(ac.nav_heading) + '°'  : '---';
-  const msgCount = ac.messages != null ? ac.messages.toLocaleString()   : '---';
+  const msgCount = ac.messages != null ? ac.messages.toLocaleString()  : '---';
   const seen     = ac.seen     != null ? ac.seen.toFixed(1) + 'S AGO'  : '---';
 
   let status = 'EN ROUTE';
@@ -255,11 +255,11 @@ async function showIndex(idx) {
         </div>
         <div class="data-row">
           <div class="data-label">LAT</div>
-          <div class="data-value">${lat}</div>
+          <div class="data-value">${lat}<span class="unit">°</span></div></div>
         </div>
         <div class="data-row">
           <div class="data-label">LON</div>
-          <div class="data-value">${lon}</div>
+          <div class="data-value">${lon}<span class="unit">°</span></div></div>
         </div>
       </div>
 
