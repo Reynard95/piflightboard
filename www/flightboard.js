@@ -228,7 +228,7 @@ async function showIndex(idx) {
   const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
   const flagUrl      = countryCode ? `/tar1090/country_flags/country_flag_${countryCode}.png` : '';
   const flagHtml     = flagUrl
-    ? `<img src="${flagUrl}" alt="${countryCode}" style="height:26px;width:auto;vertical-align:middle;border-radius:2px;" onerror="this.style.display='none'">`
+    ? `<img src="${flagUrl}" alt="${countryCode}" style="height:24px;width:auto;vertical-align:middle;border-radius:2px;" onerror="this.style.display='none'">`
     : '';
   const logoFallback = `<div class="logo-fallback">
                           <div>✈︎</div>
