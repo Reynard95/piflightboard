@@ -22,17 +22,17 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 .fade-in { display: flex; flex-direction: column; flex: 1; justify-content: space-between; min-height: 0; animation: fadeIn 0.6s ease; }
 
 /* ── AIRCRAFT HEADER ── */
-.ac-header  { display: flex; justify-content: space-between; align-items: flex-start; gap: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--amber-dim); }
-.ac-left    { display: flex; align-items: flex-start; gap: 20px; }
-.ac-right   { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.ac-info-col { display: flex; flex-direction: column; gap: 6px; }
-.logo-box { width: 220px; height: 220px; flex-shrink: 0; border-radius: 4px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.logo-box img { max-width: 220px; max-height: 220px; object-fit: fill; border-radius: 4px; }
-.logo-fallback { font-family: 'VT323', monospace; font-size: 60px; color: var(--amber-dim); background: transparent; }
-.ac-topinfo { display: flex; align-items: center; gap: 12px; justify-content: flex-end; }
+.ac-header   { display: flex; align-items: stretch; gap: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--amber-dim); }
+.logo-box    { width: 260px; height: 260px; flex-shrink: 0; align-self: center; border-radius: 4px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logo-box img { max-width: 260px; max-height: 260px; object-fit: fill; border-radius: 4px; }
+.logo-fallback { font-family: 'VT323', monospace; font-size: 72px; color: var(--amber-dim); background: transparent; }
+.ac-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ac-topinfo  { display: flex; align-items: center; gap: 12px; justify-content: flex-end; margin-bottom: 4px; }
+.ac-row      { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; }
+.route-dur-line { font-family: 'VT323', monospace; font-size: 22px; color: var(--amber-dim); letter-spacing: 0.1em; white-space: nowrap; }
 .typecode-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
 .reg-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
-.airline-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber); text-shadow: 0 0 20px var(--amber); letter-spacing: 0.06em; }
+.airline-val { font-family: 'VT323', monospace; font-size: 60px; line-height: 1; color: var(--amber); text-shadow: 0 0 20px var(--amber); letter-spacing: 0.06em; }
 .callsign-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber-bright); letter-spacing: 0.12em; }
 .ac-type-line { font-family: 'VT323', monospace; font-size: 26px; color: var(--amber-mid); letter-spacing: 0.12em; }
 .ac-flight-line { font-family: 'VT323', monospace; font-size: 26px; color: var(--amber-mid); letter-spacing: 0.22em; text-transform: uppercase; }
@@ -43,9 +43,7 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 .route-apt.unknown { color: var(--amber-dim); text-shadow: none; }
 .route-arrow { font-family: 'VT323', monospace; font-size: 44px; color: var(--amber-dim); letter-spacing: 0; }
 
-/* ── ROUTE DURATION ── */
-.ac-route-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.route-duration { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-family: 'VT323', monospace; font-size: 22px; color: var(--amber-dim); letter-spacing: 0.1em; }
+/* ── ROUTE ── */
 
 /* ── DATA GRID — 3 columns ── */
 .data-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 36px; }

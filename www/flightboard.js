@@ -228,7 +228,7 @@ async function showIndex(idx) {
   const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
   const flagUrl      = countryCode ? `/tar1090/country_flags/country_flag_${countryCode}.png` : '';
   const flagHtml     = flagUrl
-    ? `<img src="${flagUrl}" alt="${countryCode}" style="height:42px;width:auto;vertical-align:middle;border-radius:2px;" onerror="this.style.display='none'">`
+    ? `<img src="${flagUrl}" alt="${countryCode}" style="height:37px;width:auto;vertical-align:middle;border-radius:2px;" onerror="this.style.display='none'">`
     : '';
   const logoFallback = `<div class="logo-fallback">
                           <div>✈︎</div>
@@ -242,35 +242,31 @@ async function showIndex(idx) {
 
       <div class="ac-header">
 
-        <div class="ac-left">
-          <div class="logo-box" id="logo-wrap">
-            ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
-          </div>
-          <div class="ac-info-col">
-            <div class="airline-val">${airlineName}</div>
-            <div class="callsign-val">${rawCallsign}</div>
-            <div class="ac-type-line">${typeName || '—'}</div>
-            ${iataFlight ? `<div class="ac-flight-line">FLIGHT: ${iataFlight}</div>` : ''}
-          </div>
+        <div class="logo-box" id="logo-wrap">
+          ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
         </div>
 
-        <div class="ac-right">
+        <div class="ac-identity">
           <div class="ac-topinfo">
             <span class="typecode-val">${typeCode || '—'}</span>
             ${flagHtml}
             <span class="reg-val">${reg}</span>
           </div>
-          <div class="ac-route-wrap">
+          <div class="ac-row">
+            <div class="airline-val">${airlineName}</div>
             <div class="ac-route">
               <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
               <span class="route-arrow"> &#x25B6; </span>
               <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
             </div>
-            ${(etaStr !== '---' || routeDurStr !== '---') ? `
-            <div class="route-duration">
-              ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
-              ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
-            </div>` : ''}
+          </div>
+          <div class="ac-row">
+            <div class="callsign-val">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</div>
+            ${etaStr !== '---' ? `<div class="route-dur-line">LANDING <span class="v-gold">${etaStr}</span></div>` : '<div></div>'}
+          </div>
+          <div class="ac-row">
+            <div class="ac-type-line">${typeName || '—'}</div>
+            ${routeDurStr !== '---' ? `<div class="route-dur-line">${routeDurStr} TOTAL</div>` : '<div></div>'}
           </div>
         </div>
 
