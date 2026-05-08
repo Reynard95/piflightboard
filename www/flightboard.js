@@ -234,8 +234,8 @@ async function showIndex(idx) {
           <div class="data-value">${altBaro} <span class="unit">FT</span></div>
         </div>
         <div class="data-row">
-          <div class="data-label">STATUS</div>
-          <div class="data-value v-gold">${status}</div>
+          <div class="data-label">MACH</div>
+          <div class="data-value">${mach}</div>
         </div>
         <div class="data-row">
           <div class="data-label">LAT</div>
@@ -258,8 +258,8 @@ async function showIndex(idx) {
           <div class="data-value ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
         </div>
         <div class="data-row">
-          <div class="data-label">MACH</div>
-          <div class="data-value">${mach}</div>
+          <div class="data-label">STATUS</div>
+          <div class="data-value v-gold">${status}</div>
         </div>
       </div>
 
