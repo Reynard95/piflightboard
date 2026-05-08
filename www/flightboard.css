@@ -18,7 +18,7 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 .date-line { font-size: 12px; color: var(--amber-dim); letter-spacing: 0.12em; margin-top: 2px; }
 
 /* ── MAIN ── */
-.main { display: flex; flex-direction: column; gap: 16px; justify-content: center; }
+.main { display: flex; flex-direction: column; gap: 16px; justify-content: flex-start; }
 
 /* ── AIRCRAFT HEADER ── */
 .ac-header { display: flex; align-items: center; gap: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--amber-dim); }
