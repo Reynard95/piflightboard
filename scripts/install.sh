@@ -127,9 +127,9 @@ else
   echo "    Skipping db decompress — tar1090 not installed."
 fi
 
-# Patch tar1090 lighttpd config to add local asset aliases before the catch-all
-echo "[8c/10] Patching lighttpd tar1090 config for local assets..."
-sudo sed -i 's|"/tar1090/" => "/usr/local/share/tar1090/html/"|"/tar1090/airline_logos/" => "/opt/flighttracker/images/airline_logos/",\n  "/tar1090/country_flags/" => "/opt/flighttracker/images/country_flags/",\n  "/tar1090/" => "/usr/local/share/tar1090/html/"|' /etc/lighttpd/conf-enabled/88-tar1090.conf
+# Install dedicated lighttpd config for local asset aliases
+echo "[8c/10] Installing lighttpd asset aliases config..."
+cp "$REPO_DIR/config/lighttpd-assets.conf" /etc/lighttpd/conf-enabled/89-flighttracker-assets.conf
 echo "[9/10] Configuring lighttpd..."
 cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/tar1090.conf
 if [ -d "$WEB_DIR" ]; then

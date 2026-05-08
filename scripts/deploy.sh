@@ -17,13 +17,8 @@ echo "[deploy] Copying web files..."
 sudo cp "$REPO_DIR"/www/* "$WEB_DIR/"
 
 # ── lighttpd aliases for local assets ─────────────────────
-echo "[deploy] Patching lighttpd aliases for logos and flags..."
-# Remove any existing asset aliases first to avoid duplicates
-sudo sed -i '/tar1090\/airline_logos/d' /etc/lighttpd/conf-enabled/88-tar1090.conf
-sudo sed -i '/tar1090\/country_flags/d' /etc/lighttpd/conf-enabled/88-tar1090.conf
-# Add aliases before the catch-all /tar1090/ entry
-sudo sed -i 's|"/tar1090/" => "/usr/local/share/tar1090/html/"|"/tar1090/airline_logos/" => "/opt/flighttracker/images/airline_logos/",\n  "/tar1090/country_flags/" => "/opt/flighttracker/images/country_flags/",\n  "/tar1090/" => "/usr/local/share/tar1090/html/"|' \
-  /etc/lighttpd/conf-enabled/88-tar1090.conf
+echo "[deploy] Installing lighttpd asset aliases..."
+sudo cp "$REPO_DIR/config/lighttpd-assets.conf" "$CONFIG_DIR/89-flighttracker-assets.conf"
 
 # ── lighttpd reload ────────────────────────────────────────
 echo "[deploy] Reloading lighttpd..."
