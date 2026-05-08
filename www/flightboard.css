@@ -23,7 +23,7 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 
 /* ── AIRCRAFT HEADER ── */
 .ac-header   { display: flex; align-items: stretch; gap: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--amber-dim); }
-.logo-box    { width: 140px; height: 140px; flex-shrink: 0; align-self: center; border-radius: 4px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logo-box    { width: 140px; height: 140px; flex-shrink: 0; align-self: flex-start; margin-top: 42px; border-radius: 4px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .logo-box img { max-width: 140px; max-height: 140px; object-fit: contain; border-radius: 4px; }
 .logo-fallback { font-family: 'VT323', monospace; font-size: 56px; color: var(--amber-dim); background: transparent; }
 .ac-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
