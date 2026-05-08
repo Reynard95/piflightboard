@@ -1,6 +1,6 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --amber: #FFA040; --amber-dim: #6B3A00; --amber-mid: #B06018; --amber-bright: #FFD080;
+  --amber: #FFA040; --amber-dim: #9B5E10; --amber-mid: #C87828; --amber-bright: #FFD080;
   --bg: #000; --red: #FF4040; --green: #40FF80;
 }
 html, body { width: 100%; height: 100%; background: var(--bg); color: var(--amber); font-family: 'Share Tech Mono', monospace; overflow: hidden; }
@@ -27,27 +27,24 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 .logo-box img { max-width: 180px; max-height: 180px; object-fit: fill; border-radius: 4px; }
 .logo-fallback { font-family: 'VT323', monospace; font-size: 50px; color: var(--amber-dim); background: transparent; }
 
-.ac-identity { flex: 1; min-width: 0; }
-.ac-top-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.ac-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .ac-topinfo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.typecode-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
-.reg-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
-.airline-call-row { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-.airline-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber); text-shadow: 0 0 20px var(--amber); letter-spacing: 0.06em; white-space: nowrap; }
-.sep-val { font-family: 'VT323', monospace; font-size: 36px; color: var(--amber-dim); }
-.callsign-val { font-family: 'VT323', monospace; font-size: 38px; color: var(--amber-bright); letter-spacing: 0.12em; }
-.ac-type-line { font-family: 'VT323', monospace; font-size: 28px; color: var(--amber-mid); letter-spacing: 0.12em; margin-top: 4px; }
-.ac-flight-line { font-size: 14px; color: var(--amber-mid); letter-spacing: 0.22em; margin-top: 4px; text-transform: uppercase; }
+.typecode-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
+.reg-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 16px var(--amber); letter-spacing: 0.1em; }
+.airline-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber); text-shadow: 0 0 20px var(--amber); letter-spacing: 0.06em; }
+.callsign-val { font-family: 'VT323', monospace; font-size: 36px; line-height: 1; color: var(--amber-bright); letter-spacing: 0.12em; }
+.ac-type-line { font-family: 'VT323', monospace; font-size: 26px; color: var(--amber-mid); letter-spacing: 0.12em; }
+.ac-flight-line { font-family: 'VT323', monospace; font-size: 26px; color: var(--amber-mid); letter-spacing: 0.22em; text-transform: uppercase; }
 
 /* ── ROUTE ── */
-.ac-route { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
-.route-apt { font-family: 'VT323', monospace; font-size: 68px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 24px var(--amber); letter-spacing: 0.04em; white-space: nowrap; }
+.ac-route { display: flex; align-items: baseline; gap: 10px; }
+.route-apt { font-family: 'VT323', monospace; font-size: 60px; line-height: 1; color: var(--amber-bright); text-shadow: 0 0 24px var(--amber); letter-spacing: 0.04em; white-space: nowrap; }
 .route-apt.unknown { color: var(--amber-dim); text-shadow: none; }
-.route-arrow { font-family: 'VT323', monospace; font-size: 48px; color: var(--amber-dim); letter-spacing: 0; }
+.route-arrow { font-family: 'VT323', monospace; font-size: 44px; color: var(--amber-dim); letter-spacing: 0; }
 
 /* ── ROUTE DURATION ── */
-.ac-route-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-.route-duration { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-family: 'VT323', monospace; font-size: 22px; color: var(--amber-dim); letter-spacing: 0.1em; }
+.ac-route-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.route-duration { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; font-family: 'VT323', monospace; font-size: 22px; color: var(--amber-dim); letter-spacing: 0.1em; }
 
 /* ── DATA GRID — 3 columns ── */
 .data-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 36px; }

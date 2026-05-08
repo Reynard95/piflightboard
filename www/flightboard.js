@@ -241,30 +241,25 @@ async function showIndex(idx) {
           ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
         </div>
         <div class="ac-identity">
-          <div class="ac-top-row">
-            <div class="ac-topinfo">
-              <span class="typecode-val">${typeCode || '—'}</span>
-              <span class="reg-val">${reg}</span>
-              ${flagHtml}
-            </div>
-            <div class="ac-route-wrap">
-              <div class="ac-route">
-                <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
-                <span class="route-arrow"> &#x25B6; </span>
-                <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
-              </div>
-              ${(etaStr !== '---' || routeDurStr !== '---') ? `
-              <div class="route-duration">
-                ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
-                ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
-              </div>` : ''}
-            </div>
+          <div class="ac-topinfo">
+            <span class="typecode-val">${typeCode || '—'}</span>
+            <span class="reg-val">${reg}</span>
+            ${flagHtml}
           </div>
-          <div class="airline-call-row">
-            <span class="airline-val">${airlineName}</span>
-            <span class="sep-val">&#x2014;</span>
-            <span class="callsign-val">${rawCallsign}</span>
+          <div class="ac-route-wrap">
+            <div class="ac-route">
+              <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
+              <span class="route-arrow"> &#x25B6; </span>
+              <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+            </div>
+            ${(etaStr !== '---' || routeDurStr !== '---') ? `
+            <div class="route-duration">
+              ${etaStr !== '---' ? `<div>LANDING <span class="v-gold">${etaStr}</span></div>` : ''}
+              ${routeDurStr !== '---' ? `<div>${routeDurStr} TOTAL</div>` : ''}
+            </div>` : ''}
           </div>
+          <div class="airline-val">${airlineName}</div>
+          <div class="callsign-val">${rawCallsign}</div>
           <div class="ac-type-line">${typeName || '—'}</div>
           ${iataFlight ? `<div class="ac-flight-line">FLIGHT: ${iataFlight}</div>` : ''}
         </div>
