@@ -35,8 +35,8 @@ body::after  { content: ''; position: fixed; inset: 0; background: repeating-lin
 .airline-val { font-family: 'VT323', monospace; font-size: 42px; line-height: 1; color: var(--amber); text-shadow: 0 0 20px var(--amber); letter-spacing: 0.06em; white-space: nowrap; }
 .sep-val { font-family: 'VT323', monospace; font-size: 36px; color: var(--amber-dim); }
 .callsign-val { font-family: 'VT323', monospace; font-size: 38px; color: var(--amber-bright); letter-spacing: 0.12em; }
-.ac-type-line { font-family: 'VT323', monospace; font-size: 28px; color: var(--amber-dim); letter-spacing: 0.12em; margin-top: 4px; }
-.ac-flight-line { font-size: 14px; color: var(--amber-dim); letter-spacing: 0.22em; margin-top: 4px; text-transform: uppercase; }
+.ac-type-line { font-family: 'VT323', monospace; font-size: 28px; color: var(--amber-mid); letter-spacing: 0.12em; margin-top: 4px; }
+.ac-flight-line { font-size: 14px; color: var(--amber-mid); letter-spacing: 0.22em; margin-top: 4px; text-transform: uppercase; }
 
 /* ── ROUTE ── */
 .ac-route { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }

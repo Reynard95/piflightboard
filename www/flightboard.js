@@ -330,4 +330,25 @@ async function showIndex(idx) {
 }
 
 /* ── CYCLE ── */
-function resetPr
+function resetProgress() {
+  const bar = document.getElementById('progress');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  requestAnimationFrame(() => {
+    bar.style.transition = `width ${CYCLE_MS}ms linear`;
+    bar.style.width = '100%';
+  });
+}
+
+function startCycle() {
+  showIndex(0);
+  cycleTimer = setInterval(() => {
+    if (!allAircraft.length) return;
+    currentIndex = (currentIndex + 1) % Math.min(allAircraft.length, 30);
+    showIndex(currentIndex);
+  }, CYCLE_MS);
+}
+
+/* ── INIT ── */
+setInterval(fetchAircraft, FETCH_MS);
+fetchAircraft();
