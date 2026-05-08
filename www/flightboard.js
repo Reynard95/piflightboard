@@ -329,10 +329,6 @@ async function showIndex(idx) {
           <div class="telem-val">${ias}</div>
         </div>
         <div class="telem-cell">
-          <div class="telem-lbl">MACH</div>
-          <div class="telem-val">${mach}</div>
-        </div>
-        <div class="telem-cell">
           <div class="telem-lbl">WIND</div>
           <div class="telem-val">${wind}</div>
         </div>
