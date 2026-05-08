@@ -5,7 +5,7 @@ const AIRLINES = {
   BAW:'BRITISH AIRWAYS',     BEL:'BRUSSELS AIRLINES',   BOX:'DHL AIR',
   CCA:'AIR CHINA',           CES:'CHINA EASTERN',       CLX:'CARGOLUX',
   CSN:'CHINA SOUTHERN',      DAL:'DELTA AIR LINES',     DLH:'LUFTHANSA',
-  ETH:'ETHIOPIAN AIRLINES',  EXS:'JET2',                EZY:'EASYJET',
+  ETH:'ETHIOPIAN AIRLINES',  EWG:'EUROWINGS',            EXS:'JET2',                EZY:'EASYJET',
   FDX:'FEDEX EXPRESS',       FIN:'FINNAIR',             GEC:'LUFTHANSA CARGO',
   IBE:'IBERIA',              JAL:'JAPAN AIRLINES',      KLM:'KLM',
   MPH:'MARTINAIR CARGO',     MSR:'EGYPTAIR',            NOS:'NORWEGIAN',
@@ -16,33 +16,33 @@ const AIRLINES = {
   TFL:'TRANSAVIA FRANCE',    TGW:'TUI FLY NORDIC',      THY:'TURKISH AIRLINES',
   TOM:'TUI FLY',             TRA:'TRANSAVIA',           TUI:'TUI',
   UAE:'EMIRATES',            UAL:'UNITED AIRLINES',     UPS:'UPS AIRLINES',
-  VKG:'THOMAS COOK',         VLG:'VUELING',             WZZ:'WIZZ AIR',
+  VKG:'THOMAS COOK',         VLG:'VUELING',             WUK:'WIZZ AIR UK',         WZZ:'WIZZ AIR',
 };
 
 /* ── ICAO AIRLINE → ISO COUNTRY (for flag images) ── */
 const ICAO_TO_COUNTRY = {
   AAL:'US', AFR:'FR', AHY:'AZ', ANA:'JP', AUA:'AT', AZA:'IT',
   BAW:'GB', BEL:'BE', BOX:'GB', CCA:'CN', CES:'CN', CLX:'LU',
-  CSN:'CN', DAL:'US', DLH:'DE', ETH:'ET', EXS:'GB', EZY:'GB',
+  CSN:'CN', DAL:'US', DLH:'DE', ETH:'ET', EWG:'DE', EXS:'GB', EZY:'GB',
   FDX:'US', FIN:'FI', GEC:'DE', IBE:'ES', JAL:'JP', KLM:'NL',
   MPH:'NL', MSR:'EG', NOS:'NO', NSZ:'NL', OAL:'GR', PGT:'TR',
   QTR:'QA', RAM:'MA', RYR:'IE', SAS:'SE', SVA:'SA', SWR:'CH',
   SXS:'TR', TAP:'PT', TCX:'GB', TFL:'FR', TGW:'SE', THY:'TR',
   TOM:'BE', TRA:'NL', TUI:'DE', UAE:'AE', UAL:'US', UPS:'US',
-  VKG:'GB', VLG:'ES', WZZ:'HU',
+  VKG:'GB', VLG:'ES', WUK:'GB', WZZ:'HU',
 };
 
 /* ── ICAO AIRLINE → IATA 2-LETTER CODE (for IATA flight number display) ── */
 const ICAO_TO_IATA = {
   AAL:'AA', AFR:'AF', AHY:'J2', ANA:'NH', AUA:'OS', AZA:'AZ',
   BAW:'BA', BEL:'SN', BOX:'QY', CCA:'CA', CES:'MU', CLX:'CV',
-  CSN:'CZ', DAL:'DL', DLH:'LH', ETH:'ET', EXS:'LS', EZY:'U2',
+  CSN:'CZ', DAL:'DL', DLH:'LH', ETH:'ET', EWG:'EW', EXS:'LS', EZY:'U2',
   FDX:'FX', FIN:'AY', GEC:'LH', IBE:'IB', JAL:'JL', KLM:'KL',
   MPH:'MP', MSR:'MS', NOS:'DY', NSZ:'NS', OAL:'OA', PGT:'PC',
   QTR:'QR', RAM:'AT', RYR:'FR', SAS:'SK', SVA:'SV', SWR:'LX',
   SXS:'XQ', TAP:'TP', TCX:'BY', TFL:'TO', TGW:'6B', THY:'TK',
   TOM:'TB', TRA:'HV', TUI:'X3', UAE:'EK', UAL:'UA', UPS:'5X',
-  VKG:'DK', VLG:'VY', WZZ:'W6',
+  VKG:'DK', VLG:'VY', WUK:'W9', WZZ:'W6',
 };
 
 /* ── AIRCRAFT TYPE CODES → FULL NAME ── */
