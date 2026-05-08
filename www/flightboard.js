@@ -85,21 +85,35 @@ async function loadDbFile(prefix) {
   } catch(e) { return null; }
 }
 
-/* ── ROUTE PROXY ── */
+/* ── ROUTE LOOKUP ── */
 async function fetchRoute(ac) {
   const cs = (ac.flight || '').trim();
   if (!cs || routeCache[cs] !== undefined) return routeCache[cs] || null;
   routeCache[cs] = null;
+
+  // Primary: adsbdb.com — CORS-friendly, returns real IATA callsign + route
+  try {
+    const res = await fetch(`https://api.adsbdb.com/v0/callsign/${encodeURIComponent(cs)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const r = data?.response?.flightroute;
+      if (r) { routeCache[cs] = r; return r; }
+    }
+  } catch(e) {}
+
+  // Fallback: adsb.lol via local proxy
   try {
     const res = await fetch(ROUTE_API, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ icao: ac.hex, callsign: cs, lat: ac.lat || 0, lng: ac.lon || 0, postime: Date.now() })
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const r = data?.route?.[0];
-    if (r) { routeCache[cs] = r; return r; }
+    if (res.ok) {
+      const data = await res.json();
+      const r = data?.route?.[0];
+      if (r) { routeCache[cs] = r; return r; }
+    }
   } catch(e) {}
+
   return null;
 }
 
@@ -170,16 +184,12 @@ async function showIndex(idx) {
   else if (vr >  300) status = 'CLIMBING';
   else if (vr < -300) status = 'DESCENDING';
 
-  const origin = route?.origin?.iata || '';
-  const dest   = route?.destination?.iata || '';
+  const origin = route?.origin?.iata_code || route?.origin?.iata || '';
+  const dest   = route?.destination?.iata_code || route?.destination?.iata || '';
 
-  /* IATA flight number: swap ICAO prefix for IATA prefix, keep numeric suffix */
-  const rawCallsign  = (ac.flight || '').trim();
-  const iataPrefix   = route?.airline?.iata || ICAO_TO_IATA[icaoCode] || '';
-  const flightSuffix = icaoCode
-    ? rawCallsign.replace(new RegExp('^' + icaoCode, 'i'), '')
-    : rawCallsign.replace(/^[A-Z]{2,3}/i, '');
-  const iataFlight   = iataPrefix && flightSuffix ? (iataPrefix + flightSuffix) : '—--';
+  /* IATA flight number: only show real data returned by the API, never derived */
+  const rawCallsign = (ac.flight || '').trim();
+  const iataFlight  = route?.callsign_iata || '';
   
   /* Local assets */
   const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
@@ -220,7 +230,7 @@ async function showIndex(idx) {
             <span class="callsign-val">${rawCallsign}</span>
           </div>
           <div class="ac-type-line">${typeName || '—'}</div>
-          <div class="ac-flight-line">FLIGHT: ${iataFlight}</div>
+          ${iataFlight ? `<div class="ac-flight-line">FLIGHT: ${iataFlight}</div>` : ''}
         </div>
       </div>
 
@@ -320,25 +330,4 @@ async function showIndex(idx) {
 }
 
 /* ── CYCLE ── */
-function resetProgress() {
-  const bar = document.getElementById('progress');
-  bar.style.transition = 'none';
-  bar.style.width = '0%';
-  requestAnimationFrame(() => {
-    bar.style.transition = `width ${CYCLE_MS}ms linear`;
-    bar.style.width = '100%';
-  });
-}
-
-function startCycle() {
-  showIndex(0);
-  cycleTimer = setInterval(() => {
-    if (!allAircraft.length) return;
-    currentIndex = (currentIndex + 1) % Math.min(allAircraft.length, 30);
-    showIndex(currentIndex);
-  }, CYCLE_MS);
-}
-
-/* ── INIT ── */
-setInterval(fetchAircraft, FETCH_MS);
-fetchAircraft();
+function resetPr
