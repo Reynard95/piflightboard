@@ -137,7 +137,6 @@ async function fetchAircraft() {
   try {
     const res  = await fetch(AIRCRAFT_JSON + '?_=' + Date.now());
     const data = await res.json();
-    document.getElementById('msg-count').textContent = 'MESSAGES: ' + (data.messages || 0).toLocaleString();
     allAircraft = (data.aircraft || [])
       .filter(a => a.lat && a.lon && a.flight && a.flight.trim())
       .sort((a, b) => (b.rssi || -99) - (a.rssi || -99));
