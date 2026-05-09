@@ -32,11 +32,11 @@ const FETCH_MS      = 30000;   /* fetch new data every 30s */
 
     root.style.setProperty('--sz-airline',  Math.round(s * 0.115) + 'px');
     root.style.setProperty('--sz-iata',     Math.round(s * 0.280) + 'px');
-    root.style.setProperty('--sz-city',     Math.round(s * 0.023) + 'px');
+    root.style.setProperty('--sz-city',     Math.round(s * 0.032) + 'px');
     root.style.setProperty('--sz-data-val', Math.round(s * 0.082) + 'px');
-    root.style.setProperty('--sz-data-lbl', Math.round(s * 0.023) + 'px');
-    root.style.setProperty('--sz-type',     Math.round(s * 0.040) + 'px');
-    root.style.setProperty('--sz-eta',      Math.round(s * 0.040) + 'px');
+    root.style.setProperty('--sz-data-lbl', Math.round(s * 0.030) + 'px');
+    root.style.setProperty('--sz-type',     Math.round(s * 0.052) + 'px');
+    root.style.setProperty('--sz-eta',      Math.round(s * 0.052) + 'px');
     root.style.setProperty('--sz-logo',     Math.round(s * 0.210) + 'px');
   } catch(e) {}
 })();
@@ -259,18 +259,16 @@ async function showIndex(idx) {
           <div class="hero-identity">
             <div class="airline-name">${airlineName}</div>
             <div class="hero-sub">
-              <span class="hero-callsign">${rawCallsign}}</span>
+              <span class="hero-callsign">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</span>
             </div>
           </div>
           <div class="hero-meta">
-            <div>
+            <div class="hero-meta-row">
               <span class="typecode-val">${typeCode || '—'}</span>
               ${flagHtml}
               <span class="reg-val">${reg}</span>
             </div>
-            <div class="hero-sub">
-              <span class="hero-typename">${typeName || '—'}</span>
-            </div>
+            ${typeName ? `<div class="hero-typename">${typeName}</div>` : ''}
           </div>
         </div>
 

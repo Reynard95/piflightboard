@@ -93,22 +93,28 @@
   white-space: nowrap;
 }
 
+/* Type code, flag, reg on top row — aircraft full name below, all right-aligned */
+.hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: clamp(2px, 0.35vh, 7px);
+  flex-shrink: 0;
+}
+
+.hero-meta-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 22px);
+}
+
 .hero-typename {
   font-family: 'VT323', monospace;
   font-size: var(--sz-type);
   color: var(--fg-mid);
   letter-spacing: 0.10em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Type code, flag and reg — right-aligned cluster, same size as airline */
-.hero-meta {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1vw, 22px);
-  flex-shrink: 0;
+  text-align: right;
 }
 
 /* ── ROUTE — centrepiece ── */
@@ -148,6 +154,7 @@
 
 .route-center {
   flex: 1;
+  max-width: clamp(160px, 28vw, 360px);
   display: flex;
   flex-direction: column;
   align-items: center;
