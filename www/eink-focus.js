@@ -263,9 +263,11 @@ async function showIndex(idx) {
             </div>
           </div>
           <div class="hero-meta">
-            <span class="typecode-val">${typeCode || '—'}</span>
-            ${flagHtml}
-            <span class="reg-val">${reg}</span>
+            <div>
+              <span class="typecode-val">${typeCode || '—'}</span>
+              ${flagHtml}
+              <span class="reg-val">${reg}</span>
+            </div>
             <div class="hero-sub">
               <span class="hero-typename">${typeName || '—'}</span>
             </div>
