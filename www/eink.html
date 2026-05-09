@@ -3,30 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flight Board — E-Ink</title>
+<title>Flight Display — E-Ink</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="eink.css">
 </head>
 <body>
 <div class="board">
 
-  <div class="hdr">
-    <span class="hdr-title">✈ DEPARTURES</span>
-    <span class="hdr-clock" id="clock">00:00:00</span>
+  <div class="main" id="main">
+    <div class="no-signal">
+      <div class="no-signal-title">SCANNING...</div>
+      <div class="no-signal-sub">✈︎ AWAITING AIRCRAFT DATA ✈︎</div>
+    </div>
   </div>
 
-  <div class="col-hdrs">
-    <div class="ch">FLIGHT</div>
-    <div class="ch">FROM</div>
-    <div class="ch">TO</div>
-    <div class="ch">ALT FT</div>
-    <div class="ch">SPD KT</div>
-    <div class="ch">STATUS</div>
+  <div class="footer">
+    <div class="ticker-label">NOW TRACKING</div>
+    <div class="ticker-track"><div class="ticker-inner" id="ticker"></div></div>
+    <div class="ac-count" id="ac-count">0 AIRCRAFT</div>
+    <div class="clock" id="clock">00:00:00</div>
   </div>
-
-  <div class="rows" id="rows"></div>
 
 </div>
+<div class="progress-bar" id="progress" style="width:0%"></div>
+
 <script src="data.js"></script>
 <script src="eink.js"></script>
 </body>

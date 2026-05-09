@@ -1,128 +1,90 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* ── E-INK PALETTE: pure black and white only ── */
 :root {
-  --blk: #000000;
-  --wht: #ffffff;
-  --mid: #888888;   /* mid-grey for secondary text */
-  --lgt: #dddddd;   /* light grey for dividers on white rows */
+  --fg:     #000000;
+  --fg-dim: #555555;
+  --fg-mid: #222222;
+  --bg:     #ffffff;
+  --sep:    #cccccc;
 }
 
-html, body {
-  width: 100%; height: 100%;
-  background: var(--wht);
-  color: var(--blk);
-  font-family: 'Share Tech Mono', monospace;
-  overflow: hidden;
-}
+html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg); font-family: 'Share Tech Mono', monospace; overflow: hidden; }
 
 /* ── BOARD ── */
-.board {
-  width: 100vw; height: 100vh;
-  display: flex; flex-direction: column;
-  padding: clamp(10px,1.2vh,28px) clamp(18px,2vw,56px);
-}
+.board { width: 100vw; height: 100vh; display: grid; grid-template-rows: 1fr auto; padding: clamp(16px, 1.8vh, 40px) clamp(24px, 2.5vw, 80px) 0; }
 
-/* ── HEADER ── */
-.hdr {
-  display: flex; justify-content: space-between; align-items: center;
-  padding-bottom: clamp(6px,0.7vh,14px);
-  border-bottom: 3px solid var(--blk);
-  flex-shrink: 0;
-}
-.hdr-title {
-  font-family: 'VT323', monospace;
-  font-size: clamp(24px,2.6vw,64px);
-  letter-spacing: 0.3em;
-  color: var(--blk);
-  font-weight: bold;
-}
-.hdr-clock {
-  font-family: 'VT323', monospace;
-  font-size: clamp(20px,2vw,50px);
-  color: var(--mid);
-  letter-spacing: 0.1em;
-}
+/* ── CLOCK ── */
+.clock { font-family: 'VT323', monospace; font-size: clamp(16px, 1.3vw, 34px); color: var(--fg); white-space: nowrap; }
 
-/* ── COLUMN HEADERS ── */
-.col-hdrs {
-  display: grid;
-  grid-template-columns: 3fr 1.2fr 1.2fr 1.4fr 1.2fr 2.6fr;
-  background: var(--blk);
-  padding: clamp(4px,0.5vh,10px) 0;
-  flex-shrink: 0;
-}
-.ch {
-  font-size: clamp(8px,0.58vw,13px);
-  color: var(--wht);
-  letter-spacing: 0.28em;
-  padding: 0 clamp(6px,0.6vw,18px);
-}
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.fade-in { display: flex; flex-direction: column; flex: 1; justify-content: space-between; min-height: 0; }
 
-/* ── ROWS CONTAINER ── */
-.rows {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* ── AIRCRAFT HEADER ── */
+.ac-header   { display: flex; align-items: stretch; gap: clamp(16px, 1.7vw, 48px); padding-bottom: clamp(10px, 1.2vh, 24px); border-bottom: 2px solid var(--fg); }
+.logo-box    { width: clamp(80px, 7.5vw, 200px); height: clamp(80px, 7.5vw, 200px); flex-shrink: 0; align-self: flex-start; margin-top: clamp(24px, 4vh, 72px); border: 1px solid var(--sep); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.logo-fallback { font-family: 'VT323', monospace; font-size: clamp(36px, 3.5vw, 80px); color: var(--fg-dim); text-align: center; }
+.ac-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 5px); }
+.ac-topinfo  { display: flex; align-items: center; gap: clamp(8px, 0.8vw, 20px); justify-content: flex-end; margin-bottom: clamp(2px, 0.4vh, 8px); }
+.ac-row      { display: flex; justify-content: space-between; align-items: baseline; gap: clamp(12px, 1.5vw, 40px); }
+.route-dur-line { font-family: 'VT323', monospace; font-size: clamp(14px, 1.2vw, 32px); color: var(--fg-dim); letter-spacing: 0.1em; white-space: nowrap; }
+.flag-img    { height: clamp(14px, 1.4vw, 28px); width: auto; vertical-align: middle; }
 
-/* ── ROW — alternating white/black ── */
-.brow {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 3fr 1.2fr 1.2fr 1.4fr 1.2fr 2.6fr;
-  border-bottom: 1px solid var(--lgt);
-  align-items: center;
-  min-height: 0;
-  overflow: hidden;
-}
+/* ── IDENTITY TEXT ── */
+.typecode-val   { font-family: 'VT323', monospace; font-size: clamp(22px, 1.9vw, 52px); color: var(--fg);     letter-spacing: 0.1em; }
+.reg-val        { font-family: 'VT323', monospace; font-size: clamp(22px, 1.9vw, 52px); color: var(--fg);     letter-spacing: 0.1em; }
+.airline-val    { font-family: 'VT323', monospace; font-size: clamp(36px, 3.2vw, 90px); color: var(--fg);     letter-spacing: 0.06em; }
+.callsign-val   { font-family: 'VT323', monospace; font-size: clamp(22px, 1.9vw, 52px); color: var(--fg-mid); letter-spacing: 0.12em; }
+.ac-type-line   { font-family: 'VT323', monospace; font-size: clamp(16px, 1.4vw, 38px); color: var(--fg-mid); letter-spacing: 0.12em; }
+.ac-flight-line { font-family: 'VT323', monospace; font-size: clamp(16px, 1.4vw, 38px); color: var(--fg-mid); letter-spacing: 0.22em; text-transform: uppercase; }
 
-/* Even rows: black background, white text */
-.brow:nth-child(even) {
-  background: var(--blk);
-  color: var(--wht);
-  border-bottom-color: #333;
-}
+/* ── ROUTE ── */
+.ac-route   { display: flex; align-items: baseline; gap: clamp(6px, 0.6vw, 16px); }
+.route-apt  { font-family: 'VT323', monospace; font-size: clamp(36px, 3.2vw, 90px); color: var(--fg); letter-spacing: 0.04em; white-space: nowrap; }
+.route-apt.unknown { color: var(--fg-dim); }
+.route-arrow { font-family: 'VT323', monospace; font-size: clamp(28px, 2.3vw, 66px); color: var(--fg-dim); }
 
-/* Odd rows: white background, black text */
-.brow:nth-child(odd) {
-  background: var(--wht);
-  color: var(--blk);
-}
+/* ── DATA GRID ── */
+.data-grid  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 clamp(20px, 2vw, 60px); }
+.data-row   { display: flex; align-items: baseline; justify-content: space-between; gap: clamp(8px, 0.8vw, 20px); padding: clamp(6px, 0.8vh, 16px) 0; border-bottom: 1px solid var(--sep); }
+.data-label { font-size: clamp(11px, 1vw, 24px); color: var(--fg-dim); letter-spacing: 0.25em; white-space: nowrap; }
+.data-value { font-family: 'VT323', monospace; font-size: clamp(36px, 3vw, 82px); color: var(--fg); letter-spacing: 0.04em; text-align: right; }
+.data-value .unit { font-size: clamp(13px, 1.1vw, 28px); color: var(--fg-dim); margin-left: 4px; }
 
-.brow:last-child { border-bottom: none; }
+/* ── STATUS COLOURS — e-ink uses weight/decoration instead of colour ── */
+.v-blue  { color: var(--fg); }
+.v-gold  { color: var(--fg); }
+.v-pink  { color: var(--fg-mid); }
+.v-green { color: var(--fg); font-weight: 700; }   /* climbing  → bold   */
+.v-red   { color: var(--fg); font-style: italic; }  /* descending → italic */
 
-/* ── CELL ── */
-.bcell {
-  padding: 0 clamp(4px,0.45vw,12px);
-  display: flex;
-  align-items: center;
-  height: 100%;
-  overflow: hidden;
-  font-family: 'VT323', monospace;
-  font-size: clamp(18px,2.1vh,58px);
-  line-height: 1;
-  white-space: nowrap;
-}
+/* ── TELEMETRY ── */
+.telem-row  { display: flex; gap: 0; border-top: 1px solid var(--sep); padding-top: clamp(8px, 0.9vh, 18px); flex-wrap: wrap; }
+.telem-cell { flex: 1; min-width: clamp(70px, 6vw, 150px); display: flex; flex-direction: column; gap: 3px; padding: 0 clamp(10px, 1vw, 24px) 0 0; }
+.telem-cell:first-child { padding-left: 0; }
+.telem-cell + .telem-cell { border-left: 1px solid var(--sep); padding-left: clamp(10px, 1vw, 24px); }
+.telem-lbl  { font-size: clamp(9px, 0.65vw, 15px); color: var(--fg-dim); letter-spacing: 0.22em; text-transform: uppercase; }
+.telem-val  { font-family: 'VT323', monospace; font-size: clamp(18px, 1.6vw, 44px); color: var(--fg); letter-spacing: 0.08em; line-height: 1.1; }
+.telem-unit { font-size: clamp(9px, 0.65vw, 15px); color: var(--fg-dim); }
 
-/* Separator between cells — adapts to row background */
-.brow:nth-child(odd) .bcell + .bcell  { border-left: 1px solid var(--lgt); }
-.brow:nth-child(even) .bcell + .bcell { border-left: 1px solid #333; }
+/* ── NO SIGNAL ── */
+.no-signal       { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: clamp(14px, 2vh, 36px); }
+.no-signal-title { font-family: 'VT323', monospace; font-size: clamp(48px, 5vw, 130px); letter-spacing: 0.3em; color: var(--fg-dim); }
+.no-signal-sub   { font-size: clamp(12px, 1.1vw, 26px); letter-spacing: 0.2em; color: var(--fg-dim); }
 
-/* ── SECONDARY TEXT (from/to airports) ── */
-.brow:nth-child(odd)  .c-dim { color: var(--mid); }
-.brow:nth-child(even) .c-dim { color: #aaa; }
+/* ── FOOTER — inverted (white on black) ── */
+.footer      { background: var(--fg); color: var(--bg); border-top: 2px solid var(--fg); padding: clamp(8px, 0.9vh, 18px) clamp(24px, 2.5vw, 80px); margin: 0 calc(-1 * clamp(24px, 2.5vw, 80px)); display: flex; align-items: center; gap: clamp(12px, 1.5vw, 36px); overflow: hidden; }
+.ticker-label { font-size: clamp(9px, 0.65vw, 15px); color: rgba(255,255,255,0.6); letter-spacing: 0.2em; white-space: nowrap; }
+.ticker-track { flex: 1; overflow: hidden; }
+.ticker-inner { display: flex; gap: clamp(24px, 2.5vw, 64px); white-space: nowrap; animation: ticker 30s linear infinite; }
+.ticker-item  { font-family: 'VT323', monospace; font-size: clamp(16px, 1.3vw, 32px); color: rgba(255,255,255,0.6); letter-spacing: 0.15em; cursor: pointer; transition: color 0.2s; }
+.ticker-item:hover  { color: #fff; }
+.ticker-item.active { color: #fff; text-decoration: underline; }
+.ticker-sep  { color: rgba(255,255,255,0.3); }
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ac-count    { font-size: clamp(9px, 0.65vw, 15px); color: rgba(255,255,255,0.6); letter-spacing: 0.15em; white-space: nowrap; }
+.clock       { font-family: 'VT323', monospace; font-size: clamp(16px, 1.3vw, 34px); color: #fff; white-space: nowrap; }
 
-/* ── STATUS COLOURS ─ bold only, no glow ── */
-.brow:nth-child(odd)  .c-green { color: #006600; font-weight: bold; }
-.brow:nth-child(even) .c-green { color: #40FF80; font-weight: bold; }
-
-.brow:nth-child(odd)  .c-red   { color: #880000; font-weight: bold; }
-.brow:nth-child(even) .c-red   { color: #FF6060; font-weight: bold; }
-
-.brow:nth-child(odd)  .c-gold  { color: var(--blk); }
-.brow:nth-child(even) .c-gold  { color: var(--wht); }
-
-/* ── EMPTY ROW INDICATOR ── */
-.brow.empty .bcell { opacity: 0.15; }
+/* ── PROGRESS BAR — thin black line at top of footer ── */
+.progress-bar { position: fixed; bottom: 0; left: 0; height: 3px; background: var(--fg); transition: width linear; }
