@@ -7,15 +7,16 @@ const FETCH_MS      = 30000;   /* fetch new data every 30s */
 
 /* ── RESOLUTION SCALING ─────────────────────────────────────────────────────
  *  Optional URL param:  ?res=800x480  (width × height in px)
- *  Overrides --focus-* CSS tokens for pixel-perfect sizing on known panels.
+ *  Overrides --sz-* CSS tokens for pixel-perfect sizing on known panels.
  *
  *  Common e-ink resolutions:
- *    400x300   (4.2")   → ?res=400x300
- *    648x480   (5.83")  → ?res=648x480
- *    800x480   (7.5")   → ?res=800x480
- *    1200x825  (9.7")   → ?res=1200x825
- *    1404x1872 (10.3" portrait) → ?res=1404x1872
- *    1600x1200 (13.3")  → ?res=1600x1200
+ *    400x300   (4.2")              → ?res=400x300
+ *    648x480   (5.83")             → ?res=648x480
+ *    800x480   (7.5" landscape)    → ?res=800x480
+ *    1200x825  (9.7" landscape)    → ?res=1200x825
+ *    480x800   (portrait)          → ?res=480x800
+ *    1404x1872 (10.3" portrait)    → ?res=1404x1872
+ *    1600x1200 (13.3")             → ?res=1600x1200
  * ─────────────────────────────────────────────────────────────────────────── */
 (function applyResolution() {
   try {
@@ -26,15 +27,17 @@ const FETCH_MS      = 30000;   /* fetch new data every 30s */
     const h = parseInt(parts[1], 10);
     if (!w || !h) return;
 
-    /* Use shorter edge as the scale base */
-    const s   = Math.min(w, h);
+    const s    = Math.min(w, h);   /* shorter edge drives scale */
     const root = document.documentElement;
 
-    root.style.setProperty('--focus-logo',         Math.round(s * 0.22)  + 'px');
-    root.style.setProperty('--focus-airline',       Math.round(s * 0.11)  + 'px');
-    root.style.setProperty('--focus-route',         Math.round(s * 0.11)  + 'px');
-    root.style.setProperty('--focus-arrow',         Math.round(s * 0.085) + 'px');
-    root.style.setProperty('--focus-fallback-font', Math.round(s * 0.125) + 'px');
+    root.style.setProperty('--sz-airline',  Math.round(s * 0.115) + 'px');
+    root.style.setProperty('--sz-iata',     Math.round(s * 0.280) + 'px');
+    root.style.setProperty('--sz-city',     Math.round(s * 0.023) + 'px');
+    root.style.setProperty('--sz-data-val', Math.round(s * 0.082) + 'px');
+    root.style.setProperty('--sz-data-lbl', Math.round(s * 0.023) + 'px');
+    root.style.setProperty('--sz-type',     Math.round(s * 0.040) + 'px');
+    root.style.setProperty('--sz-eta',      Math.round(s * 0.040) + 'px');
+    root.style.setProperty('--sz-logo',     Math.round(s * 0.210) + 'px');
   } catch(e) {}
 })();
 
@@ -68,16 +71,6 @@ function fmtDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
   return h > 0 ? `${h}H ${String(m).padStart(2, '0')}M` : `${m}M`;
-}
-
-function srcLabel(t) {
-  if (!t) return '---';
-  if (t.startsWith('adsb')) return 'ADS-B';
-  if (t === 'mlat')          return 'MLAT';
-  if (t.startsWith('tisb'))  return 'TIS-B';
-  if (t.startsWith('adsr'))  return 'ADS-R';
-  if (t === 'mode_s')        return 'MODE-S';
-  return t.toUpperCase();
 }
 
 function getTypeName(t) {
@@ -171,7 +164,7 @@ async function fetchAircraft() {
   } catch(e) {}
 }
 
-/* ── STATIC AIRCRAFT LIST (no animation — e-ink safe) ── */
+/* ── STATIC AIRCRAFT LIST ── */
 function updateTicker() {
   document.getElementById('ac-count').textContent = allAircraft.length + ' AIRCRAFT';
   const items = allAircraft.slice(0, 30).map((ac, i) =>
@@ -184,45 +177,48 @@ function updateTicker() {
 async function showIndex(idx) {
   if (!allAircraft.length) return;
   currentIndex = idx % allAircraft.length;
-  const ac          = allAircraft[currentIndex];
-  const icaoCode    = getAirlineCode(ac.flight);
-  const countryCode = ICAO_TO_COUNTRY[icaoCode] || '';
-  const airlineName = AIRLINES[icaoCode] || icaoCode || (ac.flight || '').trim();
+  const ac       = allAircraft[currentIndex];
+  const icaoCode = getAirlineCode(ac.flight);
 
   const dbRow    = await lookupHex(ac.hex);
-  const reg      = (ac.r || '').trim() || (dbRow?.reg || '').trim() || ac.hex.toUpperCase();
-  const typeCode = (ac.t || '').trim() || (dbRow?.type || '').trim();
-  const typeName = dbRow?.desc ? dbRow.desc.toUpperCase() : getTypeName(typeCode);
+  const route    = await fetchRoute(ac);
 
-  const route = await fetchRoute(ac);
+  /* ── Airline name: local dict → route API → ICAO code ──────────────────
+   *  Computed after route fetch so the API name is available as a fallback.
+   *  This prevents unknown airlines from showing the raw 3-letter code.
+   * ────────────────────────────────────────────────────────────────────── */
+  const airlineName =
+    AIRLINES[icaoCode]                              ||
+    (route?.airline?.name || '').toUpperCase().trim() ||
+    icaoCode                                        ||
+    (ac.flight || '').trim();
 
-  const vr       = ac.baro_rate || 0;
-  const vrSign   = vr > 0 ? '+' : '';
-  const vrClass  = vr > 100 ? 'v-green' : vr < -100 ? 'v-red' : '';
-  const vsStr    = ac.baro_rate != null ? vrSign + fmt(ac.baro_rate) : '---';
-  const altBaro  = ac.alt_baro === 'ground' ? 'GND' : fmt(ac.alt_baro);
-  const speed    = fmt(ac.gs);
-  const ias      = ac.ias      != null ? fmt(ac.ias) + ' KTS' : '---';
-  const mach     = ac.mach     != null ? ac.mach.toFixed(3)   : '---';
-  const track    = ac.track    != null ? fmt(ac.track) + '°'  : '---';
-  const dist     = ac.r_dst               ? ac.r_dst.toFixed(1)       : '---';
-  const lat      = ac.lat      != null ? ac.lat.toFixed(3) + '°'      : '--°';
-  const lon      = ac.lon      != null ? ac.lon.toFixed(3) + '°'      : '--°';
-  const rssi     = ac.rssi     != null ? ac.rssi.toFixed(1) + ' dBFS' : '---';
-  const source   = srcLabel(ac.type);
-  const wind     = (ac.wd != null && ac.ws != null) ? `${fmt(ac.wd)}° / ${fmt(ac.ws)} KTS` : '---';
-  const oat      = ac.oat      != null ? ac.oat.toFixed(1) + ' °C'    : '---';
-  const navHdg   = ac.nav_heading != null ? fmt(ac.nav_heading) + '°' : '---';
-  const msgCount = ac.messages != null ? ac.messages.toLocaleString() : '---';
-  const seen     = ac.seen     != null ? ac.seen.toFixed(1) + 'S AGO' : '---';
+  const countryCode = ICAO_TO_COUNTRY[icaoCode] || '';
+  const reg         = (ac.r || '').trim() || (dbRow?.reg || '').trim() || ac.hex.toUpperCase();
+  const typeCode    = (ac.t || '').trim() || (dbRow?.type || '').trim();
+  const typeName    = dbRow?.desc ? dbRow.desc.toUpperCase() : getTypeName(typeCode);
+
+  /* ── Flight data ── */
+  const vr      = ac.baro_rate || 0;
+  const vrSign  = vr > 0 ? '+' : '';
+  const vrClass = vr > 100 ? 'v-green' : vr < -100 ? 'v-red' : '';
+  const vsStr   = ac.baro_rate != null ? vrSign + fmt(ac.baro_rate) : '---';
+  const altBaro = ac.alt_baro === 'ground' ? 'GND' : fmt(ac.alt_baro);
+  const speed   = fmt(ac.gs);
+  const track   = ac.track != null ? fmt(ac.track) + '°' : '---';
+  const dist    = ac.r_dst ? ac.r_dst.toFixed(1) : '---';
 
   let status = 'EN ROUTE';
   if (ac.alt_baro === 'ground') status = 'ON GROUND';
   else if (vr >  300) status = 'CLIMBING';
   else if (vr < -300) status = 'DESCENDING';
+  const statusClass = vr > 300 ? 'v-green' : vr < -300 ? 'v-red' : '';
 
-  const origin = route?.origin?.iata_code || route?.origin?.iata || '';
-  const dest   = route?.destination?.iata_code || route?.destination?.iata || '';
+  /* ── Route & ETA ── */
+  const origin     = route?.origin?.iata_code      || route?.origin?.iata      || '';
+  const dest       = route?.destination?.iata_code || route?.destination?.iata || '';
+  const originCity = route?.origin?.name           || '';
+  const destCity   = route?.destination?.name      || '';
 
   const rawCallsign  = (ac.flight || '').trim();
   const airlineIata  = route?.airline?.iata || ICAO_TO_IATA[icaoCode] || '';
@@ -242,84 +238,82 @@ async function showIndex(idx) {
     routeDurStr = fmtDuration((distTotal  / gsKmh) * 60);
   }
 
+  /* ── Images ── */
   const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
   const flagUrl      = countryCode ? `/tar1090/country_flags/country_flag_${countryCode}.png` : '';
   const flagHtml     = flagUrl
     ? `<img src="${flagUrl}" alt="${countryCode}" class="flag-img" onerror="this.style.display='none'">`
     : '';
-  const logoFallback = `<div class="logo-fallback"><div>✈︎</div><div>${(icaoCode || '?')}</div></div>`;
+  const logoFallback = `<div class="logo-fallback"><div>✈︎</div><div>${icaoCode || '?'}</div></div>`;
 
-  const statusClass = vr > 300 ? 'v-green' : vr < -300 ? 'v-red' : '';
-
-  /* ── Same HTML structure as eink.js — no telemetry row ── */
   document.getElementById('main').innerHTML = `
     <div class="fade-in">
 
-      <div class="ac-header">
-        <div class="logo-box" id="logo-wrap">
-          ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
-        </div>
-        <div class="ac-identity">
-          <div class="ac-topinfo">
+      <div class="hero">
+
+        <!-- Top strip: logo | airline name + callsign/type | type code flag reg -->
+        <div class="hero-top">
+          <div class="logo-box" id="logo-wrap">
+            ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
+          </div>
+          <div class="hero-identity">
+            <div class="airline-name">${airlineName}</div>
+            <div class="hero-sub">
+              <span class="hero-callsign">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</span>
+              <span class="hero-typename">${typeName || '—'}</span>
+            </div>
+          </div>
+          <div class="hero-meta">
             <span class="typecode-val">${typeCode || '—'}</span>
             ${flagHtml}
             <span class="reg-val">${reg}</span>
           </div>
-          <div class="ac-row">
-            <div class="airline-val">${airlineName}</div>
-            <div class="ac-route">
-              <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
-              <span class="route-arrow"> &#x25B6; </span>
-              <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
-            </div>
-          </div>
-          <div class="ac-row">
-            <div class="callsign-val">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</div>
-            ${etaStr !== '---' ? `<div class="route-dur-line">LANDING ${etaStr}</div>` : '<div></div>'}
-          </div>
-          <div class="ac-row">
-            <div class="ac-type-line">${typeName || '—'}</div>
-            ${routeDurStr !== '---' ? `<div class="route-dur-line">${routeDurStr} TOTAL</div>` : '<div></div>'}
-          </div>
         </div>
-      </div>
 
-      <div class="data-grid">
-        <div class="data-row">
-          <div class="data-label">TRACK</div>
-          <div class="data-value">${track}</div>
+        <!-- Route centrepiece -->
+        <div class="route-block">
+          <div class="route-endpoint">
+            <div class="route-iata${origin ? '' : ' unknown'}">${origin || '---'}</div>
+            ${originCity ? `<div class="route-city">${originCity}</div>` : ''}
+          </div>
+          <div class="route-center">
+            <div class="route-line"></div>
+            ${etaStr      !== '---' ? `<div class="route-eta">LANDING ${etaStr}</div>`      : ''}
+            ${routeDurStr !== '---' ? `<div class="route-total">${routeDurStr} TOTAL</div>` : ''}
+          </div>
+          <div class="route-endpoint dest">
+            <div class="route-iata${dest ? '' : ' unknown'}">${dest || '---'}</div>
+            ${destCity ? `<div class="route-city">${destCity}</div>` : ''}
+          </div>
         </div>
-        <div class="data-row">
-          <div class="data-label">ALTITUDE</div>
-          <div class="data-value">${altBaro} <span class="unit">FT</span></div>
+
+      </div><!-- /hero -->
+
+      <!-- Compact data strip -->
+      <div class="data-strip">
+        <div class="ds-cell">
+          <div class="ds-lbl">ALTITUDE</div>
+          <div class="ds-val">${altBaro} <span class="unit">FT</span></div>
         </div>
-        <div class="data-row">
-          <div class="data-label">MACH</div>
-          <div class="data-value">${mach}</div>
+        <div class="ds-cell">
+          <div class="ds-lbl">SPEED</div>
+          <div class="ds-val">${speed} <span class="unit">KTS</span></div>
         </div>
-        <div class="data-row">
-          <div class="data-label">LAT</div>
-          <div class="data-value">${lat}</div>
+        <div class="ds-cell">
+          <div class="ds-lbl">TRACK</div>
+          <div class="ds-val">${track}</div>
         </div>
-        <div class="data-row">
-          <div class="data-label">DISTANCE</div>
-          <div class="data-value">${dist} <span class="unit">KM</span></div>
+        <div class="ds-cell">
+          <div class="ds-lbl">VERT RATE</div>
+          <div class="ds-val ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
         </div>
-        <div class="data-row">
-          <div class="data-label">SPEED</div>
-          <div class="data-value">${speed} <span class="unit">KTS</span></div>
+        <div class="ds-cell">
+          <div class="ds-lbl">STATUS</div>
+          <div class="ds-val ${statusClass}">${status}</div>
         </div>
-        <div class="data-row">
-          <div class="data-label">LON</div>
-          <div class="data-value">${lon}</div>
-        </div>
-        <div class="data-row">
-          <div class="data-label">VERT RATE</div>
-          <div class="data-value ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
-        </div>
-        <div class="data-row">
-          <div class="data-label">STATUS</div>
-          <div class="data-value ${statusClass}">${status}</div>
+        <div class="ds-cell">
+          <div class="ds-lbl">DISTANCE</div>
+          <div class="ds-val">${dist} <span class="unit">KM</span></div>
         </div>
       </div>
 

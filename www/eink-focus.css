@@ -1,49 +1,293 @@
 /* ── eink-focus.css ─────────────────────────────────────────────────────────
- *  Loaded AFTER eink.css — only overrides what differs.
- *  Same HTML structure as eink.html but:
- *    • Logo (left)  is ~50% larger
- *    • Airline name and route airports (right) are ~50% larger
- *    • No telemetry row
- *
- *  Size tokens — overridden by ?res=WxH via eink-focus.js
+ *  Loaded AFTER eink.css.
+ *  Adds the hero route layout and overrides sizes for the focus display.
+ *  Shared base styles (body, board, footer, no-signal, etc.) come from eink.css.
  * ─────────────────────────────────────────────────────────────────────────── */
 
+/* ── SIZE TOKENS — overridden by ?res=WxH via eink-focus.js ── */
 :root {
-  --focus-logo:    clamp(110px, 11vw,  270px);
-  --focus-airline: clamp(52px,  4.8vw, 130px);
-  --focus-route:   clamp(52px,  4.8vw, 130px);
-  --focus-arrow:   clamp(40px,  3.6vw,  98px);
-  --focus-fallback-font: clamp(50px, 5.5vw, 118px);
+  --sz-airline:  clamp(48px, 10.5vh, 148px);  /* airline name, type code, reg — all matched */
+  --sz-iata:     clamp(64px, 19vh,   220px);  /* route airport codes — the centrepiece */
+  --sz-city:     clamp(8px,  1.5vh,  22px);   /* airport city label */
+  --sz-data-val: clamp(22px, 5.2vh,  72px);   /* compact data strip values */
+  --sz-data-lbl: clamp(8px,  1.3vh,  17px);   /* compact data strip labels */
+  --sz-type:     clamp(13px, 2.2vh,  32px);   /* callsign + aircraft full name */
+  --sz-eta:      clamp(13px, 2.2vh,  30px);   /* ETA / route duration */
+  --sz-logo:     clamp(72px, 15vh,   180px);  /* logo box */
 }
 
-/* ── Left portion: bigger logo ── */
+/* ── Override shared eink.css sizes for logo, type, reg, flag ── */
+
+/* Logo: bigger than the standard eink display */
 .logo-box {
-  width:  var(--focus-logo);
-  height: var(--focus-logo);
-  margin-top: clamp(32px, 5.5vh, 90px);
+  width:  var(--sz-logo);
+  height: var(--sz-logo);
+  margin-top: 0;       /* hero-top centres vertically, no manual offset needed */
+  align-self: center;
+}
+.logo-fallback { font-size: calc(var(--sz-logo) * 0.48); }
+
+/* Type code and tail number — same size as the airline name */
+.typecode-val { font-size: var(--sz-airline); letter-spacing: 0.08em; }
+.reg-val      { font-size: var(--sz-airline); letter-spacing: 0.08em; }
+.flag-img     { height: calc(var(--sz-airline) * 0.58); }
+
+/* ═══════════════════════════════════════════════════════════
+   HERO LAYOUT
+   ═══════════════════════════════════════════════════════════ */
+
+.fade-in {
+  gap: clamp(6px, 1vh, 16px);
 }
 
-.logo-fallback { font-size: var(--focus-fallback-font); }
+/* Hero block fills all vertical space above the data strip */
+.hero {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--fg);
+  padding-bottom: clamp(6px, 1vh, 16px);
+  gap: clamp(4px, 0.7vh, 14px);
+}
 
-/* ── Right portion: bigger airline name + route airports ── */
-.airline-val  { font-size: var(--focus-airline); }
-.route-apt    { font-size: var(--focus-route);   }
-.route-arrow  { font-size: var(--focus-arrow);   }
+/* ── Top strip: logo | airline name + secondary | type flag reg ── */
+.hero-top {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 1.8vw, 40px);
+}
 
-/* Scale supporting text proportionally */
-.typecode-val   { font-size: clamp(26px, 2.3vw, 60px); }
-.reg-val        { font-size: clamp(26px, 2.3vw, 60px); }
-.callsign-val   { font-size: clamp(26px, 2.3vw, 60px); }
-.ac-type-line   { font-size: clamp(18px, 1.7vw, 44px); }
-.route-dur-line { font-size: clamp(16px, 1.5vw, 38px); }
-.flag-img       { height: clamp(18px, 1.7vw, 34px); }
+.hero-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1px, 0.25vh, 5px);
+}
 
-/* ── PORTRAIT OVERRIDES ── */
+.airline-name {
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-airline);
+  color: var(--fg);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-/* Logo doesn't need its top margin in portrait — the column stacks tightly */
+.hero-sub {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(8px, 1vw, 24px);
+  flex-wrap: wrap;
+}
+
+.hero-callsign {
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-type);
+  color: var(--fg-mid);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.hero-typename {
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-type);
+  color: var(--fg-mid);
+  letter-spacing: 0.10em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Type code, flag and reg — right-aligned cluster, same size as airline */
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 22px);
+  flex-shrink: 0;
+}
+
+/* ── ROUTE — centrepiece ── */
+.route-block {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.5vw, 32px);
+}
+
+.route-endpoint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.route-endpoint.dest { align-items: flex-end; }
+
+.route-iata {
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-iata);
+  color: var(--fg);
+  letter-spacing: 0.04em;
+  line-height: 0.88;
+}
+.route-iata.unknown { color: var(--fg-dim); }
+
+.route-city {
+  font-size: var(--sz-city);
+  color: var(--fg-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  margin-top: clamp(2px, 0.4vh, 6px);
+}
+
+.route-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 0.5vh, 9px);
+}
+
+.route-line {
+  width: 100%;
+  height: 2px;
+  background: var(--fg-dim);
+  position: relative;
+}
+.route-line::after {
+  content: '▶';
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-eta);
+  color: var(--fg);
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.route-eta {
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-eta);
+  color: var(--fg-dim);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.route-total {
+  font-family: 'VT323', monospace;
+  font-size: calc(var(--sz-eta) * 0.82);
+  color: var(--fg-dim);
+  letter-spacing: 0.10em;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPACT DATA STRIP
+   ═══════════════════════════════════════════════════════════ */
+.data-strip {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.ds-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1px, 0.2vh, 3px);
+  padding: 0 clamp(8px, 0.8vw, 20px);
+}
+.ds-cell:first-child { padding-left: 0; }
+.ds-cell + .ds-cell  { border-left: 1px solid var(--sep); }
+
+.ds-lbl {
+  font-size: var(--sz-data-lbl);
+  color: var(--fg-dim);
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+}
+
+.ds-val {
+  font-family: 'VT323', monospace;
+  font-size: var(--sz-data-val);
+  color: var(--fg);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+.ds-val .unit {
+  font-size: calc(var(--sz-data-val) * 0.38);
+  color: var(--fg-dim);
+  margin-left: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PORTRAIT OVERRIDES
+   ═══════════════════════════════════════════════════════════ */
+
+html.portrait .route-block {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 0.8vh, 14px);
+}
+
+html.portrait .route-endpoint,
+html.portrait .route-endpoint.dest {
+  align-items: center;
+}
+
+html.portrait .route-city { text-align: center; }
+
+html.portrait .route-center {
+  width: 55%;
+  flex-direction: column;
+  align-items: center;
+}
+
+html.portrait .route-line {
+  width: 2px;
+  height: clamp(18px, 5vh, 56px);
+  background: var(--fg-dim);
+}
+
+html.portrait .route-line::after {
+  content: '▼';
+  right:  auto;
+  left:   50%;
+  top:    auto;
+  bottom: calc(-0.65em);
+  transform: translateX(-50%);
+}
+
+html.portrait .data-strip { flex-wrap: wrap; }
+
+html.portrait .ds-cell {
+  flex: 0 0 33.333%;
+  min-width: 0;
+  border-left: none;
+  padding-left: 0;
+  padding-bottom: clamp(4px, 0.7vh, 10px);
+}
+
+html.portrait .ds-cell:nth-child(3n+2),
+html.portrait .ds-cell:nth-child(3n+3) {
+  border-left: 1px solid var(--sep);
+  padding-left: clamp(8px, 0.8vw, 18px);
+}
+
+html.portrait .ds-cell:nth-child(n+4) {
+  border-top: 1px solid var(--sep);
+  padding-top: clamp(4px, 0.7vh, 10px);
+  margin-top:  clamp(2px, 0.4vh, 6px);
+}
+
+/* Slightly smaller logo in portrait to preserve route space */
 html.portrait .logo-box {
-  width:  calc(var(--focus-logo) * 0.75);
-  height: calc(var(--focus-logo) * 0.75);
-  margin-top: 0;
-  align-self: auto;
+  width:  calc(var(--sz-logo) * 0.78);
+  height: calc(var(--sz-logo) * 0.78);
 }
