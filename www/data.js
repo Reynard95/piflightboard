@@ -3,7 +3,7 @@ const AIRLINES = {
   AAL:'AMERICAN AIRLINES',   AFR:'AIR FRANCE',          AHY:'AZERBAIJAN AIRLINES',
   ANA:'ALL NIPPON AIRWAYS',  AUA:'AUSTRIAN AIRLINES',   AZA:'ITA AIRWAYS',
   BAW:'BRITISH AIRWAYS',     BEL:'BRUSSELS AIRLINES',   BOX:'DHL AIR',
-  CCA:'AIR CHINA',           CES:'CHINA EASTERN',       CLX:'CARGOLUX',
+  CCA:'AIR CHINA',           CES:'CHINA EASTERN',       CKK:'CHINA CARGO AIRLINES', CLX:'CARGOLUX',
   CSN:'CHINA SOUTHERN',      DAL:'DELTA AIR LINES',     DHK:'DHL AIR UK',          DLH:'LUFTHANSA',
   EIN:'AER LINGUS',           ETH:'ETHIOPIAN AIRLINES',  EWG:'EUROWINGS',            EXS:'JET2',                EZY:'EASYJET',
   FDX:'FEDEX EXPRESS',       FIN:'FINNAIR',             FRO:'FROST AIR',
@@ -23,7 +23,7 @@ const AIRLINES = {
 /* ── ICAO AIRLINE → ISO COUNTRY (for flag images) ── */
 const ICAO_TO_COUNTRY = {
   AAL:'US', AFR:'FR', AHY:'AZ', ANA:'JP', AUA:'AT', AZA:'IT',
-  BAW:'GB', BEL:'BE', BOX:'GB', CCA:'CN', CES:'CN', CLX:'LU',
+  BAW:'GB', BEL:'BE', BOX:'GB', CCA:'CN', CES:'CN', CKK:'CN', CLX:'LU',
   CSN:'CN', DAL:'US', DHK:'GB', DLH:'DE', EIN:'IE', ETH:'ET', EWG:'DE', EXS:'GB', EZY:'GB',
   FDX:'US', FIN:'FI', FRO:'SE', GEC:'DE', IBE:'ES', ITY:'IT', JAL:'JP', KLM:'NL',
   MPH:'NL', MSR:'EG', NJE:'PT', NOS:'NO', NSZ:'SE', OAL:'GR', PGT:'TR',
@@ -36,7 +36,7 @@ const ICAO_TO_COUNTRY = {
 /* ── ICAO AIRLINE → IATA 2-LETTER CODE (for IATA flight number display) ── */
 const ICAO_TO_IATA = {
   AAL:'AA', AFR:'AF', AHY:'J2', ANA:'NH', AUA:'OS', AZA:'AZ',
-  BAW:'BA', BEL:'SN', BOX:'QY', CCA:'CA', CES:'MU', CLX:'CV',
+  BAW:'BA', BEL:'SN', BOX:'QY', CCA:'CA', CES:'MU', CKK:'CK', CLX:'CV',
   CSN:'CZ', DAL:'DL', DHK:'ES', DLH:'LH', EIN:'EI', ETH:'ET', EWG:'EW', EXS:'LS', EZY:'U2',
   FDX:'FX', FIN:'AY', GEC:'LH', IBE:'IB', ITY:'AZ', JAL:'JL', KLM:'KL',
   MPH:'MP', MSR:'MS', NJE:'NJ', NOS:'DY', NSZ:'NS', OAL:'OA', PGT:'PC',
