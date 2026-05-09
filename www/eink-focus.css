@@ -8,11 +8,11 @@
 :root {
   --sz-airline:  clamp(48px, 10.5vh, 148px);  /* airline name, type code, reg — all matched */
   --sz-iata:     clamp(64px, 19vh,   220px);  /* route airport codes — the centrepiece */
-  --sz-city:     clamp(8px,  1.5vh,  22px);   /* airport city label */
+  --sz-city:     clamp(12px, 2.0vh,  28px);   /* airport city label */
   --sz-data-val: clamp(22px, 5.2vh,  72px);   /* compact data strip values */
-  --sz-data-lbl: clamp(8px,  1.3vh,  17px);   /* compact data strip labels */
-  --sz-type:     clamp(13px, 2.2vh,  32px);   /* callsign + aircraft full name */
-  --sz-eta:      clamp(13px, 2.2vh,  30px);   /* ETA / route duration */
+  --sz-data-lbl: clamp(12px, 1.8vh,  22px);   /* compact data strip labels */
+  --sz-type:     clamp(16px, 2.8vh,  40px);   /* callsign + aircraft full name */
+  --sz-eta:      clamp(16px, 2.8vh,  38px);   /* ETA / route duration */
   --sz-logo:     clamp(72px, 15vh,   180px);  /* logo box */
 }
 
