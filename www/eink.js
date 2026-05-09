@@ -138,13 +138,13 @@ async function fetchAircraft() {
   } catch(e) {}
 }
 
-/* ── TICKER ── */
+/* ── STATIC AIRCRAFT LIST (no animation — e-ink safe) ── */
 function updateTicker() {
   document.getElementById('ac-count').textContent = allAircraft.length + ' AIRCRAFT';
   const items = allAircraft.slice(0, 30).map((ac, i) =>
-    `<span class="ticker-item${i === currentIndex ? ' active' : ''}" onclick="showIndex(${i})">${ac.flight.trim()}</span><span class="ticker-sep"> ◆ </span>`
-  ).join('');
-  document.getElementById('ticker').innerHTML = items + items;
+    `<span class="ac-item${i === currentIndex ? ' active' : ''}" onclick="showIndex(${i})">${ac.flight.trim()}</span>`
+  ).join('<span class="ac-sep">·</span>');
+  document.getElementById('ac-list').innerHTML = items;
 }
 
 /* ── RENDER ── */
@@ -314,20 +314,9 @@ async function showIndex(idx) {
   }
 
   updateTicker();
-  resetProgress();
 }
 
 /* ── CYCLE ── */
-function resetProgress() {
-  const bar = document.getElementById('progress');
-  bar.style.transition = 'none';
-  bar.style.width = '0%';
-  requestAnimationFrame(() => {
-    bar.style.transition = `width ${CYCLE_MS}ms linear`;
-    bar.style.width = '100%';
-  });
-}
-
 function startCycle() {
   showIndex(0);
   cycleTimer = setInterval(() => {
