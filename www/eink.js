@@ -5,8 +5,23 @@ const DB_PATH       = '/tar1090/db-28a5940/';
 const CYCLE_MS      = 60000;   /* 60s per aircraft — minimise e-ink refreshes */
 const FETCH_MS      = 30000;   /* fetch new data every 30s */
 
+/* ── FILTER PARAMS ─────────────────────────────────────────────────────────
+ *  ?radius=N      Show only aircraft within N km of the receiver.
+ *                 Falls back to all aircraft if none are in range.
+ *
+ *  ?closest       Always display only the single nearest aircraft.
+ *                 No cycling — updates to the new closest on each refresh.
+ *
+ *  Combined:      ?radius=50&closest  →  nearest within 50 km, or nearest
+ *                 overall if none are within range.
+ * ─────────────────────────────────────────────────────────────────────────── */
+const _fp          = new URLSearchParams(window.location.search);
+const RADIUS_KM    = (() => { const v = parseFloat(_fp.get('radius')); return isFinite(v) && v > 0 ? v : null; })();
+const CLOSEST_ONLY = _fp.has('closest');
+
 /* ── STATE ── */
 let allAircraft = [], currentIndex = 0, routeCache = {}, cycleTimer = null;
+let radiusFallback = false;
 
 /* ── CLOCK — HH:MM only, updates once per minute ── */
 function tick() {
@@ -130,17 +145,59 @@ async function fetchAircraft() {
   try {
     const res  = await fetch(AIRCRAFT_JSON + '?_=' + Date.now());
     const data = await res.json();
-    allAircraft = (data.aircraft || [])
+
+    const base = (data.aircraft || [])
       .filter(a => a.lat && a.lon && a.flight && a.flight.trim())
       .sort((a, b) => (b.rssi || -99) - (a.rssi || -99));
+
+    let filtered = base;
+    radiusFallback = false;
+
+    if (RADIUS_KM !== null) {
+      const nearby = base.filter(a => a.r_dst != null && a.r_dst <= RADIUS_KM);
+      if (nearby.length > 0) {
+        filtered = nearby;
+      } else {
+        filtered = base;
+        radiusFallback = true;
+      }
+    }
+
+    if (CLOSEST_ONLY) {
+      const withDist = filtered
+        .filter(a => a.r_dst != null)
+        .sort((a, b) => a.r_dst - b.r_dst);
+      filtered = withDist.length > 0 ? [withDist[0]] : filtered.slice(0, 1);
+    }
+
+    allAircraft = filtered;
     updateTicker();
-    if (allAircraft.length > 0 && cycleTimer === null) startCycle();
+
+    if (CLOSEST_ONLY) {
+      currentIndex = 0;
+      if (allAircraft.length > 0) showIndex(0);
+    } else if (allAircraft.length > 0 && cycleTimer === null) {
+      startCycle();
+    }
   } catch(e) {}
 }
 
 /* ── STATIC AIRCRAFT LIST (no animation — e-ink safe) ── */
 function updateTicker() {
-  document.getElementById('ac-count').textContent = allAircraft.length + ' AIRCRAFT';
+  let countLabel;
+  if (CLOSEST_ONLY) {
+    countLabel = RADIUS_KM !== null
+      ? (radiusFallback ? `NEAREST (NONE WITHIN ${RADIUS_KM}KM)` : `NEAREST WITHIN ${RADIUS_KM}KM`)
+      : 'NEAREST AIRCRAFT';
+  } else if (RADIUS_KM !== null) {
+    countLabel = radiusFallback
+      ? `${allAircraft.length} AIRCRAFT (NONE WITHIN ${RADIUS_KM}KM)`
+      : `${allAircraft.length} WITHIN ${RADIUS_KM}KM`;
+  } else {
+    countLabel = allAircraft.length + ' AIRCRAFT';
+  }
+  document.getElementById('ac-count').textContent = countLabel;
+
   const items = allAircraft.slice(0, 30).map((ac, i) =>
     `<span class="ac-item${i === currentIndex ? ' active' : ''}" onclick="showIndex(${i})">${ac.flight.trim()}</span>`
   ).join('<span class="ac-sep">·</span>');
@@ -318,6 +375,7 @@ async function showIndex(idx) {
 
 /* ── CYCLE ── */
 function startCycle() {
+  if (CLOSEST_ONLY) return;
   showIndex(0);
   cycleTimer = setInterval(() => {
     if (!allAircraft.length) return;

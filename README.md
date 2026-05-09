@@ -156,9 +156,31 @@ eink-focus.html?orientation=portrait&res=480x800
 
 ---
 
+#### `?radius=N`
+
+Restricts the display to aircraft within **N kilometres** of the receiver. If no aircraft are currently within range the display falls back to showing all tracked aircraft (so the screen is never blank), and the footer label changes to indicate the fallback.
+
+```
+eink-focus.html?radius=30
+eink.html?radius=50
+```
+
+---
+
+#### `?closest`
+
+Locks the display to the **single nearest aircraft** at all times. No cycling occurs — every time new data arrives (every 30 s) the display jumps to whichever aircraft is now closest. Useful when the display is mounted near a runway or spotting point where you always want to see the overhead aircraft.
+
+```
+eink-focus.html?closest
+eink.html?closest
+```
+
+---
+
 ### Combining Parameters
 
-All three parameters stack with `&`:
+All parameters stack with `&`:
 
 ```
 eink-focus.html?theme=black&orientation=landscape&res=800x480
@@ -166,6 +188,9 @@ eink-focus.html?theme=white&orientation=portrait&res=480x800
 eink-focus.html?theme=color&res=1200x825
 eink.html?theme=black&orientation=portrait&res=1404x1872
 eink.html?theme=white&res=800x480
+eink-focus.html?closest&theme=black&res=800x480
+eink-focus.html?radius=25&closest&theme=white&res=800x480
+eink.html?radius=50&theme=white&orientation=portrait
 ```
 
 ---
