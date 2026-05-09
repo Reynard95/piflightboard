@@ -169,11 +169,30 @@ eink.html?radius=50
 
 #### `?closest`
 
-Locks the display to the **single nearest aircraft** at all times. No cycling occurs — every time new data arrives (every 30 s) the display jumps to whichever aircraft is now closest. Useful when the display is mounted near a runway or spotting point where you always want to see the overhead aircraft.
+Locks the display to the **single nearest aircraft** at all times. No cycling occurs — every time new data arrives the display updates to whichever aircraft is now closest. Useful when the display is mounted near a runway or spotting point where you always want to see the overhead aircraft.
 
 ```
 eink-focus.html?closest
 eink.html?closest
+```
+
+---
+
+#### `?refresh=N`
+
+Sets how often (in seconds) new data is fetched from the receiver. Minimum 5 seconds, default 10.
+
+Crucially, **the display only re-renders when the aircraft's data has meaningfully changed** — altitude (rounded to 100 ft), speed (rounded to 5 kts), track (rounded to 2°), and vertical rate (rounded to 100 fpm). If nothing significant has shifted between fetches, the screen is left untouched. This is especially important for e-ink panels where every render triggers a full refresh cycle.
+
+| Value | Effect |
+|-------|--------|
+| `?refresh=10` | Fetch every 10 s (default) |
+| `?refresh=30` | Fetch every 30 s — gentler for slow panels |
+| `?refresh=5` | Minimum — most responsive |
+
+```
+eink-focus.html?refresh=30
+eink.html?closest&refresh=15
 ```
 
 ---
@@ -191,6 +210,8 @@ eink.html?theme=white&res=800x480
 eink-focus.html?closest&theme=black&res=800x480
 eink-focus.html?radius=25&closest&theme=white&res=800x480
 eink.html?radius=50&theme=white&orientation=portrait
+eink-focus.html?closest&refresh=30&theme=white&res=800x480
+eink.html?radius=50&refresh=20&theme=black&res=1200x825
 ```
 
 ---

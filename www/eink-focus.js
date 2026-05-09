@@ -2,8 +2,7 @@
 const AIRCRAFT_JSON = '/tar1090/data/aircraft.json';
 const ROUTE_API     = 'http://flighttracker.local:8088';
 const DB_PATH       = '/tar1090/db-28a5940/';
-const CYCLE_MS      = 60000;   /* 60s per aircraft — minimise e-ink refreshes */
-const FETCH_MS      = 30000;   /* fetch new data every 30s */
+const CYCLE_MS = 60000;   /* 60s per aircraft — minimise e-ink refreshes */
 
 /* ── RESOLUTION SCALING ─────────────────────────────────────────────────────
  *  Optional URL param:  ?res=800x480  (width × height in px)
@@ -47,18 +46,24 @@ const FETCH_MS      = 30000;   /* fetch new data every 30s */
  *
  *  ?closest       Always display only the single nearest aircraft.
  *                 No cycling — the display updates to the new closest on each
- *                 data refresh (every 30 s).
+ *                 data refresh.
  *
- *  Combined:      ?radius=50&closest  →  nearest aircraft within 50 km,
- *                 or nearest overall if none are within range.
+ *  ?refresh=N     Fetch new data every N seconds (minimum 5, default 10).
+ *                 The display only re-renders if the aircraft's data has
+ *                 meaningfully changed — skipping identical fetches avoids
+ *                 unnecessary e-ink panel refreshes.
+ *
+ *  Combined:      ?radius=50&closest&refresh=15
  * ─────────────────────────────────────────────────────────────────────────── */
 const _fp          = new URLSearchParams(window.location.search);
 const RADIUS_KM    = (() => { const v = parseFloat(_fp.get('radius')); return isFinite(v) && v > 0 ? v : null; })();
 const CLOSEST_ONLY = _fp.has('closest');
+const FETCH_MS     = (() => { const v = parseFloat(_fp.get('refresh')); return isFinite(v) && v >= 5 ? Math.round(v * 1000) : 10000; })();
 
 /* ── STATE ── */
 let allAircraft = [], currentIndex = 0, routeCache = {}, cycleTimer = null;
 let radiusFallback = false;   /* true when radius set but no aircraft in range */
+let lastRenderedKey = '';     /* change-detection: skip render if data unchanged */
 
 /* ── CLOCK — HH:MM only, updates once per minute ── */
 function tick() {
@@ -109,6 +114,20 @@ function abbreviateAirport(name) {
     .replace(/\s{2,}/g, ' ')
     .trim()
     .toUpperCase();
+}
+
+/* Coarse snapshot of an aircraft's live state for change detection.
+ * Returns a string key — if it matches the last rendered key we skip the
+ * re-render, saving an e-ink panel refresh when nothing meaningful changed.
+ * Values are deliberately rounded so minor jitter doesn't trigger redraws.
+ */
+function aircraftKey(ac) {
+  if (!ac) return '';
+  const alt = ac.alt_baro === 'ground' ? 'GND' : Math.round((ac.alt_baro  || 0) / 100);
+  const spd = Math.round((ac.gs        || 0) / 5)   * 5;
+  const trk = Math.round((ac.track     || 0) / 2)   * 2;
+  const vr  = Math.round((ac.baro_rate || 0) / 100) * 100;
+  return `${ac.flight}|${alt}|${spd}|${trk}|${vr}`;
 }
 
 function getAirlineCode(cs) {
@@ -220,11 +239,19 @@ async function fetchAircraft() {
     updateTicker();
 
     if (CLOSEST_ONLY) {
-      /* Always snap to the nearest aircraft on every refresh */
+      /* Nearest aircraft mode — re-render only if something meaningful changed */
       currentIndex = 0;
-      if (allAircraft.length > 0) showIndex(0);
+      if (allAircraft.length > 0 && aircraftKey(allAircraft[0]) !== lastRenderedKey) {
+        showIndex(0);
+      }
     } else if (allAircraft.length > 0 && cycleTimer === null) {
       startCycle();
+    } else if (cycleTimer !== null && allAircraft.length > 0) {
+      /* Cycle running — refresh data in place if current aircraft changed */
+      const safeIdx = Math.min(currentIndex, allAircraft.length - 1);
+      if (aircraftKey(allAircraft[safeIdx]) !== lastRenderedKey) {
+        showIndex(safeIdx);
+      }
     }
   } catch(e) {}
 }
@@ -256,6 +283,7 @@ async function showIndex(idx) {
   if (!allAircraft.length) return;
   currentIndex = idx % allAircraft.length;
   const ac       = allAircraft[currentIndex];
+  lastRenderedKey = aircraftKey(ac);   /* record what we're about to render */
   const icaoCode = getAirlineCode(ac.flight);
 
   const dbRow    = await lookupHex(ac.hex);
