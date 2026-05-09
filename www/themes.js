@@ -66,21 +66,29 @@ const THEMES = [
   },
 ];
 
+/* ── STORAGE WRAPPER (safe in all browser contexts) ── */
+function storageGet(key, fallback) {
+  try { return localStorage.getItem(key) || fallback; } catch(e) { return fallback; }
+}
+function storageSet(key, val) {
+  try { localStorage.setItem(key, val); } catch(e) {}
+}
+
 /* ── APPLY A THEME ── */
 function applyTheme(theme) {
+  if (!theme) return;
   const root = document.documentElement;
   for (const [prop, val] of Object.entries(theme.vars)) {
     root.style.setProperty(prop, val);
   }
-  localStorage.setItem('fb-theme', theme.id);
-  /* Update button label if present */
+  storageSet('fb-theme', theme.id);
   const btn = document.getElementById('theme-btn');
   if (btn) btn.textContent = theme.label;
 }
 
 /* ── CYCLE TO NEXT THEME ── */
 function cycleTheme() {
-  const current = localStorage.getItem('fb-theme') || 'amber';
+  const current = storageGet('fb-theme', 'amber');
   const idx     = THEMES.findIndex(t => t.id === current);
   const next    = THEMES[(idx + 1) % THEMES.length];
   applyTheme(next);
@@ -88,7 +96,9 @@ function cycleTheme() {
 
 /* ── RESTORE ON LOAD ── */
 (function () {
-  const saved = localStorage.getItem('fb-theme') || 'amber';
-  const theme = THEMES.find(t => t.id === saved) || THEMES[0];
-  applyTheme(theme);
+  try {
+    const saved = storageGet('fb-theme', 'amber');
+    const theme = THEMES.find(t => t.id === saved) || THEMES[0];
+    applyTheme(theme);
+  } catch(e) {}
 })();
