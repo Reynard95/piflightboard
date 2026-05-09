@@ -322,3 +322,81 @@ html, body {
 
 /* Progress bar not used on e-ink */
 .progress-bar { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   PORTRAIT OVERRIDES
+   Applied when ?orientation=portrait adds .portrait to <html>
+
+   Route airports stack vertically: origin on top, arrow down,
+   destination below. Data strip wraps into a 3-column grid.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Route block becomes a column */
+html.portrait .route-block {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 0.8vh, 14px);
+}
+
+/* Both endpoints centre-align in portrait */
+html.portrait .route-endpoint,
+html.portrait .route-endpoint.dest {
+  align-items: center;
+}
+html.portrait .route-city {
+  text-align: center;
+}
+
+/* Route centre: vertical line + ETA stacked */
+html.portrait .route-center {
+  width: 55%;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 0.5vh, 8px);
+}
+
+/* Turn the horizontal rule into a vertical bar */
+html.portrait .route-line {
+  width: 2px;
+  height: clamp(18px, 5vh, 56px);
+  background: var(--fg-dim);
+}
+
+/* Arrow points down instead of right */
+html.portrait .route-line::after {
+  content: '▼';
+  right:  auto;
+  top:    auto;
+  left:   50%;
+  bottom: calc(-0.65em);
+  transform: translateX(-50%);
+}
+
+/* ── Data strip: wrap into 3 columns ── */
+html.portrait .data-strip {
+  flex-wrap: wrap;
+}
+
+html.portrait .ds-cell {
+  flex: 0 0 33.333%;
+  min-width: 0;
+  /* Reset landscape borders — we redraw them below */
+  border-left: none;
+  padding-left: 0;
+  padding-bottom: clamp(4px, 0.7vh, 10px);
+}
+
+/* Left border on columns 2 and 3 of each row */
+html.portrait .ds-cell:nth-child(3n+2),
+html.portrait .ds-cell:nth-child(3n+3) {
+  border-left: 1px solid var(--sep);
+  padding-left: clamp(8px, 0.8vw, 18px);
+}
+
+/* Top separator above second row onwards */
+html.portrait .ds-cell:nth-child(n+4) {
+  border-top: 1px solid var(--sep);
+  padding-top: clamp(4px, 0.7vh, 10px);
+  margin-top:  clamp(2px, 0.4vh, 6px);
+}

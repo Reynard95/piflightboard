@@ -84,3 +84,28 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 
 /* Progress bar hidden on e-ink — animation not suitable for slow-refresh displays */
 .progress-bar { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   PORTRAIT OVERRIDES
+   Applied when ?orientation=portrait adds .portrait to <html>
+
+   Main change: data grid drops from 3 columns to 2 so values
+   aren't squashed on a narrow portrait panel. Header and
+   telemetry row already adapt naturally via flex-wrap.
+   ═══════════════════════════════════════════════════════════ */
+
+html.portrait .data-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Stack the header logo + identity vertically on very narrow panels */
+@media (max-width: 540px) {
+  html.portrait .ac-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  html.portrait .logo-box {
+    margin-top: 0;
+    align-self: auto;
+  }
+}

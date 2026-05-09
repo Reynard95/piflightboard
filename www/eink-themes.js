@@ -1,11 +1,18 @@
-/* ── E-INK THEMES ──────────────────────────────────────────────────────────
- *  Theme is set via URL parameter:  ?theme=white  |  ?theme=black  |  ?theme=color
- *  Default when no parameter: white
+/* ── E-INK CONFIG ───────────────────────────────────────────────────────────
+ *  All URL parameters (combine freely):
+ *
+ *  ?theme=white          white bg, black text (default)
+ *  ?theme=black          black bg, white text
+ *  ?theme=color          dark bg, amber/orange text
+ *
+ *  ?orientation=landscape   side-by-side route (default)
+ *  ?orientation=portrait    stacked vertical route
  *
  *  Examples:
- *    http://flighttracker.local/tar1090/eink.html
- *    http://flighttracker.local/tar1090/eink.html?theme=black
- *    http://flighttracker.local/tar1090/eink.html?theme=color
+ *    eink.html
+ *    eink.html?theme=black&orientation=portrait
+ *    eink-focus.html?theme=color&orientation=portrait&res=480x800
+ *    eink-focus.html?theme=white&orientation=landscape&res=800x480
  * ───────────────────────────────────────────────────────────────────────── */
 
 const EINK_THEMES = {
@@ -34,11 +41,19 @@ const EINK_THEMES = {
 
 (function () {
   try {
-    const param = new URLSearchParams(window.location.search).get('theme') || 'white';
-    const vars  = EINK_THEMES[param] || EINK_THEMES.white;
-    const root  = document.documentElement;
+    const params = new URLSearchParams(window.location.search);
+    const root   = document.documentElement;
+
+    /* ── Theme ── */
+    const theme = params.get('theme') || 'white';
+    const vars  = EINK_THEMES[theme] || EINK_THEMES.white;
     for (const [prop, val] of Object.entries(vars)) {
       root.style.setProperty(prop, val);
+    }
+
+    /* ── Orientation — adds .portrait class; landscape is the default ── */
+    if ((params.get('orientation') || 'landscape') === 'portrait') {
+      root.classList.add('portrait');
     }
   } catch(e) {}
 })();
