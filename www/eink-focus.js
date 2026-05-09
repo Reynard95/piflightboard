@@ -259,14 +259,16 @@ async function showIndex(idx) {
           <div class="hero-identity">
             <div class="airline-name">${airlineName}</div>
             <div class="hero-sub">
-              <span class="hero-callsign">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</span>
-              <span class="hero-typename">${typeName || '—'}</span>
+              <span class="hero-callsign">${rawCallsign}}</span>
             </div>
           </div>
           <div class="hero-meta">
             <span class="typecode-val">${typeCode || '—'}</span>
             ${flagHtml}
             <span class="reg-val">${reg}</span>
+            <div class="hero-sub">
+              <span class="hero-typename">${typeName || '—'}</span>
+            </div>
           </div>
         </div>
 
