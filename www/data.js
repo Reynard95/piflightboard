@@ -73,7 +73,7 @@ const AC_TYPES = {
   CRJX:'CRJ-1000',          F50:'Fokker 50',            F70:'Fokker 70',
   F100:'Fokker 100',        MD11:'MD-11',               MD82:'MD-82',
   MD83:'MD-83',             DC10:'Douglas DC-10',
-  IL76:'Ilyushin IL-76',    SU95:'Sukhoi Superjet',
+  IL76:'Ilyushin IL-76',    SU95:'Sukhoi Superjet',    SB20:'Saab 2000',
   C130:'C-130 Hercules',    C17:'Boeing C-17',
   PC12:'Pilatus PC-12',     C208:'Cessna Caravan',      C172:'Cessna 172',
   PA28:'Piper Cherokee',    BE20:'King Air 200',

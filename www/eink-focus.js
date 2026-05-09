@@ -95,6 +95,22 @@ function getTypeName(t) {
   return AC_TYPES[key] ? AC_TYPES[key].toUpperCase() : key;
 }
 
+/* Shorten full airport names for display under the IATA code:
+ *   "LONDON LUTON AIRPORT"              → "LONDON LUTON"
+ *   "DUBAI INTERNATIONAL AIRPORT"       → "DUBAI INTL"
+ *   "JOHN F KENNEDY INTERNATIONAL ..."  → "JOHN F KENNEDY INTL"
+ */
+function abbreviateAirport(name) {
+  if (!name) return '';
+  return name
+    .replace(/\bINTERNATIONAL AIRPORT\b/gi, 'INTL')
+    .replace(/\bINTERNATIONAL\b/gi, 'INTL')
+    .replace(/\bAIRPORT\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
 function getAirlineCode(cs) {
   if (!cs) return null;
   const u = cs.trim().toUpperCase();
@@ -277,17 +293,14 @@ async function showIndex(idx) {
   const statusClass = vr > 300 ? 'v-green' : vr < -300 ? 'v-red' : '';
 
   /* ── Route & ETA ── */
-  const origin     = route?.origin?.iata_code      || route?.origin?.iata      || '';
-  const dest       = route?.destination?.iata_code || route?.destination?.iata || '';
-  const originCity = route?.origin?.name           || '';
-  const destCity   = route?.destination?.name      || '';
+  const origin        = route?.origin?.iata_code      || route?.origin?.iata      || '';
+  const dest          = route?.destination?.iata_code || route?.destination?.iata || '';
+  const originCity    = abbreviateAirport(route?.origin?.name      || '');
+  const destCity      = abbreviateAirport(route?.destination?.name || '');
+  const originCountry = (route?.origin?.country_name      || '').toUpperCase();
+  const destCountry   = (route?.destination?.country_name || '').toUpperCase();
 
-  const rawCallsign  = (ac.flight || '').trim();
-  const airlineIata  = route?.airline?.iata || ICAO_TO_IATA[icaoCode] || '';
-  const flightSuffix = icaoCode ? rawCallsign.replace(new RegExp('^' + icaoCode, 'i'), '').trim() : '';
-  const derived      = (airlineIata && airlineIata !== icaoCode && flightSuffix) ? airlineIata + flightSuffix : '';
-  const apiIata      = route?.callsign_iata || '';
-  const iataFlight   = (apiIata && apiIata !== rawCallsign) ? apiIata : derived;
+  const rawCallsign = (ac.flight || '').trim();
 
   let etaStr = '---', routeDurStr = '---';
   const oLat = route?.origin?.latitude,      oLon = route?.origin?.longitude;
@@ -321,7 +334,7 @@ async function showIndex(idx) {
           <div class="hero-identity">
             <div class="airline-name">${airlineName}</div>
             <div class="hero-sub">
-              <span class="hero-callsign">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</span>
+              <span class="hero-callsign">${rawCallsign}</span>
             </div>
           </div>
           <div class="hero-meta">
@@ -338,7 +351,8 @@ async function showIndex(idx) {
         <div class="route-block">
           <div class="route-endpoint">
             <div class="route-iata${origin ? '' : ' unknown'}">${origin || '---'}</div>
-            ${originCity ? `<div class="route-city">${originCity}</div>` : ''}
+            ${originCity    ? `<div class="route-city">${originCity}</div>`       : ''}
+            ${originCountry ? `<div class="route-country">${originCountry}</div>` : ''}
           </div>
           <div class="route-center">
             <div class="route-line"></div>
@@ -347,7 +361,8 @@ async function showIndex(idx) {
           </div>
           <div class="route-endpoint dest">
             <div class="route-iata${dest ? '' : ' unknown'}">${dest || '---'}</div>
-            ${destCity ? `<div class="route-city">${destCity}</div>` : ''}
+            ${destCity    ? `<div class="route-city">${destCity}</div>`       : ''}
+            ${destCountry ? `<div class="route-country">${destCountry}</div>` : ''}
           </div>
         </div>
 
