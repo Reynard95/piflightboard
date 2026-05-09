@@ -1,402 +1,49 @@
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── eink-focus.css ─────────────────────────────────────────────────────────
+ *  Loaded AFTER eink.css — only overrides what differs.
+ *  Same HTML structure as eink.html but:
+ *    • Logo (left)  is ~50% larger
+ *    • Airline name and route airports (right) are ~50% larger
+ *    • No telemetry row
+ *
+ *  Size tokens — overridden by ?res=WxH via eink-focus.js
+ * ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --fg:     #000000;
-  --fg-dim: #555555;
-  --fg-mid: #222222;
-  --bg:     #ffffff;
-  --sep:    #cccccc;
-
-  /* ── SIZE TOKENS — overridden by ?res=WxH via JS ── */
-  --sz-airline:  clamp(40px, 7.5vh, 120px);   /* airline name */
-  --sz-iata:     clamp(60px, 18vh, 210px);    /* route airport codes */
-  --sz-city:     clamp(8px,  1.4vh, 20px);    /* airport city label */
-  --sz-data-val: clamp(22px, 5vh,   70px);    /* compact data values */
-  --sz-data-lbl: clamp(8px,  1.2vh, 16px);    /* compact data labels */
-  --sz-meta:     clamp(16px, 3vh,   44px);    /* reg / type / callsign */
-  --sz-type:     clamp(12px, 2vh,   30px);    /* aircraft full name */
-  --sz-eta:      clamp(12px, 2vh,   28px);    /* ETA / duration */
-  --sz-ticker:   clamp(12px, 2.2vh, 28px);    /* footer ac list */
-  --sz-clock:    clamp(12px, 2.2vh, 28px);    /* footer clock */
-  --sz-count:    clamp(8px,  1.2vh, 14px);    /* footer count label */
-  --sz-logo:     clamp(60px, 13vh,  160px);   /* logo box */
+  --focus-logo:    clamp(110px, 11vw,  270px);
+  --focus-airline: clamp(52px,  4.8vw, 130px);
+  --focus-route:   clamp(52px,  4.8vw, 130px);
+  --focus-arrow:   clamp(40px,  3.6vw,  98px);
+  --focus-fallback-font: clamp(50px, 5.5vw, 118px);
 }
 
-html, body {
-  width: 100%; height: 100%;
-  background: var(--bg); color: var(--fg);
-  font-family: 'Share Tech Mono', monospace;
-  overflow: hidden;
-}
-
-/* ── BOARD ── */
-.board {
-  width: 100vw; height: 100vh;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  padding: clamp(10px, 1.5vh, 28px) clamp(16px, 2vw, 48px) 0;
-}
-
-/* ── MAIN ── */
-.main { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-
-.fade-in {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  gap: clamp(6px, 1vh, 16px);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   HERO — takes all remaining vertical space
-   ═══════════════════════════════════════════════════════════ */
-.hero {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border-bottom: 2px solid var(--fg);
-  padding-bottom: clamp(6px, 1vh, 16px);
-  gap: clamp(4px, 0.6vh, 12px);
-}
-
-/* ── Top strip: logo + airline name + reg/type/flag ── */
-.hero-top {
-  display: flex;
-  align-items: center;
-  gap: clamp(12px, 1.5vw, 36px);
-}
-
+/* ── Left portion: bigger logo ── */
 .logo-box {
-  width:  var(--sz-logo);
-  height: var(--sz-logo);
-  flex-shrink: 0;
-  border: 1px solid var(--sep);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.logo-box img       { max-width: 100%; max-height: 100%; object-fit: contain; }
-.logo-fallback      { font-family: 'VT323', monospace; font-size: calc(var(--sz-logo) * 0.5); color: var(--fg-dim); text-align: center; }
-
-.hero-identity {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(1px, 0.2vh, 4px);
+  width:  var(--focus-logo);
+  height: var(--focus-logo);
+  margin-top: clamp(32px, 5.5vh, 90px);
 }
 
-.airline-name {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-airline);
-  color: var(--fg);
-  letter-spacing: 0.06em;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.logo-fallback { font-size: var(--focus-fallback-font); }
 
-.hero-sub {
-  display: flex;
-  align-items: baseline;
-  gap: clamp(8px, 1vw, 24px);
-}
+/* ── Right portion: bigger airline name + route airports ── */
+.airline-val  { font-size: var(--focus-airline); }
+.route-apt    { font-size: var(--focus-route);   }
+.route-arrow  { font-size: var(--focus-arrow);   }
 
-.callsign-val {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-meta);
-  color: var(--fg-mid);
-  letter-spacing: 0.12em;
-  white-space: nowrap;
-}
+/* Scale supporting text proportionally */
+.typecode-val   { font-size: clamp(26px, 2.3vw, 60px); }
+.reg-val        { font-size: clamp(26px, 2.3vw, 60px); }
+.callsign-val   { font-size: clamp(26px, 2.3vw, 60px); }
+.ac-type-line   { font-size: clamp(18px, 1.7vw, 44px); }
+.route-dur-line { font-size: clamp(16px, 1.5vw, 38px); }
+.flag-img       { height: clamp(18px, 1.7vw, 34px); }
 
-.ac-type-line {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-type);
-  color: var(--fg-mid);
-  letter-spacing: 0.10em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* ── PORTRAIT OVERRIDES ── */
 
-.hero-meta {
-  display: flex;
-  align-items: center;
-  gap: clamp(6px, 0.8vw, 18px);
-  flex-shrink: 0;
-}
-
-.typecode-val {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-meta);
-  color: var(--fg);
-  letter-spacing: 0.10em;
-}
-
-.reg-val {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-meta);
-  color: var(--fg);
-  letter-spacing: 0.10em;
-}
-
-.flag-img { height: calc(var(--sz-meta) * 0.55); width: auto; vertical-align: middle; }
-
-/* ── ROUTE — the centrepiece ── */
-.route-block {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1.5vw, 32px);
-}
-
-.route-endpoint {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex-shrink: 0;
-}
-.route-endpoint.dest { align-items: flex-end; }
-
-.route-iata {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-iata);
-  color: var(--fg);
-  letter-spacing: 0.04em;
-  line-height: 0.88;
-}
-.route-iata.unknown { color: var(--fg-dim); }
-
-.route-city {
-  font-size: var(--sz-city);
-  color: var(--fg-dim);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  margin-top: clamp(2px, 0.4vh, 6px);
-}
-
-.route-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(3px, 0.5vh, 8px);
-}
-
-.route-line {
-  width: 100%;
-  position: relative;
-  height: 2px;
-  background: var(--fg-dim);
-}
-.route-line::after {
-  content: '▶';
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-eta);
-  color: var(--fg);
-  position: absolute;
-  right: -2px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.route-eta {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-eta);
-  color: var(--fg-dim);
-  letter-spacing: 0.12em;
-  white-space: nowrap;
-}
-
-.route-total {
-  font-family: 'VT323', monospace;
-  font-size: calc(var(--sz-eta) * 0.8);
-  color: var(--fg-dim);
-  letter-spacing: 0.10em;
-  white-space: nowrap;
-  opacity: 0.7;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   COMPACT DATA STRIP — replaces the telemetry row
-   ═══════════════════════════════════════════════════════════ */
-.data-strip {
-  display: flex;
-  gap: 0;
-  flex-shrink: 0;
-}
-
-.ds-cell {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(1px, 0.2vh, 3px);
-  padding: 0 clamp(8px, 0.8vw, 20px);
-}
-.ds-cell:first-child { padding-left: 0; }
-.ds-cell + .ds-cell   { border-left: 1px solid var(--sep); }
-
-.ds-lbl {
-  font-size: var(--sz-data-lbl);
-  color: var(--fg-dim);
-  letter-spacing: 0.22em;
-  white-space: nowrap;
-}
-
-.ds-val {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-data-val);
-  color: var(--fg);
-  letter-spacing: 0.05em;
-  line-height: 1;
-}
-
-.ds-val .unit {
-  font-size: calc(var(--sz-data-val) * 0.38);
-  color: var(--fg-dim);
-  margin-left: 2px;
-}
-
-/* ── Status colours — weight/decoration only (e-ink safe) ── */
-.v-green { color: var(--fg); font-weight: 700; }
-.v-red   { color: var(--fg); font-style: italic; }
-.v-blue  { color: var(--fg); }
-
-/* ═══════════════════════════════════════════════════════════
-   FOOTER
-   ═══════════════════════════════════════════════════════════ */
-.footer {
-  border-top: 1px solid var(--sep);
-  padding-top: clamp(5px, 0.7vh, 12px);
-  margin-top: clamp(5px, 0.7vh, 12px);
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 1.2vw, 28px);
-  overflow: hidden;
-}
-
-.ac-count {
-  font-size: var(--sz-count);
-  color: var(--fg-dim);
-  letter-spacing: 0.15em;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ac-list {
-  flex: 1;
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-ticker);
-  color: var(--fg-dim);
-  letter-spacing: 0.12em;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.ac-list .ac-item        { cursor: default; }
-.ac-list .ac-item.active { color: var(--fg); font-weight: bold; }
-.ac-list .ac-sep         { color: var(--sep); margin: 0 0.3em; }
-
-.clock {
-  font-family: 'VT323', monospace;
-  font-size: var(--sz-clock);
-  color: var(--fg-dim);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   NO SIGNAL
-   ═══════════════════════════════════════════════════════════ */
-.no-signal       { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: clamp(12px, 2vh, 30px); }
-.no-signal-title { font-family: 'VT323', monospace; font-size: clamp(48px, 10vh, 130px); letter-spacing: 0.3em; color: var(--fg-dim); }
-.no-signal-sub   { font-size: clamp(10px, 1.8vh, 24px); letter-spacing: 0.2em; color: var(--fg-dim); }
-
-/* Progress bar not used on e-ink */
-.progress-bar { display: none; }
-
-/* ═══════════════════════════════════════════════════════════
-   PORTRAIT OVERRIDES
-   Applied when ?orientation=portrait adds .portrait to <html>
-
-   Route airports stack vertically: origin on top, arrow down,
-   destination below. Data strip wraps into a 3-column grid.
-   ═══════════════════════════════════════════════════════════ */
-
-/* Route block becomes a column */
-html.portrait .route-block {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(4px, 0.8vh, 14px);
-}
-
-/* Both endpoints centre-align in portrait */
-html.portrait .route-endpoint,
-html.portrait .route-endpoint.dest {
-  align-items: center;
-}
-html.portrait .route-city {
-  text-align: center;
-}
-
-/* Route centre: vertical line + ETA stacked */
-html.portrait .route-center {
-  width: 55%;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(3px, 0.5vh, 8px);
-}
-
-/* Turn the horizontal rule into a vertical bar */
-html.portrait .route-line {
-  width: 2px;
-  height: clamp(18px, 5vh, 56px);
-  background: var(--fg-dim);
-}
-
-/* Arrow points down instead of right */
-html.portrait .route-line::after {
-  content: '▼';
-  right:  auto;
-  top:    auto;
-  left:   50%;
-  bottom: calc(-0.65em);
-  transform: translateX(-50%);
-}
-
-/* ── Data strip: wrap into 3 columns ── */
-html.portrait .data-strip {
-  flex-wrap: wrap;
-}
-
-html.portrait .ds-cell {
-  flex: 0 0 33.333%;
-  min-width: 0;
-  /* Reset landscape borders — we redraw them below */
-  border-left: none;
-  padding-left: 0;
-  padding-bottom: clamp(4px, 0.7vh, 10px);
-}
-
-/* Left border on columns 2 and 3 of each row */
-html.portrait .ds-cell:nth-child(3n+2),
-html.portrait .ds-cell:nth-child(3n+3) {
-  border-left: 1px solid var(--sep);
-  padding-left: clamp(8px, 0.8vw, 18px);
-}
-
-/* Top separator above second row onwards */
-html.portrait .ds-cell:nth-child(n+4) {
-  border-top: 1px solid var(--sep);
-  padding-top: clamp(4px, 0.7vh, 10px);
-  margin-top:  clamp(2px, 0.4vh, 6px);
+/* Logo doesn't need its top margin in portrait — the column stacks tightly */
+html.portrait .logo-box {
+  width:  calc(var(--focus-logo) * 0.75);
+  height: calc(var(--focus-logo) * 0.75);
+  margin-top: 0;
+  align-self: auto;
 }
