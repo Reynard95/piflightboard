@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flight Display — Focus</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="eink-focus.css">
+<!--
+  URL parameters:
+    ?theme=white          white bg, black text (default)
+    ?theme=black          black bg, white text
+    ?theme=color          dark bg, amber text
+
+    ?res=800x480          pixel-perfect sizing for 7.5" landscape panel
+    ?res=1200x825         9.7" landscape
+    ?res=1404x1872        10.3" portrait
+    ?res=1600x1200        13.3"
+    (omit ?res for fluid clamp-based sizing)
+
+  Both params can be combined:
+    eink-focus.html?theme=black&res=800x480
+-->
+</head>
+<body>
+<div class="board">
+
+  <div class="main" id="main">
+    <div class="no-signal">
+      <div class="no-signal-title">SCANNING...</div>
+      <div class="no-signal-sub">✈︎ AWAITING AIRCRAFT DATA ✈︎</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="ac-count" id="ac-count">0 AIRCRAFT</div>
+    <div class="ac-list"  id="ac-list"></div>
+    <div class="clock"    id="clock">00:00</div>
+  </div>
+
+</div>
+
+<script src="data.js"></script>
+<script src="eink-themes.js"></script>
+<script src="eink-focus.js"></script>
+</body>
+</html>
