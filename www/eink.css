@@ -1,13 +1,11 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --fg:         #000000;
-  --fg-dim:     #555555;
-  --fg-mid:     #222222;
-  --bg:         #ffffff;
-  --sep:        #cccccc;
-  --footer-bg:  #000000;
-  --footer-fg:  #ffffff;
+  --fg:     #000000;
+  --fg-dim: #555555;
+  --fg-mid: #222222;
+  --bg:     #ffffff;
+  --sep:    #cccccc;
 }
 
 html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg); font-family: 'Share Tech Mono', monospace; overflow: hidden; }
@@ -75,18 +73,14 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 .no-signal-title { font-family: 'VT323', monospace; font-size: clamp(48px, 5vw, 130px); letter-spacing: 0.3em; color: var(--fg-dim); }
 .no-signal-sub   { font-size: clamp(12px, 1.1vw, 26px); letter-spacing: 0.2em; color: var(--fg-dim); }
 
-/* ── FOOTER — inverted, static, no animation ── */
-.footer   { background: var(--footer-bg); color: var(--footer-fg); border-top: 2px solid var(--footer-bg); padding: clamp(8px, 0.9vh, 18px) clamp(24px, 2.5vw, 80px); margin: 0 calc(-1 * clamp(24px, 2.5vw, 80px)); display: flex; align-items: center; gap: clamp(12px, 1.5vw, 36px); overflow: hidden; }
-.ac-count { font-size: clamp(9px, 0.65vw, 15px); color: var(--footer-fg); opacity: 0.65; letter-spacing: 0.15em; white-space: nowrap; flex-shrink: 0; }
-.ac-list  { flex: 1; font-family: 'VT323', monospace; font-size: clamp(14px, 1.2vw, 30px); color: var(--footer-fg); opacity: 0.85; letter-spacing: 0.12em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ac-list .ac-item        { cursor: pointer; }
-.ac-list .ac-item.active { opacity: 1; text-decoration: underline; }
-.ac-list .ac-sep         { opacity: 0.35; margin: 0 0.3em; }
-.clock    { font-family: 'VT323', monospace; font-size: clamp(16px, 1.3vw, 34px); color: var(--footer-fg); white-space: nowrap; flex-shrink: 0; }
-
-/* ── THEME BUTTON ── */
-.theme-btn { font-family: 'Share Tech Mono', monospace; font-size: clamp(9px, 0.65vw, 15px); color: var(--footer-fg); opacity: 0.65; letter-spacing: 0.15em; cursor: pointer; background: none; border: 1px solid var(--footer-fg); padding: 2px 8px; border-radius: 2px; white-space: nowrap; flex-shrink: 0; transition: opacity 0.2s; }
-.theme-btn:hover { opacity: 1; }
+/* ── FOOTER — same background as content, simple separator ── */
+.footer   { border-top: 1px solid var(--sep); padding-top: clamp(8px, 0.9vh, 18px); margin-top: clamp(8px, 0.9vh, 18px); display: flex; align-items: center; gap: clamp(12px, 1.5vw, 36px); overflow: hidden; }
+.ac-count { font-size: clamp(9px, 0.65vw, 15px); color: var(--fg-dim); letter-spacing: 0.15em; white-space: nowrap; flex-shrink: 0; }
+.ac-list  { flex: 1; font-family: 'VT323', monospace; font-size: clamp(14px, 1.2vw, 30px); color: var(--fg-dim); letter-spacing: 0.12em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ac-list .ac-item        { cursor: default; }
+.ac-list .ac-item.active { color: var(--fg); font-weight: bold; }
+.ac-list .ac-sep         { color: var(--sep); margin: 0 0.3em; }
+.clock    { font-family: 'VT323', monospace; font-size: clamp(16px, 1.3vw, 34px); color: var(--fg-dim); white-space: nowrap; flex-shrink: 0; }
 
 /* Progress bar hidden on e-ink — animation not suitable for slow-refresh displays */
 .progress-bar { display: none; }

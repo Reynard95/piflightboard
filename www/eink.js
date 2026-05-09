@@ -2,17 +2,17 @@
 const AIRCRAFT_JSON = '/tar1090/data/aircraft.json';
 const ROUTE_API     = 'http://flighttracker.local:8088';
 const DB_PATH       = '/tar1090/db-28a5940/';
-const CYCLE_MS      = 20000;   /* slightly longer cycle for e-ink */
-const FETCH_MS      = 5000;
+const CYCLE_MS      = 60000;   /* 60s per aircraft — minimise e-ink refreshes */
+const FETCH_MS      = 30000;   /* fetch new data every 30s */
 
 /* ── STATE ── */
 let allAircraft = [], currentIndex = 0, routeCache = {}, cycleTimer = null;
 
-/* ── CLOCK ── */
+/* ── CLOCK — HH:MM only, updates once per minute ── */
 function tick() {
-  document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 8);
+  document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 5);
 }
-setInterval(tick, 1000); tick();
+setInterval(tick, 60000); tick();
 
 /* ── HELPERS ── */
 function fmt(v, d = 0) {
