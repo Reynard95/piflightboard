@@ -109,3 +109,22 @@ html.portrait .data-grid {
     align-self: auto;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE (≤640px) — full layout fixes
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .board { padding: 10px 14px 0; }
+
+  /* Shrink logo so the identity area has more room */
+  .logo-box { width: 56px; height: 56px; margin-top: 0; align-self: center; }
+  .logo-box img { max-width: 56px; max-height: 56px; }
+  .logo-fallback { font-size: clamp(18px, 5vw, 26px); }
+
+  /* 2-column data grid — 3 columns are too cramped on narrow screens */
+  .data-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Allow more telem cells per row by reducing the minimum cell width */
+  .telem-cell { min-width: clamp(56px, 26vw, 150px); }
+}

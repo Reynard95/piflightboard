@@ -16,30 +16,26 @@
   --sz-logo:     clamp(72px, 15vh,   180px);  /* logo box */
 }
 
-/* ── Override shared eink.css sizes for logo, type, reg, flag ── */
-
-/* Logo: bigger than the standard eink display, no border */
-.logo-box {
+/* ── Override shared eink.css sizes for logo, type, reg, flag ──────────────
+ *  Scoped under html.focus-mode (added by eink-themes.js when ?focus is set)
+ *  so these don't bleed into the full layout when both CSS files are loaded.
+ * ─────────────────────────────────────────────────────────────────────────── */
+html.focus-mode .logo-box {
   width:  var(--sz-logo);
   height: var(--sz-logo);
   margin-top: 0;
   align-self: center;
   border: none;
 }
-.logo-fallback { font-size: calc(var(--sz-logo) * 0.48); }
-
-/* Type code and tail number — same size as the airline name */
-.typecode-val { font-size: var(--sz-airline); letter-spacing: 0.08em; }
-.reg-val      { font-size: var(--sz-airline); letter-spacing: 0.08em; }
-.flag-img     { height: calc(var(--sz-airline) * 0.58); }
+html.focus-mode .logo-fallback { font-size: calc(var(--sz-logo) * 0.48); }
+html.focus-mode .typecode-val  { font-size: var(--sz-airline); letter-spacing: 0.08em; }
+html.focus-mode .reg-val       { font-size: var(--sz-airline); letter-spacing: 0.08em; }
+html.focus-mode .flag-img      { height: calc(var(--sz-airline) * 0.58); }
+html.focus-mode .fade-in       { gap: clamp(6px, 1vh, 16px); }
 
 /* ═══════════════════════════════════════════════════════════
    HERO LAYOUT
    ═══════════════════════════════════════════════════════════ */
-
-.fade-in {
-  gap: clamp(6px, 1vh, 16px);
-}
 
 /* Hero block fills all vertical space above the data strip */
 .hero {
@@ -313,4 +309,49 @@ html.portrait .ds-cell:nth-child(n+4) {
 html.portrait .logo-box {
   width:  calc(var(--sz-logo) * 0.78);
   height: calc(var(--sz-logo) * 0.78);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE (≤640px)
+   The default size tokens use vh units tuned for e-ink panels.
+   On a phone (e.g. iPhone 844px tall) 19vh = 160px airport codes
+   — far too large. Rebase on vw so sizes scale with screen width.
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  :root {
+    --sz-airline:  clamp(28px, 7.5vw, 44px);
+    --sz-iata:     clamp(56px, 20vw,  88px);
+    --sz-city:     clamp(9px,  2.5vw, 14px);
+    --sz-data-val: clamp(18px, 5vw,   32px);
+    --sz-data-lbl: clamp(9px,  2.5vw, 13px);
+    --sz-type:     clamp(16px, 4vw,   26px);
+    --sz-eta:      clamp(13px, 3.5vw, 20px);
+    --sz-logo:     clamp(44px, 12vw,  64px);
+  }
+
+  /* Narrow route centre so airport codes have room on a small screen */
+  .route-center {
+    flex: 0 0 clamp(72px, 18vw, 120px);
+    max-width: clamp(72px, 18vw, 120px);
+  }
+
+  /* Wrap data strip to 2 rows × 3 cells */
+  .data-strip { flex-wrap: wrap; }
+  .ds-cell {
+    flex: 0 0 33.333%;
+    min-width: 0;
+    padding-bottom: clamp(4px, 1vh, 8px);
+  }
+  .ds-cell + .ds-cell { border-left: none; padding-left: 0; }
+  .ds-cell:nth-child(3n+2),
+  .ds-cell:nth-child(3n+3) {
+    border-left: 1px solid var(--sep);
+    padding-left: clamp(6px, 1.5vw, 12px);
+  }
+  .ds-cell:nth-child(n+4) {
+    border-top: 1px solid var(--sep);
+    padding-top: clamp(4px, 1vh, 8px);
+    margin-top: clamp(2px, 0.5vh, 6px);
+  }
 }

@@ -47,8 +47,8 @@ tailscale ip -4
 | URL | Description |
 |-----|-------------|
 | `http://flighttracker.local/tar1090` | Live map |
-| `http://flighttracker.local/tar1090/eink.html` | Full layout — data grid + telemetry |
-| `http://flighttracker.local/tar1090/eink-focus.html` | Focus layout — route centrepiece + compact strip |
+| `http://flighttracker.local/tar1090/main.html` | Full layout — data grid + telemetry row |
+| `http://flighttracker.local/tar1090/main.html?focus` | Focus layout — giant route airports + compact strip |
 
 ## Auto-deploy
 
@@ -243,12 +243,10 @@ piflightboard/
 │   └── route-proxy.py              # CORS proxy for route API
 ├── www/
 │   ├── data.js                     # airline names, ICAO→country, ICAO→IATA, aircraft types
-│   ├── eink.html                   # full layout
-│   ├── eink.css                    # base styles (shared by both pages)
-│   ├── eink.js                     # full layout logic
-│   ├── eink-focus.html             # focus layout
+│   ├── main.html                   # single entry point (?focus switches to focus layout)
+│   ├── main.js                     # merged JS — full layout + focus layout, FOCUS_MODE flag
+│   ├── eink.css                    # base styles (both layouts)
 │   ├── eink-focus.css              # focus layout overrides + hero/route/data-strip classes
-│   ├── eink-focus.js               # focus layout logic + ?res= resolution scaling
-│   └── eink-themes.js              # shared ?theme= and ?orientation= URL param handler
+│   └── eink-themes.js              # ?theme=, ?orientation=, ?focus → CSS class applier
 └── README.md
 ```

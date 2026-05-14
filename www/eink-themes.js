@@ -55,5 +55,10 @@ const EINK_THEMES = {
     if ((params.get('orientation') || 'landscape') === 'portrait') {
       root.classList.add('portrait');
     }
+
+    /* ── Focus mode — enables focus-specific CSS overrides ── */
+    if (params.has('focus')) {
+      root.classList.add('focus-mode');
+    }
   } catch(e) {}
 })();

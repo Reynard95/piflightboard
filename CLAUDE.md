@@ -56,25 +56,26 @@ All pages live in `www/` and are served by lighttpd under `/tar1090/`.
 
 | Page | Description |
 |------|-------------|
-| `eink.html`        | Full layout — logo/header + 9-field data grid + 9-field telemetry |
-| `eink-focus.html`  | Focus layout — giant route airports as centrepiece, compact 6-field strip |
+| `main.html`        | Single entry point. Default: full layout (data grid + telemetry). `?focus`: focus layout (giant route airports + compact strip). |
 
-### Shared JavaScript modules
+### JavaScript
 
-- **`data.js`** — lookup tables loaded before any page JS: `AIRLINES` (ICAO→name), `ICAO_TO_COUNTRY` (for flag images), `ICAO_TO_IATA` (for IATA flight number derivation), `AC_TYPES` (type code→full name).
-- **`eink-themes.js`** — IIFE that applies `?theme=` CSS variables and adds `.portrait` class for `?orientation=portrait`. Loaded by both pages before their own JS.
+- **`main.js`** — merged JS. `FOCUS_MODE = _fp.has('focus')` dispatches `showIndex()` to either `renderFull()` or `renderFocus()`. Resolution scaling IIFE runs only when `FOCUS_MODE` is true.
+- **`data.js`** — lookup tables: `AIRLINES`, `ICAO_TO_COUNTRY`, `ICAO_TO_IATA`, `AC_TYPES`.
+- **`eink-themes.js`** — IIFE that applies `?theme=` CSS vars, adds `.portrait` for `?orientation=portrait`, and adds `.focus-mode` for `?focus`. Runs before `main.js`.
 
-### E-ink CSS layering
+### CSS layering
 
-`eink.html` loads only `eink.css`. `eink-focus.html` loads `eink.css` then `eink-focus.css`. The focus CSS overrides the `--sz-*` size tokens and adds the hero layout classes (`.hero`, `.hero-top`, `.hero-identity`, `.hero-meta`, `.route-block`, `.route-endpoint`, `.data-strip`, `.ds-cell`). Never put focus-specific styles into `eink.css`.
+`main.html` loads `eink.css` then `eink-focus.css` always. Conflicting focus overrides (logo size, typecode/reg font, flag height, fade-in gap) are scoped under `html.focus-mode` so they don't affect the full layout. Focus-specific layout classes (`.hero`, `.route-block`, `.data-strip`, etc.) are harmless when the full layout is active — those elements simply don't exist in the DOM. Never put focus-specific styles into `eink.css`.
 
 ### URL parameter pattern
 
-Parameters are parsed at the top of each JS file via a `const _fp = new URLSearchParams(window.location.search)` block. The e-ink files support:
+`const _fp = new URLSearchParams(window.location.search)` at the top of `main.js`.
 
+- `?focus` — switches render path; also handled by `eink-themes.js` (adds `.focus-mode` to `<html>`)
 - `?theme=` / `?orientation=` — handled entirely by `eink-themes.js`
-- `?res=WxH` — IIFE at the top of `eink-focus.js` overrides `--sz-*` CSS custom properties; coefficients are defined at the top of the IIFE
-- `?radius=N` / `?closest` / `?refresh=N` — parsed into `RADIUS_KM`, `CLOSEST_ONLY`, `FETCH_MS` constants
+- `?res=WxH` — IIFE in `main.js` (runs only when `FOCUS_MODE`) overrides `--sz-*` CSS tokens; coefficients defined at the top of the IIFE
+- `?radius=N` / `?closest` / `?refresh=N` — parsed into `RADIUS_KM`, `CLOSEST_ONLY`, `FETCH_MS`
 
 ### Airline name resolution (e-ink pages)
 
