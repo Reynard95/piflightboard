@@ -261,14 +261,14 @@ function updateTicker() {
   let countLabel;
   if (CLOSEST_ONLY) {
     countLabel = RADIUS_KM !== null
-      ? (radiusFallback ? `NEAREST (NONE WITHIN ${RADIUS_KM}KM)` : `NEAREST WITHIN ${RADIUS_KM}KM`)
-      : 'NEAREST AIRCRAFT';
+      ? (radiusFallback ? `NEAREST (NONE IN ${RADIUS_KM}KM)` : `NEAREST <${RADIUS_KM}KM`)
+      : 'NEAREST';
   } else if (RADIUS_KM !== null) {
     countLabel = radiusFallback
-      ? `${allAircraft.length} AIRCRAFT (NONE WITHIN ${RADIUS_KM}KM)`
-      : `${allAircraft.length} WITHIN ${RADIUS_KM}KM`;
+      ? `${allAircraft.length} AC (NONE IN ${RADIUS_KM}KM)`
+      : `${allAircraft.length} AC <${RADIUS_KM}KM`;
   } else {
-    countLabel = allAircraft.length + ' AIRCRAFT';
+    countLabel = allAircraft.length + ' AC';
   }
   document.getElementById('ac-count').textContent = countLabel;
 
@@ -315,9 +315,9 @@ async function showIndex(idx) {
   const dist    = ac.r_dst ? ac.r_dst.toFixed(1) : '---';
 
   let status = 'EN ROUTE';
-  if (ac.alt_baro === 'ground') status = 'ON GROUND';
+  if (ac.alt_baro === 'ground') status = 'ON GND';
   else if (vr >  300) status = 'CLIMBING';
-  else if (vr < -300) status = 'DESCENDING';
+  else if (vr < -300) status = 'DESCEND';
   const statusClass = vr > 300 ? 'v-green' : vr < -300 ? 'v-red' : '';
 
   /* ── Route & ETA ── */
@@ -384,8 +384,8 @@ async function showIndex(idx) {
           </div>
           <div class="route-center">
             <div class="route-line"></div>
-            ${etaStr      !== '---' ? `<div class="route-eta">LANDING ${etaStr}</div>`      : ''}
-            ${routeDurStr !== '---' ? `<div class="route-total">${routeDurStr} TOTAL</div>` : ''}
+            ${etaStr      !== '---' ? `<div class="route-eta">LDG ${etaStr}</div>`          : ''}
+            ${routeDurStr !== '---' ? `<div class="route-total">${routeDurStr} TOT</div>`   : ''}
           </div>
           <div class="route-endpoint dest">
             <div class="route-iata${dest ? '' : ' unknown'}">${dest || '---'}</div>
@@ -399,19 +399,19 @@ async function showIndex(idx) {
       <!-- Compact data strip -->
       <div class="data-strip">
         <div class="ds-cell">
-          <div class="ds-lbl">ALTITUDE</div>
+          <div class="ds-lbl">ALT</div>
           <div class="ds-val">${altBaro} <span class="unit">FT</span></div>
         </div>
         <div class="ds-cell">
-          <div class="ds-lbl">SPEED</div>
+          <div class="ds-lbl">SPD</div>
           <div class="ds-val">${speed} <span class="unit">KTS</span></div>
         </div>
         <div class="ds-cell">
-          <div class="ds-lbl">TRACK</div>
+          <div class="ds-lbl">TRK</div>
           <div class="ds-val">${track}</div>
         </div>
         <div class="ds-cell">
-          <div class="ds-lbl">VERT RATE</div>
+          <div class="ds-lbl">V/R</div>
           <div class="ds-val ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
         </div>
         <div class="ds-cell">
@@ -419,7 +419,7 @@ async function showIndex(idx) {
           <div class="ds-val ${statusClass}">${status}</div>
         </div>
         <div class="ds-cell">
-          <div class="ds-lbl">DISTANCE</div>
+          <div class="ds-lbl">DIST</div>
           <div class="ds-val">${dist} <span class="unit">KM</span></div>
         </div>
       </div>

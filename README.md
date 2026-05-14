@@ -47,10 +47,8 @@ tailscale ip -4
 | URL | Description |
 |-----|-------------|
 | `http://flighttracker.local/tar1090` | Live map |
-| `http://flighttracker.local/tar1090/flightboard.html` | Full-screen amber CRT departure board |
-| `http://flighttracker.local/tar1090/flipboard.html` | Split-flap (Solari) departure board |
-| `http://flighttracker.local/tar1090/eink.html` | E-ink display — full layout |
-| `http://flighttracker.local/tar1090/eink-focus.html` | E-ink display — focus layout |
+| `http://flighttracker.local/tar1090/eink.html` | Full layout — data grid + telemetry |
+| `http://flighttracker.local/tar1090/eink-focus.html` | Focus layout — route centrepiece + compact strip |
 
 ## Auto-deploy
 
@@ -245,13 +243,10 @@ piflightboard/
 │   └── route-proxy.py              # CORS proxy for route API
 ├── www/
 │   ├── data.js                     # airline names, ICAO→country, ICAO→IATA, aircraft types
-│   ├── flightboard.html/css/js     # amber CRT single-aircraft display
-│   ├── flipboard.html/css/js       # split-flap (Solari) departure board
-│   ├── themes.js                   # 8 colour themes for flightboard + flipboard
-│   ├── eink.html                   # e-ink full layout
-│   ├── eink.css                    # e-ink base styles (shared by both e-ink pages)
-│   ├── eink.js                     # e-ink full layout logic
-│   ├── eink-focus.html             # e-ink focus layout
+│   ├── eink.html                   # full layout
+│   ├── eink.css                    # base styles (shared by both pages)
+│   ├── eink.js                     # full layout logic
+│   ├── eink-focus.html             # focus layout
 │   ├── eink-focus.css              # focus layout overrides + hero/route/data-strip classes
 │   ├── eink-focus.js               # focus layout logic + ?res= resolution scaling
 │   └── eink-themes.js              # shared ?theme= and ?orientation= URL param handler

@@ -214,14 +214,14 @@ function updateTicker() {
   let countLabel;
   if (CLOSEST_ONLY) {
     countLabel = RADIUS_KM !== null
-      ? (radiusFallback ? `NEAREST (NONE WITHIN ${RADIUS_KM}KM)` : `NEAREST WITHIN ${RADIUS_KM}KM`)
-      : 'NEAREST AIRCRAFT';
+      ? (radiusFallback ? `NEAREST (NONE IN ${RADIUS_KM}KM)` : `NEAREST <${RADIUS_KM}KM`)
+      : 'NEAREST';
   } else if (RADIUS_KM !== null) {
     countLabel = radiusFallback
-      ? `${allAircraft.length} AIRCRAFT (NONE WITHIN ${RADIUS_KM}KM)`
-      : `${allAircraft.length} WITHIN ${RADIUS_KM}KM`;
+      ? `${allAircraft.length} AC (NONE IN ${RADIUS_KM}KM)`
+      : `${allAircraft.length} AC <${RADIUS_KM}KM`;
   } else {
-    countLabel = allAircraft.length + ' AIRCRAFT';
+    countLabel = allAircraft.length + ' AC';
   }
   document.getElementById('ac-count').textContent = countLabel;
 
@@ -270,9 +270,9 @@ async function showIndex(idx) {
   const seen     = ac.seen     != null ? ac.seen.toFixed(1) + 'S AGO'  : '---';
 
   let status = 'EN ROUTE';
-  if (ac.alt_baro === 'ground') status = 'ON GROUND';
+  if (ac.alt_baro === 'ground') status = 'ON GND';
   else if (vr >  300) status = 'CLIMBING';
-  else if (vr < -300) status = 'DESCENDING';
+  else if (vr < -300) status = 'DESCEND';
 
   const origin = route?.origin?.iata_code || route?.origin?.iata || '';
   const dest   = route?.destination?.iata_code || route?.destination?.iata || '';
@@ -329,22 +329,22 @@ async function showIndex(idx) {
           </div>
           <div class="ac-row">
             <div class="callsign-val">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</div>
-            ${etaStr !== '---' ? `<div class="route-dur-line">LANDING ${etaStr}</div>` : '<div></div>'}
+            ${etaStr !== '---' ? `<div class="route-dur-line">LDG ${etaStr}</div>` : '<div></div>'}
           </div>
           <div class="ac-row">
             <div class="ac-type-line">${typeName || '—'}</div>
-            ${routeDurStr !== '---' ? `<div class="route-dur-line">${routeDurStr} TOTAL</div>` : '<div></div>'}
+            ${routeDurStr !== '---' ? `<div class="route-dur-line">${routeDurStr} TOT</div>` : '<div></div>'}
           </div>
         </div>
       </div>
 
       <div class="data-grid">
         <div class="data-row">
-          <div class="data-label">TRACK</div>
+          <div class="data-label">TRK</div>
           <div class="data-value">${track}</div>
         </div>
         <div class="data-row">
-          <div class="data-label">ALTITUDE</div>
+          <div class="data-label">ALT</div>
           <div class="data-value">${altBaro} <span class="unit">FT</span></div>
         </div>
         <div class="data-row">
@@ -356,11 +356,11 @@ async function showIndex(idx) {
           <div class="data-value">${lat}</div>
         </div>
         <div class="data-row">
-          <div class="data-label">DISTANCE</div>
+          <div class="data-label">DIST</div>
           <div class="data-value">${dist} <span class="unit">KM</span></div>
         </div>
         <div class="data-row">
-          <div class="data-label">SPEED</div>
+          <div class="data-label">SPD</div>
           <div class="data-value">${speed} <span class="unit">KTS</span></div>
         </div>
         <div class="data-row">
@@ -368,7 +368,7 @@ async function showIndex(idx) {
           <div class="data-value">${lon}</div>
         </div>
         <div class="data-row">
-          <div class="data-label">VERT RATE</div>
+          <div class="data-label">V/R</div>
           <div class="data-value ${vrClass}">${vsStr} <span class="unit">FPM</span></div>
         </div>
         <div class="data-row">
@@ -378,15 +378,15 @@ async function showIndex(idx) {
       </div>
 
       <div class="telem-row">
-        <div class="telem-cell"><div class="telem-lbl">SOURCE</div><div class="telem-val">${source}</div></div>
-        <div class="telem-cell"><div class="telem-lbl">SIGNAL</div><div class="telem-val">${rssi}</div></div>
-        <div class="telem-cell"><div class="telem-lbl">SQUAWK</div><div class="telem-val ${squawkClass}">${squawk}</div></div>
+        <div class="telem-cell"><div class="telem-lbl">SRC</div><div class="telem-val">${source}</div></div>
+        <div class="telem-cell"><div class="telem-lbl">SIG</div><div class="telem-val">${rssi}</div></div>
+        <div class="telem-cell"><div class="telem-lbl">SQK</div><div class="telem-val ${squawkClass}">${squawk}</div></div>
         <div class="telem-cell"><div class="telem-lbl">IAS</div><div class="telem-val">${ias}</div></div>
         <div class="telem-cell"><div class="telem-lbl">WIND</div><div class="telem-val">${wind}</div></div>
         <div class="telem-cell"><div class="telem-lbl">OAT</div><div class="telem-val">${oat}</div></div>
-        <div class="telem-cell"><div class="telem-lbl">NAV HDG</div><div class="telem-val">${navHdg}</div></div>
+        <div class="telem-cell"><div class="telem-lbl">HDG</div><div class="telem-val">${navHdg}</div></div>
         <div class="telem-cell"><div class="telem-lbl">MSGS</div><div class="telem-val">${msgCount}</div></div>
-        <div class="telem-cell"><div class="telem-lbl">LAST SEEN</div><div class="telem-val">${seen}</div></div>
+        <div class="telem-cell"><div class="telem-lbl">SEEN</div><div class="telem-val">${seen}</div></div>
       </div>
 
     </div>
