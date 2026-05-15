@@ -78,13 +78,13 @@ In the Tailscale admin under **Access Controls**, make sure `tag:ci` exists:
 
 ## E-ink Displays
 
-Two purpose-built pages optimised for e-ink panels. Both avoid animations, smooth scrolling, per-second updates, glow effects, and any CSS that causes unnecessary full-panel refreshes.
+Two layouts served from a single page (`main.html`), optimised for e-ink panels. Both avoid animations, smooth scrolling, per-second updates, glow effects, and any CSS that causes unnecessary full-panel refreshes.
 
-### eink.html — Full Layout
+### main.html — Full Layout
 
-Mirrors the information density of `flightboard.html`. Shows one aircraft at a time with a full header (logo, airline, route, callsign, aircraft type, registration, flag), a 9-field data grid (track, altitude, mach, lat, distance, speed, lon, vertical rate, status), and a 9-field telemetry row (source, signal, squawk, IAS, wind, OAT, nav heading, message count, last seen). Aircraft cycle automatically every 60 seconds.
+Shows one aircraft at a time with a full header (logo, airline, route, callsign, aircraft type, registration, flag), a 9-field data grid (track, altitude, mach, lat, distance, speed, lon, vertical rate, status), and a 9-field telemetry row (source, signal, squawk, IAS, wind, OAT, nav heading, message count, last seen). Aircraft cycle automatically every 60 seconds.
 
-### eink-focus.html — Focus Layout
+### main.html?focus — Focus Layout
 
 Designed for larger text and a cleaner read from a distance. The route airports (`FRA ──► DXB`) dominate the centre of the screen as the visual centrepiece. The top strip shows the airline name, callsign, aircraft type name, and — at the same size as the airline name — the ICAO type code, country flag, and tail number. A compact strip of six fields runs along the bottom (altitude, speed, track, vertical rate, status, distance). No telemetry row.
 
@@ -92,7 +92,17 @@ Designed for larger text and a cleaner read from a distance. The route airports 
 
 ### URL Parameters
 
-All parameters work on both `eink.html` and `eink-focus.html` and can be freely combined.
+All parameters work on both layouts and can be freely combined.
+
+#### `?focus`
+
+Switches from the full layout to the focus layout.
+
+```
+main.html?focus
+```
+
+---
 
 #### `?theme=`
 
@@ -105,8 +115,8 @@ Controls colour scheme. Default is `white`.
 | `color` | Near-black `#050200` | Amber `#FFA040` | Colour e-ink or OLED panels |
 
 ```
-eink.html?theme=black
-eink-focus.html?theme=color
+main.html?theme=black
+main.html?focus&theme=color
 ```
 
 ---
@@ -123,8 +133,8 @@ Controls whether the layout stacks horizontally or vertically. Default is `lands
 Use `portrait` when the display is mounted vertically (taller than it is wide), or when `?res=` gives a height greater than the width.
 
 ```
-eink.html?orientation=portrait
-eink-focus.html?orientation=portrait
+main.html?orientation=portrait
+main.html?focus&orientation=portrait
 ```
 
 ---
@@ -147,11 +157,11 @@ The shorter of the two dimensions is used as the scale base so the layout works 
 | Waveshare 13.3" | 13.3 inch | 1600 × 1200 | `?res=1600x1200` |
 
 ```
-eink-focus.html?res=800x480
-eink-focus.html?orientation=portrait&res=480x800
+main.html?focus&res=800x480
+main.html?focus&orientation=portrait&res=480x800
 ```
 
-> **Tip:** If your panel resolution is not listed, use whichever standard resolution is closest, or enter your panel's exact spec. The scaling coefficients are defined at the top of `eink-focus.js` and `eink.js` and can be tuned per-display.
+> **Tip:** If your panel resolution is not listed, use whichever standard resolution is closest, or enter your panel's exact spec. The scaling coefficients are defined at the top of `main.js` and can be tuned per-display.
 
 ---
 
@@ -160,8 +170,8 @@ eink-focus.html?orientation=portrait&res=480x800
 Restricts the display to aircraft within **N kilometres** of the receiver. If no aircraft are currently within range the display falls back to showing all tracked aircraft (so the screen is never blank), and the footer label changes to indicate the fallback.
 
 ```
-eink-focus.html?radius=30
-eink.html?radius=50
+main.html?focus&radius=30
+main.html?radius=50
 ```
 
 ---
@@ -171,8 +181,8 @@ eink.html?radius=50
 Locks the display to the **single nearest aircraft** at all times. No cycling occurs — every time new data arrives the display updates to whichever aircraft is now closest. Useful when the display is mounted near a runway or spotting point where you always want to see the overhead aircraft.
 
 ```
-eink-focus.html?closest
-eink.html?closest
+main.html?focus&closest
+main.html?closest
 ```
 
 ---
@@ -190,8 +200,8 @@ Crucially, **the display only re-renders when the aircraft's data has meaningful
 | `?refresh=5` | Minimum — most responsive |
 
 ```
-eink-focus.html?refresh=30
-eink.html?closest&refresh=15
+main.html?focus&refresh=30
+main.html?closest&refresh=15
 ```
 
 ---
@@ -201,23 +211,23 @@ eink.html?closest&refresh=15
 All parameters stack with `&`:
 
 ```
-eink-focus.html?theme=black&orientation=landscape&res=800x480
-eink-focus.html?theme=white&orientation=portrait&res=480x800
-eink-focus.html?theme=color&res=1200x825
-eink.html?theme=black&orientation=portrait&res=1404x1872
-eink.html?theme=white&res=800x480
-eink-focus.html?closest&theme=black&res=800x480
-eink-focus.html?radius=25&closest&theme=white&res=800x480
-eink.html?radius=50&theme=white&orientation=portrait
-eink-focus.html?closest&refresh=30&theme=white&res=800x480
-eink.html?radius=50&refresh=20&theme=black&res=1200x825
+main.html?focus&theme=black&orientation=landscape&res=800x480
+main.html?focus&theme=white&orientation=portrait&res=480x800
+main.html?focus&theme=color&res=1200x825
+main.html?theme=black&orientation=portrait&res=1404x1872
+main.html?theme=white&res=800x480
+main.html?focus&closest&theme=black&res=800x480
+main.html?focus&radius=25&closest&theme=white&res=800x480
+main.html?radius=50&theme=white&orientation=portrait
+main.html?focus&closest&refresh=30&theme=white&res=800x480
+main.html?radius=50&refresh=20&theme=black&res=1200x825
 ```
 
 ---
 
 ### Data Sources
 
-Both displays cycle through aircraft sorted by signal strength (strongest first, up to 30 shown). Aircraft data is fetched from tar1090's local `aircraft.json` every 30 seconds. Route data (origin, destination, airline name, IATA flight number) is fetched on first sight of a callsign from `api.adsbdb.com`, falling back to the local route proxy. Results are cached for the session so each callsign is only looked up once.
+Both layouts cycle through aircraft sorted by signal strength (strongest first, up to 30 shown). Aircraft data is fetched from tar1090's local `aircraft.json` every 10 seconds by default. Route data (origin, destination, airline name, IATA flight number) is fetched on first sight of a callsign from `api.adsbdb.com`, falling back to the local route proxy. Results are cached for the session so each callsign is only looked up once.
 
 The airline name resolves in order: local `AIRLINES` dictionary in `data.js` → airline name returned by the route API → raw ICAO prefix code.
 
