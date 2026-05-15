@@ -1,4 +1,4 @@
-/* ── E-INK CONFIG ───────────────────────────────────────────────────────────
+/* ── main-themes.js ─────────────────────────────────────────────────────────
  *  All URL parameters (combine freely):
  *
  *  ?theme=white          white bg, black text (default)
@@ -9,10 +9,10 @@
  *  ?orientation=portrait    stacked vertical route
  *
  *  Examples:
- *    eink.html
- *    eink.html?theme=black&orientation=portrait
- *    eink-focus.html?theme=color&orientation=portrait&res=480x800
- *    eink-focus.html?theme=white&orientation=landscape&res=800x480
+ *    main.html
+ *    main.html?theme=black&orientation=portrait
+ *    main.html?focus&theme=color&orientation=portrait&res=480x800
+ *    main.html?focus&theme=white&orientation=landscape&res=800x480
  * ───────────────────────────────────────────────────────────────────────── */
 
 const EINK_THEMES = {

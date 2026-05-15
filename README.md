@@ -347,8 +347,13 @@ piflightboard/
 │   ├── data.js                     # airline names, ICAO→country, ICAO→IATA, aircraft types
 │   ├── main.html                   # single entry point (?focus switches to focus layout)
 │   ├── main.js                     # merged JS — full layout + focus layout, FOCUS_MODE flag
-│   ├── eink.css                    # base styles (both layouts)
-│   ├── eink-focus.css              # focus layout overrides + hero/route/data-strip classes
-│   └── eink-themes.js              # ?theme=, ?orientation=, ?focus → CSS class applier
+│   ├── main.css                    # base styles (both layouts)
+│   ├── main-focus.css              # focus layout overrides + hero/route/data-strip classes
+│   ├── main-themes.js              # ?theme=, ?orientation=, ?focus → CSS class applier
+│   ├── radar.html                  # PPI radar display
+│   ├── radar.js                    # radar fetch, RAF loop, canvas draw, cards, menu
+│   ├── radar.css                   # radar layout, canvas, cards, burger menu styles
+│   ├── radar-themes.js             # radar manufacturer-inspired themes
+│   └── radar-geo.js                # receiver coords, country polygons, airport list
 └── README.md
 ```

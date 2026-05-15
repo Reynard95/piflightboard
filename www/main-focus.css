@@ -1,10 +1,10 @@
-/* ── eink-focus.css ─────────────────────────────────────────────────────────
- *  Loaded AFTER eink.css.
+/* ── main-focus.css ──────────────────────────────────────────────────────────
+ *  Loaded AFTER main.css.
  *  Adds the hero route layout and overrides sizes for the focus display.
- *  Shared base styles (body, board, footer, no-signal, etc.) come from eink.css.
+ *  Shared base styles (body, board, footer, no-signal, etc.) come from main.css.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-/* ── SIZE TOKENS — overridden by ?res=WxH via eink-focus.js ── */
+/* ── SIZE TOKENS — overridden by ?res=WxH via main.js ── */
 :root {
   --sz-airline:  clamp(48px, 10.5vh, 148px);  /* airline name, type code, reg — all matched */
   --sz-iata:     clamp(64px, 19vh,   220px);  /* route airport codes — the centrepiece */
@@ -16,8 +16,8 @@
   --sz-logo:     clamp(72px, 15vh,   180px);  /* logo box */
 }
 
-/* ── Override shared eink.css sizes for logo, type, reg, flag ──────────────
- *  Scoped under html.focus-mode (added by eink-themes.js when ?focus is set)
+/* ── Override shared main.css sizes for logo, type, reg, flag ──────────────
+ *  Scoped under html.focus-mode (added by main-themes.js when ?focus is set)
  *  so these don't bleed into the full layout when both CSS files are loaded.
  * ─────────────────────────────────────────────────────────────────────────── */
 html.focus-mode .logo-box {
