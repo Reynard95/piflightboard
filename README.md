@@ -49,6 +49,7 @@ tailscale ip -4
 | `http://flighttracker.local/tar1090` | Live map |
 | `http://flighttracker.local/tar1090/main.html` | Full layout — data grid + telemetry row |
 | `http://flighttracker.local/tar1090/main.html?focus` | Focus layout — giant route airports + compact strip |
+| `http://flighttracker.local/tar1090/radar.html` | PPI radar — rotating sweep + aircraft cards |
 
 ## Auto-deploy
 
@@ -219,6 +220,97 @@ eink.html?radius=50&refresh=20&theme=black&res=1200x825
 Both displays cycle through aircraft sorted by signal strength (strongest first, up to 30 shown). Aircraft data is fetched from tar1090's local `aircraft.json` every 30 seconds. Route data (origin, destination, airline name, IATA flight number) is fetched on first sight of a callsign from `api.adsbdb.com`, falling back to the local route proxy. Results are cached for the session so each callsign is only looked up once.
 
 The airline name resolves in order: local `AIRLINES` dictionary in `data.js` → airline name returned by the route API → raw ICAO prefix code.
+
+---
+
+## Radar Display
+
+`radar.html` renders a live plan-position-indicator (PPI) radar with a rotating sweep arm, country outlines, airport markers, and an aircraft card grid.
+
+### URL Parameters
+
+#### `?theme=`
+
+Controls the colour scheme. Default for the radar page is `color`.
+
+| Value | Inspiration | Background | Foreground |
+|-------|-------------|-----------|-----------|
+| `color` | Classic radar amber | Near-black | Amber `#FFA040` |
+| `airbus` | Airbus blue/grey | Near-black | Blue `#7EB3E8` |
+| `boeing` | Boeing navy/gold | Near-black | Gold `#C8A84B` |
+| `embraer` | Embraer teal | Near-black | Teal `#5FC4B0` |
+| `bombardier` | Bombardier red | Near-black | Red `#E87070` |
+| `military` | Military green | Near-black | Green `#5EBF5E` |
+
+```
+radar.html?theme=airbus
+radar.html?theme=military
+```
+
+#### `?range=`
+
+Sets the initial radar range. Default: `250`.
+
+| Value | Effect |
+|-------|--------|
+| `100` | 100 km radius |
+| `150` | 150 km radius |
+| `200` | 200 km radius |
+| `250` | 250 km radius (default) |
+| `auto` | Automatically shrinks to fit all visible aircraft |
+
+```
+radar.html?range=100
+radar.html?range=auto
+```
+
+#### `?refresh=N`
+
+Data fetch interval in seconds. Default `2`, minimum `1`.
+
+```
+radar.html?refresh=5
+```
+
+#### `?radius=N`
+
+Restricts aircraft to within N km of the receiver (same as e-ink pages).
+
+```
+radar.html?radius=80
+```
+
+#### `?closest`
+
+Locks the display to only the single nearest aircraft.
+
+```
+radar.html?closest
+```
+
+#### `?sweep=off`
+
+Disables the rotating sweep animation on load. Blips still update on each data fetch.
+
+```
+radar.html?sweep=off
+```
+
+#### `?units=metric`
+
+Switches altitude (m), speed (km/h), and vertical rate (m/s) to metric. Default is imperial.
+
+```
+radar.html?units=metric
+```
+
+### Combining Parameters
+
+```
+radar.html?theme=military&range=150&units=metric
+radar.html?theme=airbus&range=auto&sweep=off
+radar.html?theme=color&radius=80&closest&refresh=3
+```
 
 ---
 

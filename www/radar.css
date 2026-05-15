@@ -1,0 +1,376 @@
+/* radar.css — PPI radar display styles */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Defaults — overridden by radar-themes.js */
+  --bg:     #050200;
+  --fg:     #FFA040;
+  --fg-mid: #CC7020;
+  --fg-dim: #7A4010;
+  --sep:    #3A1E08;
+  --accent: #FF8000;
+  --land:   #0D0804;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TOP-LEVEL LAYOUT
+   ══════════════════════════════════════════════════════════ */
+
+.radar-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Left: canvas + footer ── */
+.radar-left {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  /* width is set dynamically by JS to match canvas size */
+}
+
+.canvas-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+#radar-canvas {
+  display: block;
+  background: var(--bg);
+}
+
+/* Footer stats bar below canvas */
+.radar-footer {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--sep);
+  padding: 6px 12px;
+  flex-shrink: 0;
+}
+
+.rf-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rf-cell + .rf-cell {
+  border-left: 1px solid var(--sep);
+  padding-left: 14px;
+  margin-left: 0;
+}
+
+.rf-lbl {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+}
+.rf-val {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--fg);
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+/* ── Right: header + card grid ── */
+.radar-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--sep);
+  overflow: hidden;
+}
+
+/* Header bar: LIVE dot + title + MENU button */
+.radar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--sep);
+  flex-shrink: 0;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg);
+  flex-shrink: 0;
+}
+
+.live-label {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: var(--fg);
+  letter-spacing: 0.15em;
+}
+
+.radar-title {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: var(--fg-dim);
+  letter-spacing: 0.25em;
+  flex: 1;
+  text-align: center;
+}
+
+.menu-btn {
+  background: none;
+  border: 1px solid var(--sep);
+  color: var(--fg);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.menu-btn:hover { border-color: var(--fg); }
+
+/* ── Aircraft card grid ── */
+.ac-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 5px;
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: start;
+}
+
+/* ── Individual card ── */
+.ac-card {
+  border: 1px solid var(--sep);
+  padding: 7px 9px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+.ac-card:hover { border-color: var(--fg-mid); }
+.ac-card.selected { border-color: var(--fg); }
+
+.card-airline {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--fg);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.card-dist {
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+}
+
+.card-flight {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--fg-mid);
+  letter-spacing: 0.10em;
+  white-space: nowrap;
+}
+
+.card-type {
+  font-size: 10px;
+  color: var(--fg-mid);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-divider {
+  border: none;
+  border-top: 1px solid var(--sep);
+  margin: 0;
+}
+
+.card-data {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 6px;
+}
+
+.card-field-lbl {
+  font-size: 8px;
+  color: var(--fg-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.card-field-val {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: var(--fg);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BURGER MENU OVERLAY
+   ══════════════════════════════════════════════════════════ */
+
+.menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.menu-overlay.open { display: flex; }
+
+.menu-panel {
+  background: var(--bg);
+  border: 1px solid var(--fg-mid);
+  width: min(380px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sep);
+}
+.menu-panel-title {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--fg);
+  letter-spacing: 0.25em;
+}
+.menu-close {
+  background: none;
+  border: none;
+  color: var(--fg);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0;
+}
+
+.menu-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sep);
+}
+.menu-section:last-child { border-bottom: none; }
+
+.menu-section-title {
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.30em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.menu-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.menu-opt {
+  background: none;
+  border: 1px solid var(--sep);
+  color: var(--fg-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+.menu-opt:hover { border-color: var(--fg-mid); color: var(--fg-mid); }
+.menu-opt.active { border-color: var(--fg); color: var(--fg); }
+
+/* Legend section */
+.menu-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--fg-mid);
+  letter-spacing: 0.12em;
+}
+.legend-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-dot.level    { background: var(--fg); }
+.legend-dot.climbing { background: #33EE55; }
+.legend-dot.descent  { background: #FF5555; }
+.legend-dot.ground   { background: #4499FF; }
+
+/* ══════════════════════════════════════════════════════════
+   NARROW / STACKED layout  (< 700px — right panel below)
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 699px) {
+  .radar-shell {
+    flex-direction: column;
+  }
+  .radar-left {
+    flex-shrink: 0;
+  }
+  .radar-right {
+    border-left: none;
+    border-top: 1px solid var(--sep);
+    flex: 1;
+    min-height: 0;
+  }
+  .ac-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SCROLLBAR STYLE (Webkit)
+   ══════════════════════════════════════════════════════════ */
+
+.ac-grid::-webkit-scrollbar { width: 4px; }
+.ac-grid::-webkit-scrollbar-track { background: transparent; }
+.ac-grid::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 2px; }
+.ac-grid::-webkit-scrollbar-thumb:hover { background: var(--fg-dim); }

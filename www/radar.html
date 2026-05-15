@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radar</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="radar.css">
+<!--
+  URL parameters:
+    ?theme=color|airbus|boeing|embraer|bombardier|military   default: color
+    ?range=100|150|200|250|auto                               default: 250
+    ?refresh=N    data fetch interval in seconds (min 1)      default: 2
+    ?radius=N     restrict aircraft to within N km of receiver
+    ?closest      show only the single nearest aircraft
+    ?sweep=off    disable sweep animation on load
+    ?units=metric start in metric mode
+-->
+</head>
+<body>
+
+<!-- Shell -->
+<div class="radar-shell">
+  <!-- Left: canvas + footer -->
+  <div class="radar-left" id="radar-left">
+    <div class="canvas-wrap">
+      <canvas id="radar-canvas"></canvas>
+    </div>
+    <div class="radar-footer">
+      <div class="rf-cell">
+        <div class="rf-lbl">TRACKED</div>
+        <div class="rf-val" id="stat-tracked">0</div>
+      </div>
+      <div class="rf-cell">
+        <div class="rf-lbl">AIRPORTS</div>
+        <div class="rf-val" id="stat-airports">0</div>
+      </div>
+      <div class="rf-cell">
+        <div class="rf-lbl">TIME</div>
+        <div class="rf-val" id="stat-time">--:--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: header + aircraft card grid -->
+  <div class="radar-right">
+    <div class="radar-header">
+      <div class="live-dot"></div>
+      <div class="live-label">LIVE</div>
+      <div class="radar-title">PPI RADAR</div>
+      <button class="menu-btn" id="menu-open-btn">&#9776; MENU</button>
+    </div>
+    <div class="ac-grid" id="ac-grid"></div>
+  </div>
+</div>
+
+<!-- Burger menu overlay -->
+<div class="menu-overlay" id="menu-overlay">
+  <div class="menu-panel">
+    <div class="menu-panel-header">
+      <span class="menu-panel-title">SETTINGS</span>
+      <button class="menu-close" id="menu-close-btn">&#x2715;</button>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">Range</div>
+      <div class="menu-btn-group" id="menu-range">
+        <button class="menu-opt" data-val="100">100 KM</button>
+        <button class="menu-opt" data-val="150">150 KM</button>
+        <button class="menu-opt" data-val="200">200 KM</button>
+        <button class="menu-opt" data-val="250">250 KM</button>
+        <button class="menu-opt" data-val="auto">AUTO</button>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">Sweep</div>
+      <div class="menu-btn-group" id="menu-sweep">
+        <button class="menu-opt" data-val="on">ON</button>
+        <button class="menu-opt" data-val="off">OFF</button>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">Units</div>
+      <div class="menu-btn-group" id="menu-units">
+        <button class="menu-opt" data-val="imperial">IMPERIAL</button>
+        <button class="menu-opt" data-val="metric">METRIC</button>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">Theme</div>
+      <div class="menu-btn-group" id="menu-theme">
+        <button class="menu-opt" data-val="color">COLOR</button>
+        <button class="menu-opt" data-val="airbus">AIRBUS</button>
+        <button class="menu-opt" data-val="boeing">BOEING</button>
+        <button class="menu-opt" data-val="embraer">EMBRAER</button>
+        <button class="menu-opt" data-val="bombardier">BOMBARDIER</button>
+        <button class="menu-opt" data-val="military">MILITARY</button>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">Legend</div>
+      <div class="menu-legend">
+        <div class="legend-row"><div class="legend-dot level"></div> LEVEL FLIGHT</div>
+        <div class="legend-row"><div class="legend-dot climbing"></div> CLIMBING (&gt; 300 FPM)</div>
+        <div class="legend-row"><div class="legend-dot descent"></div> DESCENDING (&lt; −300 FPM)</div>
+        <div class="legend-row"><div class="legend-dot ground"></div> ON GROUND</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- set default theme before radar-themes.js runs -->
+<script>
+  if (!new URLSearchParams(location.search).has('theme')) {
+    const u = new URL(location.href);
+    u.searchParams.set('theme', 'color');
+    history.replaceState(null, '', u);
+  }
+</script>
+<script src="data.js"></script>
+<script src="radar-themes.js"></script>
+<script src="radar-geo.js"></script>
+<script src="radar.js"></script>
+</body>
+</html>
