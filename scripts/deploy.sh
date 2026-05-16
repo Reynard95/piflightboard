@@ -17,8 +17,10 @@ echo "[deploy] Copying web files..."
 sudo cp "$REPO_DIR"/www/* "$WEB_DIR/"
 
 # ── lighttpd aliases for local assets ─────────────────────
+# 87-* loads before 88-tar1090.conf so our specific aliases win over the catch-all /tar1090/
 echo "[deploy] Installing lighttpd asset aliases..."
-sudo cp "$REPO_DIR/config/lighttpd-assets.conf" "$CONFIG_DIR/89-flighttracker-assets.conf"
+sudo cp "$REPO_DIR/config/lighttpd-tar1090.conf" "$CONFIG_DIR/87-flighttracker.conf"
+sudo cp "$REPO_DIR/config/lighttpd-assets.conf"  "$CONFIG_DIR/89-flighttracker-assets.conf"
 
 # ── lighttpd reload ────────────────────────────────────────
 echo "[deploy] Reloading lighttpd..."

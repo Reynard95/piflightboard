@@ -90,13 +90,20 @@ Three-tier fallback, evaluated **after** the route fetch completes:
 
 ### lighttpd aliases
 
-Defined in `config/lighttpd-tar1090.conf` (installed as `tar1090.conf`):
-- `/tar1090/data/` → `/run/readsb/` (live ADS-B JSON)
-- `/tar1090/db-28a5940/` → tar1090's aircraft database (hex → reg/type)
-- `/tar1090/airline_logos/` and `/tar1090/country_flags/` → `images/` in this repo
-- `/tar1090` → `/usr/local/share/tar1090/html` (all web files)
+The tar1090 installer writes `/etc/lighttpd/conf-enabled/88-tar1090.conf` which already defines:
+- `/tar1090/data/` → `/run/readsb/`
+- `/tar1090/db-*/` → tar1090's aircraft database
+- `/tar1090` → `/usr/local/share/tar1090/html`
 
-`config/lighttpd-assets.conf` is intentionally a comments-only file — the image aliases are already in the tar1090 system config and duplicating them causes lighttpd to crash with duplicate-key errors.
+`config/lighttpd-tar1090.conf` (installed as `87-flighttracker.conf`) defines **only** the two entries that tar1090 omits:
+- `/tar1090/airline_logos/` → `images/airline_logos/` in this repo
+- `/tar1090/country_flags/` → `images/country_flags/` in this repo
+
+**Do not add `/tar1090/data/`, `/tar1090/db-*/`, or `/tar1090` to our config.** lighttpd crashes with `Duplicate array-key` if any alias key appears more than once across all conf-enabled files.
+
+**The `87-` prefix is load-order critical.** lighttpd processes `alias.url` entries in the order they are added across all conf files. `88-tar1090.conf` contains a catch-all `/tar1090/` entry that matches everything under that path. Our more-specific `/tar1090/airline_logos/` and `/tar1090/country_flags/` entries must be added to the array *before* that catch-all — otherwise lighttpd matches `/tar1090/` first and the image paths never resolve. Naming our file `87-*` ensures it loads before `88-tar1090.conf`.
+
+`config/lighttpd-assets.conf` is intentionally a comments-only placeholder — the deploy script copies it to `89-flighttracker-assets.conf` but it contains no active directives.
 
 ## Key configuration
 

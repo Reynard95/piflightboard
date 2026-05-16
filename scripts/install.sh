@@ -131,7 +131,11 @@ fi
 echo "[8c/10] Installing lighttpd asset aliases config..."
 cp "$REPO_DIR/config/lighttpd-assets.conf" /etc/lighttpd/conf-enabled/89-flighttracker-assets.conf
 echo "[9/10] Configuring lighttpd..."
-cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/tar1090.conf
+# Install as 87-* so it loads before 88-tar1090.conf — our specific aliases
+# (/tar1090/airline_logos/, /tar1090/country_flags/) must be added to the
+# alias.url array before tar1090's catch-all /tar1090/ entry, otherwise
+# lighttpd matches the catch-all first and the image paths never resolve.
+cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/87-flighttracker.conf
 if [ -d "$WEB_DIR" ]; then
   cp "$REPO_DIR"/www/* "$WEB_DIR/"
 fi
