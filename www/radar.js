@@ -299,9 +299,9 @@ function drawBase() {
   });
 
   // Country outlines
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 0.65;
   ctx.strokeStyle = fgDimColor;
-  ctx.lineWidth   = 0.8;
+  ctx.lineWidth   = 1.0;
   GEO_POLYGONS.forEach(poly => {
     ctx.beginPath();
     poly.forEach(([lat, lon], i) => {
@@ -315,7 +315,7 @@ function drawBase() {
 
   // Fine grid
   ctx.strokeStyle = fgColor;
-  ctx.globalAlpha = 0.08;
+  ctx.globalAlpha = 0.12;
   ctx.lineWidth   = 0.5;
   const step = R / 5;
   for (let x = cx % step; x < W; x += step) {
@@ -539,6 +539,53 @@ function drawSweep(angle) {
   ctx.restore();
 }
 
+/* ── Aircraft icon — top-down airplane silhouette ── */
+function drawPlaneIcon(x, y, trackDeg, color, size) {
+  const s = size;
+  ctx.save();
+  ctx.translate(x, y);
+  // track 0 = north = up on screen; rotate clockwise by track degrees
+  ctx.rotate(trackDeg * Math.PI / 180);
+  ctx.fillStyle = color;
+
+  // Fuselage — nose at (0, -s), tail at (0, s*0.55)
+  ctx.beginPath();
+  ctx.moveTo(0,        -s);          // nose tip
+  ctx.lineTo( s*0.18,  s*0.20);
+  ctx.lineTo( s*0.12,  s*0.55);
+  ctx.lineTo( 0,       s*0.42);
+  ctx.lineTo(-s*0.12,  s*0.55);
+  ctx.lineTo(-s*0.18,  s*0.20);
+  ctx.closePath();
+  ctx.fill();
+
+  // Main wings — swept back slightly
+  ctx.beginPath();
+  ctx.moveTo( s*0.14,  s*0.08);
+  ctx.lineTo( s*1.05,  s*0.52);
+  ctx.lineTo( s*0.85,  s*0.62);
+  ctx.lineTo( 0,       s*0.30);
+  ctx.lineTo(-s*0.85,  s*0.62);
+  ctx.lineTo(-s*1.05,  s*0.52);
+  ctx.lineTo(-s*0.14,  s*0.08);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail fins
+  ctx.beginPath();
+  ctx.moveTo( s*0.10,  s*0.52);
+  ctx.lineTo( s*0.40,  s*0.92);
+  ctx.lineTo( s*0.22,  s*0.98);
+  ctx.lineTo( 0,       s*0.75);
+  ctx.lineTo(-s*0.22,  s*0.98);
+  ctx.lineTo(-s*0.40,  s*0.92);
+  ctx.lineTo(-s*0.10,  s*0.52);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
 function drawBlips() {
   const W  = canvas.width;
   const cx = W / 2, cy = W / 2;
@@ -552,13 +599,15 @@ function drawBlips() {
     const [x, y] = geoToXY(ac.lat, ac.lon, cx, cy, R, rangeKm);
     if (x < 0 || x > W || y < 0 || y > W) return;
 
-    const color    = blipColor(ac);
+    const color      = blipColor(ac);
     const isSelected = ac.hex === selectedHex;
-    const radius   = isSelected ? 5 : 3.5;
+    const iconSize   = isSelected ? 9 : 7;
+    const hasTrack   = ac.track !== undefined && ac.gs > 0;
+    const trackDeg   = ac.track || 0;
 
-    // Trail ghost dots
-    const hist = posHistory.get(ac.hex) || [];
-    const trail = hist.slice(0, -1); // exclude current (will be drawn as blip)
+    // Trail ghost dots (small circles — historical positions)
+    const hist  = posHistory.get(ac.hex) || [];
+    const trail = hist.slice(0, -1);
     const opacities = [0.15, 0.25, 0.35];
     trail.forEach((pos, i) => {
       const oi = trail.length - 1 - i;
@@ -571,22 +620,24 @@ function drawBlips() {
     });
     ctx.globalAlpha = 1;
 
-    // Heading vector
-    if (ac.track !== undefined && ac.gs > 0) {
-      const rad = (ac.track - 90) * Math.PI / 180;
+    // Heading vector — thin line extending ahead of the nose
+    if (hasTrack) {
+      const tRad  = trackDeg * Math.PI / 180;
+      const noseX = x + Math.sin(tRad) * iconSize;
+      const noseY = y - Math.cos(tRad) * iconSize;
       ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(rad) * 14, y + Math.sin(rad) * 14);
+      ctx.moveTo(noseX, noseY);
+      ctx.lineTo(noseX + Math.sin(tRad) * 18, noseY - Math.cos(tRad) * 18);
       ctx.strokeStyle = color;
       ctx.lineWidth   = 0.8;
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.55;
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
-    // Glow ring for selected
+    // Glow ring for selected aircraft
     if (isSelected) {
-      ctx.beginPath(); ctx.arc(x, y, radius + 4, 0, 2 * Math.PI);
+      ctx.beginPath(); ctx.arc(x, y, iconSize + 5, 0, 2 * Math.PI);
       ctx.strokeStyle = color;
       ctx.lineWidth   = 1.5;
       ctx.globalAlpha = 0.4;
@@ -594,24 +645,27 @@ function drawBlips() {
       ctx.globalAlpha = 1;
     }
 
-    // Blip dot
-    ctx.beginPath(); ctx.arc(x, y, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
+    // Airplane icon (falls back to circle if no track data)
+    if (hasTrack) {
+      drawPlaneIcon(x, y, trackDeg, color, iconSize);
+    } else {
+      ctx.beginPath(); ctx.arc(x, y, iconSize * 0.55, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
 
-    // Callout label for selected
+    // Callout label for selected aircraft
     if (isSelected) {
-      const cs      = (ac.flight || ac.hex || '').trim();
-      const altStr  = fmtAlt(ac.alt_baro);
-      const spdStr  = fmtSpd(ac.gs);
-      const lines   = [cs, altStr, spdStr].filter(Boolean);
-      const padX    = 6, padY = 4, lineH = 13, boxW = 80;
-      const boxH    = lines.length * lineH + padY * 2;
-      let bx = x + 9, by = y - boxH / 2;
-      // Flip left if near right edge
-      if (bx + boxW > W - 10) bx = x - boxW - 9;
+      const cs     = (ac.flight || ac.hex || '').trim();
+      const altStr = fmtAlt(ac.alt_baro);
+      const spdStr = fmtSpd(ac.gs);
+      const lines  = [cs, altStr, spdStr].filter(Boolean);
+      const padX   = 6, padY = 4, lineH = 13, boxW = 84;
+      const boxH   = lines.length * lineH + padY * 2;
+      let bx = x + iconSize + 6, by = y - boxH / 2;
+      if (bx + boxW > W - 10) bx = x - boxW - iconSize - 6;
       ctx.fillStyle   = bgColor;
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.88;
       ctx.fillRect(bx, by, boxW, boxH);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = color;
@@ -744,12 +798,12 @@ const THEMES_LIST = ['color', 'airbus', 'boeing', 'embraer', 'bombardier', 'mili
 function applyThemeByName(name) {
   // radar-themes.js themes object is not exported, so re-apply via URL + inline styles
   const THEMES = {
-    color:      { '--bg':'#050200','--fg':'#FFA040','--fg-mid':'#CC7020','--fg-dim':'#7A4010','--sep':'#3A1E08','--accent':'#FF8000','--land':'#0D0804' },
-    airbus:     { '--bg':'#06080F','--fg':'#7EB3E8','--fg-mid':'#4A7AB0','--fg-dim':'#243C5A','--sep':'#152030','--accent':'#3A8FD4','--land':'#0A0E18' },
-    boeing:     { '--bg':'#060508','--fg':'#C8A84B','--fg-mid':'#8A7030','--fg-dim':'#483A18','--sep':'#28200C','--accent':'#F0C040','--land':'#0C0A0E' },
-    embraer:    { '--bg':'#050A09','--fg':'#5FC4B0','--fg-mid':'#348878','--fg-dim':'#1A4840','--sep':'#0E2824','--accent':'#2EA898','--land':'#080F0D' },
-    bombardier: { '--bg':'#080505','--fg':'#E87070','--fg-mid':'#A03838','--fg-dim':'#581818','--sep':'#300C0C','--accent':'#CC4444','--land':'#0E0808' },
-    military:   { '--bg':'#030603','--fg':'#5EBF5E','--fg-mid':'#388038','--fg-dim':'#1A401A','--sep':'#0C200C','--accent':'#3A9A3A','--land':'#060A06' },
+    color:      { '--bg':'#050200','--fg':'#FFA040','--fg-mid':'#CC7020','--fg-dim':'#7A4010','--sep':'#3A1E08','--accent':'#FF8000','--land':'#1E1208' },
+    airbus:     { '--bg':'#06080F','--fg':'#7EB3E8','--fg-mid':'#4A7AB0','--fg-dim':'#243C5A','--sep':'#152030','--accent':'#3A8FD4','--land':'#0F1828' },
+    boeing:     { '--bg':'#060508','--fg':'#C8A84B','--fg-mid':'#8A7030','--fg-dim':'#483A18','--sep':'#28200C','--accent':'#F0C040','--land':'#181208' },
+    embraer:    { '--bg':'#050A09','--fg':'#5FC4B0','--fg-mid':'#348878','--fg-dim':'#1A4840','--sep':'#0E2824','--accent':'#2EA898','--land':'#0D2018' },
+    bombardier: { '--bg':'#080505','--fg':'#E87070','--fg-mid':'#A03838','--fg-dim':'#581818','--sep':'#300C0C','--accent':'#CC4444','--land':'#200C0C' },
+    military:   { '--bg':'#030603','--fg':'#5EBF5E','--fg-mid':'#388038','--fg-dim':'#1A401A','--sep':'#0C200C','--accent':'#3A9A3A','--land':'#0C1A0A' },
   };
   const t = THEMES[name] || THEMES.color;
   const root = document.documentElement;

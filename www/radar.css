@@ -148,9 +148,9 @@ html, body {
 /* ── Aircraft card grid ── */
 .ac-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-  gap: 5px;
-  padding: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 10px;
   overflow-y: auto;
   flex: 1;
   align-content: start;
@@ -159,11 +159,11 @@ html, body {
 /* ── Individual card ── */
 .ac-card {
   border: 1px solid var(--sep);
-  padding: 7px 9px;
+  padding: 10px 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
   min-width: 0;
   transition: border-color 0.15s;
 }
@@ -172,7 +172,7 @@ html, body {
 
 .card-airline {
   font-family: 'VT323', monospace;
-  font-size: 16px;
+  font-size: 22px;
   color: var(--fg);
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -189,7 +189,7 @@ html, body {
 }
 
 .card-dist {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--fg-dim);
   letter-spacing: 0.1em;
   flex-shrink: 0;
@@ -197,14 +197,14 @@ html, body {
 
 .card-flight {
   font-family: 'VT323', monospace;
-  font-size: 14px;
+  font-size: 18px;
   color: var(--fg-mid);
   letter-spacing: 0.10em;
   white-space: nowrap;
 }
 
 .card-type {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--fg-mid);
   letter-spacing: 0.08em;
   white-space: nowrap;
@@ -221,18 +221,18 @@ html, body {
 .card-data {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 6px;
+  gap: 5px 8px;
 }
 
 .card-field-lbl {
-  font-size: 8px;
+  font-size: 11px;
   color: var(--fg-dim);
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 .card-field-val {
   font-family: 'VT323', monospace;
-  font-size: 13px;
+  font-size: 18px;
   color: var(--fg);
   letter-spacing: 0.05em;
   line-height: 1.2;
@@ -364,6 +364,40 @@ html, body {
   .ac-grid {
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   LARGE SCREEN (≥ 1400px) — ultrawide / big monitor
+   Bigger cards and text so the grid is readable from distance.
+   ══════════════════════════════════════════════════════════ */
+
+@media (min-width: 1400px) {
+  .ac-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+  .ac-card {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  .card-airline    { font-size: 30px; }
+  .card-flight     { font-size: 24px; }
+  .card-type       { font-size: 15px; }
+  .card-dist       { font-size: 15px; }
+  .card-field-lbl  { font-size: 12px; letter-spacing: 0.22em; }
+  .card-field-val  { font-size: 24px; }
+  .card-data       { gap: 6px 10px; }
+
+  /* Slightly taller header to match the bigger cards */
+  .radar-header    { padding: 10px 16px; }
+  .live-label      { font-size: 22px; }
+  .radar-title     { font-size: 24px; }
+  .menu-btn        { font-size: 14px; padding: 6px 14px; }
+
+  /* Bigger footer stats */
+  .rf-lbl { font-size: 11px; }
+  .rf-val  { font-size: 28px; }
 }
 
 /* ══════════════════════════════════════════════════════════

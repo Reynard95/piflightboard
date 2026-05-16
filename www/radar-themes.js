@@ -11,7 +11,7 @@
       '--fg-dim': '#7A4010',
       '--sep':    '#3A1E08',
       '--accent': '#FF8000',
-      '--land':   '#0D0804',
+      '--land':   '#1E1208',   /* noticeably lighter than --bg for map contrast */
     },
     airbus: {
       '--bg':     '#06080F',
@@ -20,7 +20,7 @@
       '--fg-dim': '#243C5A',
       '--sep':    '#152030',
       '--accent': '#3A8FD4',
-      '--land':   '#0A0E18',
+      '--land':   '#0F1828',
     },
     boeing: {
       '--bg':     '#060508',
@@ -29,7 +29,7 @@
       '--fg-dim': '#483A18',
       '--sep':    '#28200C',
       '--accent': '#F0C040',
-      '--land':   '#0C0A0E',
+      '--land':   '#181208',
     },
     embraer: {
       '--bg':     '#050A09',
@@ -38,7 +38,7 @@
       '--fg-dim': '#1A4840',
       '--sep':    '#0E2824',
       '--accent': '#2EA898',
-      '--land':   '#080F0D',
+      '--land':   '#0D2018',
     },
     bombardier: {
       '--bg':     '#080505',
@@ -47,7 +47,7 @@
       '--fg-dim': '#581818',
       '--sep':    '#300C0C',
       '--accent': '#CC4444',
-      '--land':   '#0E0808',
+      '--land':   '#200C0C',
     },
     military: {
       '--bg':     '#030603',
@@ -56,7 +56,7 @@
       '--fg-dim': '#1A401A',
       '--sep':    '#0C200C',
       '--accent': '#3A9A3A',
-      '--land':   '#060A06',
+      '--land':   '#0C1A0A',
     },
   };
 
