@@ -16,31 +16,131 @@ ADS-B flight tracker running on a Raspberry Pi Zero 2W with NooElec RTL-SDR v5.
 
 ## Fresh Install
 
-On a clean Raspberry Pi OS Lite (64-bit):
+### Step 1 — Flash the SD card
+
+Download and install **[Raspberry Pi Imager](https://www.raspberrypi.com/software/)** on your computer.
+
+1. Open Raspberry Pi Imager
+2. **Choose Device** → Raspberry Pi Zero 2W
+3. **Choose OS** → Raspberry Pi OS (other) → **Raspberry Pi OS Lite (64-bit)** — no desktop needed
+4. **Choose Storage** → select your microSD card (64 GB recommended)
+5. Click **Next**, then when prompted click **Edit Settings** to configure the image before writing:
+
+In the **General** tab:
+- Set hostname: e.g. `flighttracker`
+- Set username and password (remember these — you'll SSH in with them)
+- Tick **Configure wireless LAN** and enter your Wi-Fi SSID and password
+- Set locale / timezone
+
+In the **Services** tab:
+- Tick **Enable SSH** → Use password authentication
+
+Click **Save**, then **Yes** to apply the settings, then **Yes** to write. Writing takes about 2–3 minutes.
+
+### Step 2 — First boot and SSH in
+
+Insert the SD card into the Pi, connect the RTL-SDR dongle, and power it on. Wait about 60 seconds for it to boot and connect to Wi-Fi.
+
+Find the Pi on your network — try the hostname first:
 
 ```bash
-# Install git first
+ssh YOUR_USERNAME@flighttracker.local
+```
+
+If `.local` doesn't resolve, find the IP from your router's DHCP table or use a scanner like `nmap -sn 192.168.1.0/24` (adjust the subnet to match your network). Then SSH directly:
+
+```bash
+ssh YOUR_USERNAME@192.168.1.X
+```
+
+### Step 3 — Clone the repo and run the install script
+
+Once you're SSH'd in, run these commands **as your regular user** (not root):
+
+```bash
+# Update the package list and install git
 sudo apt update && sudo apt install -y git
 
-# Clone the repo as your user (NOT sudo — ownership matters for git pull)
+# Clone the repo as your user (NOT sudo — ownership matters for git pull later)
 git clone https://github.com/YOUR_USERNAME/piflightboard.git /opt/flighttracker
 
-# Run the install script with sudo
+# Run the full install script with sudo
 cd /opt/flighttracker
 sudo bash scripts/install.sh
 ```
 
-The script will pause and print instructions when action is needed — particularly for Tailscale authentication and the SSH deploy key.
+The script runs 10 steps — system update, dependencies, Tailscale, SSH deploy key, RTL-SDR driver blacklist, udev rules, readsb build, tar1090 install, lighttpd config, and the route proxy. It takes roughly 10–15 minutes on a Pi Zero 2W.
 
-**After the script finishes:**
+**Watch for two pauses during the script:**
+
+1. **Deploy SSH key** — the script prints the private key to the terminal. Copy the entire block including the `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----` lines. This goes into GitHub secret `DEPLOY_SSH_KEY`.
+2. **Post-install reminder** — the script prints what to do next (Tailscale auth, GitHub secrets).
+
+### Step 4 — Authenticate Tailscale
+
+After the script finishes, authenticate Tailscale:
 
 ```bash
-# 1. Authenticate Tailscale (opens a browser URL)
 sudo tailscale up
+```
 
-# 2. Note your Pi's Tailscale IP — you'll need it for GitHub secrets
+Tailscale will print a URL like `https://login.tailscale.com/a/...`. Open it in a browser on any device logged into your Tailscale account and click **Approve**. The Pi will show as connected in the [Tailscale admin panel](https://login.tailscale.com/admin/machines).
+
+Then note the Pi's Tailscale IP — you'll need it for GitHub:
+
+```bash
 tailscale ip -4
 ```
+
+### Step 5 — Set the receiver location
+
+The receiver's GPS coordinates are hardcoded in `config/readsb.conf`. This is used to calculate each aircraft's distance from the receiver (`r_dst`). Update them to match where the Pi is physically located:
+
+```bash
+nano /opt/flighttracker/config/readsb.conf
+```
+
+Find the `--lat` and `--lon` flags and update them. Save, then restart readsb:
+
+```bash
+sudo systemctl restart readsb
+```
+
+### Step 6 — Add GitHub secrets and enable auto-deploy
+
+In your GitHub repo go to **Settings → Secrets and variables → Actions → New repository secret** and add each of the following:
+
+| Secret | How to get it |
+|--------|---------------|
+| `TAILSCALE_OAUTH_CLIENT_ID` | Tailscale admin → OAuth clients → Generate client (see below) |
+| `TAILSCALE_OAUTH_CLIENT_SECRET` | Same page — copy before closing, it's not shown again |
+| `PI_TAILSCALE_IP` | Output of `tailscale ip -4` on the Pi (Step 4) |
+| `PI_USER` | Your Pi username e.g. `reynard` |
+| `DEPLOY_SSH_KEY` | Printed by `install.sh` — copy the full private key block (Step 3) |
+
+Once all five secrets are set, every push to `main` will trigger GitHub Actions which SSHes into the Pi via Tailscale and runs `scripts/deploy.sh` automatically.
+
+#### How to create the Tailscale OAuth client
+
+The OAuth client is what lets GitHub Actions authenticate a temporary Tailscale node on each deploy — no long-lived auth keys needed.
+
+Before creating the client, the `tag:ci` tag must exist in your ACL. In [Tailscale admin → Access Controls](https://login.tailscale.com/admin/acls), add the following to your ACL JSON and click **Save**:
+
+```json
+"tagOwners": {
+  "tag:ci": []
+}
+```
+
+Then create the client:
+
+1. Go to [Tailscale admin → Settings → OAuth clients](https://login.tailscale.com/admin/settings/oauth)
+2. Click **Generate OAuth client**
+3. Under **Scopes**, enable **Devices: Write**
+4. Under **Tags**, add `tag:ci`
+5. Click **Generate client** — copy both values before closing the page; the secret is not shown again
+
+---
 
 ## Web UI
 
@@ -50,31 +150,6 @@ tailscale ip -4
 | `http://flighttracker.local/tar1090/main.html` | Full layout — data grid + telemetry row |
 | `http://flighttracker.local/tar1090/main.html?focus` | Focus layout — giant route airports + compact strip |
 | `http://flighttracker.local/tar1090/radar.html` | PPI radar — rotating sweep + aircraft cards |
-
-## Auto-deploy
-
-Every push to `main` triggers GitHub Actions which SSHes into the Pi via Tailscale and runs `scripts/deploy.sh`.
-
-### GitHub Secrets
-
-Go to repo → **Settings → Secrets and variables → Actions → New repository secret**
-
-| Secret | How to get it |
-|--------|---------------|
-| `TAILSCALE_OAUTH_CLIENT_ID` | [Tailscale admin](https://login.tailscale.com/admin/settings/oauth) → Generate OAuth client with **Devices: Write** scope and tag `tag:ci` |
-| `TAILSCALE_OAUTH_CLIENT_SECRET` | Same page as above |
-| `PI_TAILSCALE_IP` | Output of `tailscale ip -4` on the Pi |
-| `PI_USER` | Your Pi username e.g. `reynard` |
-| `DEPLOY_SSH_KEY` | Printed by `install.sh` — full contents of `~/.ssh/deploy_key` on the Pi |
-
-### Tailscale ACL tag
-
-In the Tailscale admin under **Access Controls**, make sure `tag:ci` exists:
-```json
-"tagOwners": {
-  "tag:ci": []
-}
-```
 
 ## E-ink Displays
 
