@@ -12,7 +12,9 @@ Or as a systemd service (settings-api.service).
 
 import hashlib
 import json
+import math
 import os
+import random
 import re
 import secrets
 import subprocess
@@ -853,6 +855,155 @@ def api_vitals():
         "load":         load,
         "hostname":     hostname,
         "cpu_cores":    os.cpu_count() or 1,
+    })
+
+
+# ---------------------------------------------------------------------------
+# RF Spectrum
+# ---------------------------------------------------------------------------
+
+# Known FM station frequencies (MHz) used in the simulation
+_FM_STATIONS = [88.5, 90.9, 92.3, 94.7, 96.1, 97.9, 99.5, 101.1, 103.5, 105.7, 107.9]
+
+def _simulate_spectrum(freqs_mhz: list[float]) -> list[float]:
+    """
+    Generate a realistic-looking RF spectrum.
+    Noise floor ~-78 dBm with band-specific signals.
+    """
+    t = time.time()
+    powers = []
+    for f in freqs_mhz:
+        # Base noise floor: Gaussian noise around -78 dBm
+        p = -78.0 + random.gauss(0, 1.8)
+
+        # FM broadcast band 88–108 MHz — several strong stations
+        for sf in _FM_STATIONS:
+            dist = abs(f - sf)
+            if dist < 0.8:
+                strength = -42.0 + random.gauss(0, 0.8)
+                # Lorentzian roll-off
+                p = max(p, strength - 12.0 * dist * dist)
+
+        # Aircraft VHF voice 118–137 MHz — occasional activity
+        if 118.0 <= f <= 137.0:
+            # Slow time-varying "activity" pattern
+            activity = 0.5 + 0.5 * math.sin(t * 0.3 + f * 0.7)
+            if activity > 0.85:
+                p = max(p, -54.0 + random.gauss(0, 2.0))
+
+        # NOAA Weather Radio 162.4 / 162.55 MHz — persistent narrowband
+        for wf in [162.4, 162.55]:
+            dist = abs(f - wf)
+            if dist < 0.5:
+                p = max(p, -50.0 + random.gauss(0, 0.6) - 10.0 * dist)
+
+        # Maritime/PMR 155–174 MHz — faint occasional
+        if 155.0 <= f <= 174.0:
+            if random.random() < 0.03:
+                p = max(p, -62.0 + random.gauss(0, 3.0))
+
+        # Pager band ~152 / ~158 MHz
+        for pf in [152.0, 158.0]:
+            dist = abs(f - pf)
+            if dist < 0.4:
+                p = max(p, -56.0 + random.gauss(0, 1.5) - 15.0 * dist)
+
+        # 433 MHz ISM (remote controls, weather stations) — bursty
+        if 433.0 <= f <= 435.0:
+            burst = math.sin(t * 2.0 + f) > 0.7
+            p = max(p, -58.0 + random.gauss(0, 2.5) if burst else p)
+
+        # 868 MHz ISM (LoRa, Z-Wave) — faint persistent
+        if 868.0 <= f <= 869.0:
+            p = max(p, -65.0 + random.gauss(0, 2.0))
+
+        # ADS-B at 1090 MHz — strong, always visible (the whole point!)
+        dist = abs(f - 1090.0)
+        if dist < 1.5:
+            # Pulse-like: varies with sin to simulate intermittent transmissions
+            pulse = 0.6 + 0.4 * abs(math.sin(t * 4.1))
+            p = max(p, -32.0 * pulse + random.gauss(0, 1.5) - 8.0 * dist)
+
+        powers.append(round(p, 1))
+    return powers
+
+
+def _run_rtl_power(freq_start_mhz: float, freq_end_mhz: float,
+                   step_mhz: float, gain: int = 40) -> list[float] | None:
+    """
+    Run rtl_power for a single sweep. Returns power list or None on failure.
+    The RTL-SDR is almost always held by readsb, so this usually returns None.
+    """
+    try:
+        out_file = "/tmp/_rtl_spectrum.csv"
+        cmd = [
+            "rtl_power",
+            "-f", f"{freq_start_mhz:.0f}M:{freq_end_mhz:.0f}M:{step_mhz:.0f}M",
+            "-i", "1",
+            "-1",
+            "-g", str(gain),
+            out_file,
+        ]
+        result = subprocess.run(cmd, timeout=6, capture_output=True)
+        if result.returncode != 0:
+            return None
+        powers = []
+        with open(out_file) as fh:
+            for line in fh:
+                parts = line.strip().split(",")
+                if len(parts) < 7:
+                    continue
+                # CSV: date, time, hz_low, hz_high, hz_step, samples, db...
+                db_vals = [float(x) for x in parts[6:] if x.strip()]
+                powers.extend(db_vals)
+        return powers if powers else None
+    except Exception:
+        return None
+
+
+@app.route("/api/spectrum", methods=["GET"])
+def api_spectrum():
+    """
+    Return a single RF spectrum sweep.
+    Query params:
+      start  — start freq MHz (default 88)
+      end    — end freq MHz (default 1100)
+      step   — step MHz (default 2)
+      gain   — RTL gain (default 40, only used with real hardware)
+    """
+    start = float(request.args.get("start", 88))
+    end   = float(request.args.get("end",  1100))
+    step  = float(request.args.get("step", 2))
+    gain  = int(request.args.get("gain",  40))
+
+    # Build frequency list
+    freqs = []
+    f = start
+    while f <= end + 0.001:
+        freqs.append(round(f, 3))
+        f += step
+
+    # Try real hardware first; fall back to simulation
+    powers = _run_rtl_power(start, end, step, gain)
+    source = "rtl_power"
+    if powers is None or len(powers) < len(freqs) // 2:
+        powers = _simulate_spectrum(freqs)
+        source = "simulated"
+    else:
+        # Align lengths
+        powers = powers[:len(freqs)]
+        while len(powers) < len(freqs):
+            powers.append(-78.0)
+
+    return jsonify({
+        "freqs_mhz":     freqs,
+        "powers_db":     powers,
+        "source":        source,
+        "min_freq_mhz":  start,
+        "max_freq_mhz":  end,
+        "step_mhz":      step,
+        "min_db":        -90,
+        "max_db":        -20,
     })
 
 

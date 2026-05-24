@@ -1,0 +1,123 @@
+/* spectrum.css — RF Spectrum Waterfall styles */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:     #050200;
+  --fg:     #FFA040;
+  --fg-mid: #CC7020;
+  --fg-dim: #7A4010;
+  --sep:    #3A1E08;
+  --warn:   #FFC040;
+  --danger: #FF5050;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+}
+
+/* CRT scanlines */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent  0px,
+    transparent  2px,
+    rgba(0,0,0,0.28) 2px,
+    rgba(0,0,0,0.28) 3px
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   SHELL
+   ══════════════════════════════════════════════════════════ */
+
+.spectrum-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════ */
+
+.spectrum-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--sep);
+  flex-shrink: 0;
+}
+
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--fg);
+  flex-shrink: 0;
+  animation: blink 2s ease-in-out infinite;
+}
+
+.live-dot.sim { background: var(--fg-mid); }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.live-label {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+}
+
+.live-label.sim { color: var(--fg-mid); }
+
+.spectrum-title {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: var(--fg-dim);
+  letter-spacing: 0.28em;
+  flex: 1;
+  text-align: center;
+}
+
+.header-range {
+  font-size: 12px;
+  color: var(--fg-mid);
+  letter-spacing: 0.12em;
+}
+
+.header-time {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BODY — canvas fills everything
+   ══════════════════════════════════════════════════════════ */
+
+.spectrum-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+#spectrum-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RF Spectrum</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="spectrum.css">
+</head>
+<body>
+
+<div class="spectrum-shell">
+
+  <!-- Header -->
+  <div class="spectrum-header">
+    <div class="live-dot" id="s-dot"></div>
+    <div class="live-label" id="s-source">LIVE</div>
+    <div class="spectrum-title">RF SPECTRUM</div>
+    <div class="header-range" id="s-range">—</div>
+    <div class="header-time" id="s-time">--:--</div>
+  </div>
+
+  <!-- Canvas fills the rest -->
+  <div class="spectrum-body">
+    <canvas id="spectrum-canvas"></canvas>
+  </div>
+
+</div>
+
+<script src="spectrum.js"></script>
+</body>
+</html>
