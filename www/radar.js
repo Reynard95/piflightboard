@@ -36,9 +36,8 @@ function sizeCanvas() {
   const isNarrow = window.innerWidth < 700;
   let available;
   if (squareLayout) {
-    // Square mode: canvas = min(full width, 58% of viewport height)
-    // radar-left width is 100% (CSS handles it); don't constrain via JS
-    available = Math.min(window.innerWidth, Math.floor(window.innerHeight * 0.58) - footerH);
+    // Square mode: full-screen canvas, no list panel
+    available = Math.min(window.innerWidth, window.innerHeight - footerH);
     shell.style.width = '';
   } else if (isNarrow) {
     // Stacked: canvas takes ~55% of vh

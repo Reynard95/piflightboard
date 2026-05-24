@@ -410,16 +410,12 @@ body.square-layout .radar-shell {
 }
 body.square-layout .radar-left {
   width: 100% !important;
-  align-items: center;    /* center canvas horizontally */
+  height: 100vh;
+  align-items: center;
+  justify-content: center;
 }
 body.square-layout .radar-right {
-  border-left: none;
-  border-top: 1px solid var(--sep);
-  flex: 1;
-  min-height: 0;
-}
-body.square-layout .ac-grid {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  display: none;
 }
 
 /* ══════════════════════════════════════════════════════════
