@@ -230,6 +230,15 @@ systemctl start settings-api
 # flightboard-reinstall is oneshot — not enabled, triggered on demand by deploy.sh
 
 # ── Done ───────────────────────────────────────────────────
+# Re-chown the repo so the deploy user can git pull without a sudo TTY.
+# Must happen last — some earlier steps (git clone of tar1090-db) run as root
+# and temporarily affect the working directory.
+chown -R "$DEPLOY_USER:$DEPLOY_USER" "$REPO_DIR"
+# config/settings.json and config/ need to stay writable by nobody (settings-api)
+chown nobody:nogroup "$REPO_DIR/config/settings.json" 2>/dev/null || true
+chmod 660 "$REPO_DIR/config/settings.json" 2>/dev/null || true
+chown root:root "$REPO_DIR/config/readsb.conf" 2>/dev/null || true
+
 cp "$REPO_DIR/VERSION" "$REPO_DIR/.installed-version"
 echo "[done] Installed version: $(cat "$REPO_DIR/VERSION")"
 
