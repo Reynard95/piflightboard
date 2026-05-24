@@ -54,6 +54,8 @@ rm -f /etc/lighttpd/conf-enabled/50-flightboard.conf
 rm -f /etc/lighttpd/conf-enabled/87-flighttracker.conf
 rm -f /etc/lighttpd/conf-enabled/88-tar1090.conf
 rm -f /etc/lighttpd/conf-enabled/89-flighttracker-assets.conf
+rm -f /etc/lighttpd/conf-enabled/95-tar1090-otherport.conf
+rm -f /etc/lighttpd/conf-enabled/99-unconfigured.conf
 
 # ── 5. Remove web root and aircraft DB ────────────────────
 echo "[5/8] Removing web root and aircraft database..."

@@ -18,7 +18,7 @@
 // Config
 // ---------------------------------------------------------------------------
 
-const API = 'http://localhost:8089';
+const API = ''; // same-origin — routed through lighttpd proxy to port 8089
 
 // ---------------------------------------------------------------------------
 // Token helpers
