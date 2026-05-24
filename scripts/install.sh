@@ -85,10 +85,11 @@ else
 fi
 
 echo "[4/11] Configuring sudoers..."
-# On Raspberry Pi OS bookworm /bin is a symlink to /usr/bin — sudo resolves
-# the real path before matching, so entries must use /usr/bin/ not /bin/.
+# !requiretty is required — GitHub Actions SSH sessions have no PTY.
+# Without it, sudo demands a password even when NOPASSWD is set.
 cat > /etc/sudoers.d/flighttracker-deploy << EOF
-$DEPLOY_USER ALL=(ALL) NOPASSWD: /usr/bin/cp, /usr/bin/chmod, /usr/bin/systemctl, /usr/sbin/lighttpd
+Defaults:$DEPLOY_USER !requiretty
+$DEPLOY_USER ALL=(ALL) NOPASSWD: ALL
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-deploy
 
