@@ -22,6 +22,10 @@ let   metricUnits   = _fp.get('units') === 'metric';
 
 if (squareLayout) document.body.classList.add('square-layout');
 
+// Sweep start time — used to sync JS phosphor fade with the CSS animation
+const SWEEP_START_MS = Date.now();
+const SWEEP_PERIOD_MS = 3000; // must match CSS animation-duration
+
 /* ══════════════════════════════════════════════════════════
    CANVAS SETUP
    ══════════════════════════════════════════════════════════ */
@@ -577,6 +581,15 @@ function drawBlips() {
   const cx = W / 2, cy = W / 2;
   const R  = W * 0.43;
 
+  // ── Phosphor persistence ──────────────────────────────────
+  // Sync with the CSS conic-gradient sweep: starts at north (−π/2),
+  // rotates clockwise one full turn every SWEEP_PERIOD_MS ms.
+  let sweepAngle = null;
+  if (sweepEnabled) {
+    const elapsed = (Date.now() - SWEEP_START_MS) % SWEEP_PERIOD_MS;
+    sweepAngle = -Math.PI / 2 + (elapsed / SWEEP_PERIOD_MS) * 2 * Math.PI;
+  }
+
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.clip();
 
@@ -585,28 +598,38 @@ function drawBlips() {
     const [x, y] = geoToXY(ac.lat, ac.lon, cx, cy, R, rangeKm);
     if (x < 0 || x > W || y < 0 || y > W) return;
 
-    const color      = blipColor(ac);
+    // ── Phosphor alpha ───────────────────────────────────────
+    // diff = angular distance the sweep has travelled *past* this blip.
+    // diff ≈ 0  → sweep just lit it up  → bright
+    // diff ≈ 2π → sweep about to return → dim
+    let alpha = 1.0;
+    if (sweepAngle !== null) {
+      const acAngle = Math.atan2(y - cy, x - cx);
+      let diff = sweepAngle - acAngle;
+      diff = ((diff % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      alpha = Math.max(0.06, Math.exp(-diff * 1.2));
+    }
+
     const isSelected = ac.hex === selectedHex;
     const iconSize   = isSelected ? 9 : 7;
     const hasTrack   = ac.track !== undefined && ac.gs > 0;
     const trackDeg   = ac.track || 0;
 
-    // Trail ghost dots (small circles — historical positions)
+    // ── Trail ghost dots ─────────────────────────────────────
     const hist  = posHistory.get(ac.hex) || [];
     const trail = hist.slice(0, -1);
-    const opacities = [0.15, 0.25, 0.35];
     trail.forEach((pos, i) => {
       const oi = trail.length - 1 - i;
-      const op = opacities[oi] || 0.15;
+      const op = ([0.10, 0.18, 0.28][oi] || 0.10) * alpha;
       const [tx, ty] = geoToXY(pos.lat, pos.lon, cx, cy, R, rangeKm);
       ctx.beginPath(); ctx.arc(tx, ty, 2, 0, 2 * Math.PI);
-      ctx.fillStyle   = color;
+      ctx.fillStyle   = fgColor;
       ctx.globalAlpha = op;
       ctx.fill();
     });
     ctx.globalAlpha = 1;
 
-    // Heading vector — thin line extending ahead of the nose
+    // ── Heading vector ───────────────────────────────────────
     if (hasTrack) {
       const tRad  = trackDeg * Math.PI / 180;
       const noseX = x + Math.sin(tRad) * iconSize;
@@ -614,51 +637,67 @@ function drawBlips() {
       ctx.beginPath();
       ctx.moveTo(noseX, noseY);
       ctx.lineTo(noseX + Math.sin(tRad) * 18, noseY - Math.cos(tRad) * 18);
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = fgColor;
       ctx.lineWidth   = 0.8;
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = 0.5 * alpha;
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
-    // Glow ring for selected aircraft
+    // ── Phosphor bloom glow (bright just after sweep passes) ─
+    if (sweepAngle !== null && alpha > 0.25) {
+      const glowRadius = iconSize + 6;
+      const glowAlpha  = (alpha - 0.25) * 0.55;
+      const grd = ctx.createRadialGradient(x, y, iconSize * 0.5, x, y, glowRadius);
+      grd.addColorStop(0, fgColor);
+      grd.addColorStop(1, 'transparent');
+      ctx.beginPath(); ctx.arc(x, y, glowRadius, 0, 2 * Math.PI);
+      ctx.fillStyle   = grd;
+      ctx.globalAlpha = glowAlpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Selection ring ───────────────────────────────────────
     if (isSelected) {
       ctx.beginPath(); ctx.arc(x, y, iconSize + 5, 0, 2 * Math.PI);
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = fgColor;
       ctx.lineWidth   = 1.5;
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.5;
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
-    // Airplane icon (falls back to circle if no track data)
+    // ── Airplane icon ────────────────────────────────────────
+    ctx.globalAlpha = alpha;
     if (hasTrack) {
-      drawPlaneIcon(x, y, trackDeg, color, iconSize);
+      drawPlaneIcon(x, y, trackDeg, fgColor, iconSize);
     } else {
       ctx.beginPath(); ctx.arc(x, y, iconSize * 0.55, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
+      ctx.fillStyle = fgColor;
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
 
-    // Callout label for selected aircraft
+    // ── Callout label for selected aircraft (always full opacity) ──
     if (isSelected) {
-      const cs     = (ac.flight || ac.hex || '').trim();
+      const cs      = (ac.flight || ac.hex || '').trim();
       const typeStr = ac.t || (ac.type && !ac.type.includes('_') ? ac.type : '');
-      const altStr = fmtAlt(ac.alt_baro);
-      const spdStr = fmtSpd(ac.gs);
-      const lines  = [cs, typeStr, altStr, spdStr].filter(Boolean);
-      const padX   = 6, padY = 4, lineH = 13, boxW = 84;
-      const boxH   = lines.length * lineH + padY * 2;
+      const altStr  = fmtAlt(ac.alt_baro);
+      const spdStr  = fmtSpd(ac.gs);
+      const lines   = [cs, typeStr, altStr, spdStr].filter(Boolean);
+      const padX = 6, padY = 4, lineH = 13, boxW = 84;
+      const boxH = lines.length * lineH + padY * 2;
       let bx = x + iconSize + 6, by = y - boxH / 2;
       if (bx + boxW > W - 10) bx = x - boxW - iconSize - 6;
       ctx.fillStyle   = bgColor;
       ctx.globalAlpha = 0.88;
       ctx.fillRect(bx, by, boxW, boxH);
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = fgColor;
       ctx.lineWidth   = 1;
       ctx.strokeRect(bx, by, boxW, boxH);
-      ctx.fillStyle    = color;
+      ctx.fillStyle    = fgColor;
       ctx.font         = '10px monospace';
       ctx.textAlign    = 'left';
       ctx.textBaseline = 'top';

@@ -45,8 +45,6 @@ html, body {
 .canvas-wrap {
   position: relative;
   flex-shrink: 0;
-  /* Phosphor screen glow — colour follows theme */
-  filter: drop-shadow(0 0 8px var(--fg-dim));
 }
 
 /* ── CRT scanlines — horizontal dark lines over the whole canvas area ── */
@@ -59,9 +57,9 @@ html, body {
   background: repeating-linear-gradient(
     to bottom,
     transparent  0px,
-    transparent  3px,
-    rgba(0,0,0,0.18) 3px,
-    rgba(0,0,0,0.18) 4px    /* 1 px dark line every 4 px */
+    transparent  2px,
+    rgba(0,0,0,0.30) 2px,
+    rgba(0,0,0,0.30) 3px    /* 1 px dark line every 3 px */
   );
 }
 
