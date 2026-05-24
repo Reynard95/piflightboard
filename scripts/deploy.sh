@@ -24,8 +24,11 @@ if [ "$REPO_VERSION" != "$INSTALLED_VERSION" ]; then
   echo "[deploy] Triggering auto-reinstall via systemd..."
   echo "[deploy] Progress: sudo journalctl -u flightboard-reinstall -f"
   echo "[deploy]           or: tail -f $REPO_DIR/reinstall.log"
-  # systemctl is already in the deploy sudoers — no TTY or nohup tricks needed.
-  # The service runs as root and survives the SSH session closing.
+  # Install the service file from the repo before starting it — it won't exist
+  # on a fresh Pi that has never had install.sh run. cp and systemctl are both
+  # in the deploy sudoers so no TTY issues.
+  sudo cp "$REPO_DIR/config/auto-reinstall.service" /etc/systemd/system/flightboard-reinstall.service
+  sudo systemctl daemon-reload
   sudo systemctl start flightboard-reinstall
   echo "[deploy] Reinstall service started. Exiting deploy — nothing else to do."
   exit 0
