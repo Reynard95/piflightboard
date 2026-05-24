@@ -333,6 +333,8 @@ function buildFreqTicks(lo, hi) {
 
 /* ── Fetch ── */
 
+let firstFetch = true;
+
 async function fetchSpectrum() {
   try {
     const res = await fetch('/api/spectrum');
@@ -358,10 +360,44 @@ async function fetchSpectrum() {
       srcEl.textContent = sim ? 'SIM' : 'LIVE';
     }
 
+    /* On first fetch, pre-fill the entire waterfall so it looks populated */
+    if (firstFetch && wfBuf) {
+      firstFetch = false;
+      for (let row = 0; row < wfH; row++) {
+        prefillWaterfallRow(row);
+      }
+    }
+
     /* Add new waterfall row then redraw */
     pushWaterfallRow();
     draw();
   } catch (_) { /* network error — silent */ }
+}
+
+/*
+ * Write a synthetic row at a specific position in the waterfall buffer,
+ * aged by how far down it is (older = dimmer).
+ */
+function prefillWaterfallRow(row) {
+  if (!wfBuf || freqs.length === 0) return;
+  const d        = wfBuf.data;
+  const rowBytes = plotW * 4;
+  /* age factor: row 0 = newest (full brightness), row wfH-1 = oldest (dim) */
+  const age = row / wfH;  /* 0..1 */
+
+  for (let px = 0; px < plotW; px++) {
+    const mhz    = minFreq + (px / plotW) * (maxFreq - minFreq);
+    const binIdx = Math.round((mhz - minFreq) / (maxFreq - minFreq) * (freqs.length - 1));
+    const db     = powers[Math.max(0, Math.min(powers.length - 1, binIdx))] ?? MIN_DB;
+    /* Fade older rows towards the noise floor */
+    const agedDb = db + age * (MIN_DB - db) * 0.6;
+    const li     = dbToLut(agedDb) * 4;
+    const off    = row * rowBytes + px * 4;
+    d[off]     = LUT[li];
+    d[off + 1] = LUT[li + 1];
+    d[off + 2] = LUT[li + 2];
+    d[off + 3] = 255;
+  }
 }
 
 /* ── Clock ── */
