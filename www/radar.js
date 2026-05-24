@@ -607,7 +607,7 @@ function drawBlips() {
       const acAngle = Math.atan2(y - cy, x - cx);
       let diff = sweepAngle - acAngle;
       diff = ((diff % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      alpha = Math.max(0.06, Math.exp(-diff * 1.2));
+      alpha = Math.max(0.08, Math.exp(-diff * 0.45));
     }
 
     const isSelected = ac.hex === selectedHex;
