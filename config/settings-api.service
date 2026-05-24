@@ -12,9 +12,5 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
-# Hardening — settings-api only needs to write two specific paths
-ReadWritePaths=/opt/flighttracker/config /etc/default /etc/fr24feed.ini /run/readsb
-NoNewPrivileges=yes
-
 [Install]
 WantedBy=multi-user.target
