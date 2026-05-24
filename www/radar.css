@@ -50,6 +50,7 @@ html, body {
 #radar-canvas {
   display: block;
   background: var(--bg);
+  cursor: crosshair;
 }
 
 /* Footer stats bar below canvas */
@@ -398,6 +399,27 @@ html, body {
   /* Bigger footer stats */
   .rf-lbl { font-size: 11px; }
   .rf-val  { font-size: 28px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SQUARE LAYOUT  (?square — stacked, canvas top, list below)
+   ══════════════════════════════════════════════════════════ */
+
+body.square-layout .radar-shell {
+  flex-direction: column;
+}
+body.square-layout .radar-left {
+  width: 100% !important;
+  align-items: center;    /* center canvas horizontally */
+}
+body.square-layout .radar-right {
+  border-left: none;
+  border-top: 1px solid var(--sep);
+  flex: 1;
+  min-height: 0;
+}
+body.square-layout .ac-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 /* ══════════════════════════════════════════════════════════

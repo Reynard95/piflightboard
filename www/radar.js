@@ -10,14 +10,17 @@
 
 const _fp = new URLSearchParams(location.search);
 
-const RANGE_OPTS  = [100, 150, 200, 250];
-let   rangeMode   = _fp.get('range') || '250';   // '100'|'150'|'200'|'250'|'auto'
-let   rangeKm     = rangeMode === 'auto' ? 250 : (parseInt(rangeMode, 10) || 250);
-const FETCH_MS    = Math.max(1000, (_fp.get('refresh') ? parseFloat(_fp.get('refresh')) : 2) * 1000);
-const RADIUS_KM   = _fp.has('radius') ? parseFloat(_fp.get('radius')) : null;
+const RANGE_OPTS   = [100, 150, 200, 250];
+let   rangeMode    = _fp.get('range') || '250';   // '100'|'150'|'200'|'250'|'auto'
+let   rangeKm      = rangeMode === 'auto' ? 250 : (parseInt(rangeMode, 10) || 250);
+const FETCH_MS     = Math.max(1000, (_fp.get('refresh') ? parseFloat(_fp.get('refresh')) : 5) * 1000);
+const RADIUS_KM    = _fp.has('radius') ? parseFloat(_fp.get('radius')) : null;
 const CLOSEST_ONLY = _fp.has('closest');
-let   sweepEnabled = _fp.get('sweep') !== 'off';
-let   metricUnits  = _fp.get('units') === 'metric';
+const SQUARE_LAYOUT = _fp.has('square');
+let   sweepEnabled  = _fp.get('sweep') !== 'off';
+let   metricUnits   = _fp.get('units') === 'metric';
+
+if (SQUARE_LAYOUT) document.body.classList.add('square-layout');
 
 /* ══════════════════════════════════════════════════════════
    CANVAS SETUP
@@ -28,31 +31,61 @@ const ctx    = canvas.getContext('2d');
 const shell  = document.getElementById('radar-left');
 
 function sizeCanvas() {
-  // Square canvas — fit the available space
-  const panel  = document.querySelector('.radar-shell');
-  const footer = document.querySelector('.radar-footer');
+  const footer  = document.querySelector('.radar-footer');
+  const footerH = footer ? footer.offsetHeight : 40;
   const isNarrow = window.innerWidth < 700;
   let available;
-  if (isNarrow) {
-    // Stack: canvas takes ~55% of vh minus footer height
-    const footerH = footer ? footer.offsetHeight : 40;
+  if (SQUARE_LAYOUT) {
+    // Square mode: canvas = min(full width, 58% of viewport height)
+    // radar-left width is 100% (CSS handles it); don't constrain via JS
+    available = Math.min(window.innerWidth, Math.floor(window.innerHeight * 0.58) - footerH);
+    shell.style.width = '';
+  } else if (isNarrow) {
+    // Stacked: canvas takes ~55% of vh
     available = Math.min(window.innerWidth, Math.floor(window.innerHeight * 0.55) - footerH);
+    shell.style.width = Math.max(220, available) + 'px';
   } else {
-    // Side-by-side: canvas takes up to 60% of width, full height minus footer
-    const footerH = footer ? footer.offsetHeight : 40;
+    // Side-by-side: canvas up to 60% of width, full height minus footer
     available = Math.min(
       Math.floor(window.innerWidth * 0.60),
       window.innerHeight - footerH
     );
+    shell.style.width = Math.max(220, available) + 'px';
   }
   const sz = Math.max(220, available);
   canvas.width  = sz;
   canvas.height = sz;
-  shell.style.width = sz + 'px';
 }
 
 sizeCanvas();
 window.addEventListener('resize', () => { sizeCanvas(); drawFrame(); });
+
+/* ── Canvas click: select nearest blip, highlight its card ── */
+canvas.addEventListener('click', e => {
+  const rect  = canvas.getBoundingClientRect();
+  const mx    = (e.clientX - rect.left) * (canvas.width  / rect.width);
+  const my    = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  const W     = canvas.width;
+  const cx    = W / 2, cy = W / 2;
+  const R     = W * 0.43;
+
+  let best = null, bestDist = 22; // px hit-radius
+  aircraft.forEach(ac => {
+    if (!ac.lat || !ac.lon) return;
+    const [x, y] = geoToXY(ac.lat, ac.lon, cx, cy, R, rangeKm);
+    const d = Math.hypot(mx - x, my - y);
+    if (d < bestDist) { bestDist = d; best = ac; }
+  });
+
+  if (best) {
+    selectedHex = best.hex === selectedHex ? null : best.hex;
+    renderCards();
+    if (selectedHex) {
+      const card = document.querySelector(`.ac-card[data-hex="${CSS.escape(selectedHex)}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+});
 
 /* ══════════════════════════════════════════════════════════
    SWEEP ANIMATION
@@ -236,19 +269,21 @@ async function fetchAircraft() {
     const data = await r.json();
     let list = (data.aircraft || []).filter(a => a.lat && a.lon);
 
-    // Distance filter
-    if (RADIUS_KM || CLOSEST_ONLY) {
-      list = list.map(a => ({ ...a, _dist: distKm(a) }));
-    }
+    // Always compute distance — used for sorting and card display
+    list = list.map(a => ({ ...a, _dist: distKm(a) }));
+
+    // Radius filter
     if (RADIUS_KM) {
       const full = list.filter(a => a._dist <= RADIUS_KM);
       list = full.length ? full : list; // fallback if empty
     }
+
+    // Always sort nearest-first
+    list.sort((a, b) => (a._dist || 9999) - (b._dist || 9999));
+
+    // Closest-only mode
     if (CLOSEST_ONLY) {
-      list.sort((a, b) => (a._dist || 9999) - (b._dist || 9999));
       list = list.slice(0, 1);
-    } else {
-      list.sort((a, b) => (b.rssi || -999) - (a.rssi || -999));
     }
 
     aircraft = list;
