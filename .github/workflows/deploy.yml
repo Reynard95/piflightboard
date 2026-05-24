@@ -30,6 +30,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             git config --global --add safe.directory /opt/flighttracker
+            rm -f /opt/flighttracker/.git/FETCH_HEAD
             cd /opt/flighttracker
             git pull origin main
             bash scripts/deploy.sh

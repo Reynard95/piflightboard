@@ -14,8 +14,7 @@ echo "[deploy] Starting deployment..."
 
 # ── Version check ──────────────────────────────────────────
 # If the stack version has changed (or no install stamp exists),
-# trigger a full reset + reinstall in the background and exit.
-# The SSH session closes cleanly; progress is logged to reinstall.log.
+# trigger a full reset + reinstall via the systemd oneshot service.
 REPO_VERSION=$(cat "$REPO_DIR/VERSION" 2>/dev/null || echo "0")
 INSTALLED_VERSION=$(cat "$REPO_DIR/.installed-version" 2>/dev/null || echo "none")
 
@@ -24,10 +23,8 @@ if [ "$REPO_VERSION" != "$INSTALLED_VERSION" ]; then
   echo "[deploy] Triggering auto-reinstall via systemd..."
   echo "[deploy] Progress: sudo journalctl -u flightboard-reinstall -f"
   echo "[deploy]           or: tail -f $REPO_DIR/reinstall.log"
-  # Install the service file from the repo before starting it — it won't exist
-  # on a fresh Pi that has never had install.sh run. cp and systemctl are both
-  # in the deploy sudoers so no TTY issues.
-  sudo cp "$REPO_DIR/config/auto-reinstall.service" /etc/systemd/system/flightboard-reinstall.service
+  # The flightboard-reinstall.service was installed by install.sh.
+  # We only need systemctl to start it — no sudo cp required.
   sudo systemctl daemon-reload
   sudo systemctl start flightboard-reinstall
   echo "[deploy] Reinstall service started. Exiting deploy — nothing else to do."
@@ -37,8 +34,10 @@ fi
 echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
 
 # ── Web files ──────────────────────────────────────────────
+# /var/www/flightboard is owned by the deploy user (set by install.sh),
+# so no sudo needed here.
 echo "[deploy] Copying web files..."
-sudo cp "$REPO_DIR"/www/* "$WEB_DIR/"
+cp -r "$REPO_DIR"/www/* "$WEB_DIR/"
 
 # ── lighttpd config ────────────────────────────────────────
 echo "[deploy] Installing lighttpd config..."
@@ -61,23 +60,27 @@ fi
 sudo cp "$REPO_DIR/config/tmpfiles-readsb.conf" /etc/tmpfiles.d/readsb.conf
 
 # ── route proxy ────────────────────────────────────────────
-if [ -f "$REPO_DIR/config/route-proxy.service" ]; then
-  sudo cp "$REPO_DIR/scripts/route-proxy.py" /usr/local/bin/route-proxy.py
-  sudo chmod +x /usr/local/bin/route-proxy.py
+# Service now runs directly from the repo (no copy to /usr/local/bin needed).
+# Only update the service file if it changed, then restart.
+if ! diff -q "$REPO_DIR/config/route-proxy.service" "$SYSTEMD_DIR/route-proxy.service" > /dev/null 2>&1; then
+  echo "[deploy] Updating route-proxy service file..."
   sudo cp "$REPO_DIR/config/route-proxy.service" "$SYSTEMD_DIR/route-proxy.service"
   sudo systemctl daemon-reload
   sudo systemctl enable route-proxy
-  sudo systemctl restart route-proxy
 fi
+echo "[deploy] Restarting route-proxy..."
+sudo systemctl restart route-proxy
 
 # ── settings API ────────────────────────────────────────────
-if [ -f "$REPO_DIR/config/settings-api.service" ]; then
-  sudo cp "$REPO_DIR/scripts/settings-api.py" /usr/local/bin/settings-api.py
-  sudo chmod +x /usr/local/bin/settings-api.py
+# Service now runs directly from the repo (no copy to /usr/local/bin needed).
+# Only update the service file if it changed, then restart.
+if ! diff -q "$REPO_DIR/config/settings-api.service" "$SYSTEMD_DIR/settings-api.service" > /dev/null 2>&1; then
+  echo "[deploy] Updating settings-api service file..."
   sudo cp "$REPO_DIR/config/settings-api.service" "$SYSTEMD_DIR/settings-api.service"
   sudo systemctl daemon-reload
   sudo systemctl enable settings-api
-  sudo systemctl restart settings-api
 fi
+echo "[deploy] Restarting settings-api..."
+sudo systemctl restart settings-api
 
 echo "[deploy] Done! Deployment complete."

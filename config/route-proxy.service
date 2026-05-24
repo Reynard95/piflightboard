@@ -3,7 +3,7 @@ Description=Route API CORS Proxy
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /usr/local/bin/route-proxy.py
+ExecStart=/usr/bin/python3 /opt/flighttracker/scripts/route-proxy.py
 Restart=always
 User=nobody
 

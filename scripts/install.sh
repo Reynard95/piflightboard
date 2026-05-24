@@ -184,7 +184,10 @@ rm -rf /tmp/tar1090-db
 echo "[10/11] Configuring web root and lighttpd..."
 mkdir -p "$WEB_DIR"
 cp "$REPO_DIR"/www/* "$WEB_DIR/"
-chown -R www-data:www-data "$WEB_DIR"
+# Owned by the deploy user so deploy.sh can update web files without sudo.
+# Lighttpd only needs read access, which the default umask provides.
+chown -R "$DEPLOY_USER:$DEPLOY_USER" "$WEB_DIR"
+chmod -R a+rX "$WEB_DIR"
 
 # Patch the document-root in the main lighttpd.conf — lighttpd rejects
 # duplicate assignments so we can't set it again in a conf-enabled file.
@@ -199,12 +202,11 @@ systemctl restart lighttpd
 # ── 11. Route proxy, settings API, auto-reinstall service ─
 echo "[11/11] Installing services..."
 
-cp "$REPO_DIR/scripts/route-proxy.py" /usr/local/bin/route-proxy.py
-chmod +x /usr/local/bin/route-proxy.py
+# Services run directly from the repo — no copy to /usr/local/bin needed.
+# Scripts must be executable in the repo itself.
+chmod +x "$REPO_DIR/scripts/route-proxy.py"
+chmod +x "$REPO_DIR/scripts/settings-api.py"
 cp "$REPO_DIR/config/route-proxy.service" /etc/systemd/system/route-proxy.service
-
-cp "$REPO_DIR/scripts/settings-api.py" /usr/local/bin/settings-api.py
-chmod +x /usr/local/bin/settings-api.py
 cp "$REPO_DIR/config/settings-api.service" /etc/systemd/system/settings-api.service
 
 cp "$REPO_DIR/config/auto-reinstall.service" /etc/systemd/system/flightboard-reinstall.service
