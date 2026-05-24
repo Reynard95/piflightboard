@@ -21,11 +21,13 @@ INSTALLED_VERSION=$(cat "$REPO_DIR/.installed-version" 2>/dev/null || echo "none
 
 if [ "$REPO_VERSION" != "$INSTALLED_VERSION" ]; then
   echo "[deploy] Version mismatch — installed: $INSTALLED_VERSION, repo: $REPO_VERSION"
-  echo "[deploy] Triggering auto-reinstall in background..."
-  echo "[deploy] Progress: tail -f $REPO_DIR/reinstall.log"
-  nohup sudo bash "$REPO_DIR/scripts/auto-reinstall.sh" \
-    > "$REPO_DIR/reinstall.log" 2>&1 &
-  echo "[deploy] Reinstall started (PID $!). Exiting deploy — nothing else to do."
+  echo "[deploy] Triggering auto-reinstall via systemd..."
+  echo "[deploy] Progress: sudo journalctl -u flightboard-reinstall -f"
+  echo "[deploy]           or: tail -f $REPO_DIR/reinstall.log"
+  # systemctl is already in the deploy sudoers — no TTY or nohup tricks needed.
+  # The service runs as root and survives the SSH session closing.
+  sudo systemctl start flightboard-reinstall
+  echo "[deploy] Reinstall service started. Exiting deploy — nothing else to do."
   exit 0
 fi
 

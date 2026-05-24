@@ -1,0 +1,19 @@
+[Unit]
+Description=Flightboard Auto-Reinstall
+# Triggered by deploy.sh on version mismatch — do not start manually.
+# Logs to /opt/flighttracker/reinstall.log
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/flighttracker/scripts/auto-reinstall.sh
+StandardOutput=append:/opt/flighttracker/reinstall.log
+StandardError=append:/opt/flighttracker/reinstall.log
+# Run as root — needs to install packages, write system configs, restart services
+User=root
+
+# Do NOT auto-restart — if it fails, it fails. Check the log.
+Restart=no
+
+[Install]
+# Not enabled — started on demand by deploy.sh via: systemctl start flightboard-reinstall
+WantedBy=multi-user.target

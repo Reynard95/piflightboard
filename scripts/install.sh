@@ -186,6 +186,11 @@ systemctl start route-proxy
 systemctl enable settings-api
 systemctl start settings-api
 
+# Install the auto-reinstall service (triggered by deploy.sh on future version bumps)
+# Not enabled for auto-start — deploy.sh triggers it via: systemctl start flightboard-reinstall
+cp "$REPO_DIR/config/auto-reinstall.service" /etc/systemd/system/flightboard-reinstall.service
+systemctl daemon-reload
+
 # Stamp the installed version so deploy.sh can detect future mismatches
 cp "$REPO_DIR/VERSION" "$REPO_DIR/.installed-version"
 echo "[done] Installed version: $(cat "$REPO_DIR/VERSION")"
