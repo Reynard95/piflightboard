@@ -691,9 +691,10 @@ function drawBlips() {
     // Callout label for selected aircraft
     if (isSelected) {
       const cs     = (ac.flight || ac.hex || '').trim();
+      const typeStr = (ac.type || ac.t || '');
       const altStr = fmtAlt(ac.alt_baro);
       const spdStr = fmtSpd(ac.gs);
-      const lines  = [cs, altStr, spdStr].filter(Boolean);
+      const lines  = [cs, typeStr, altStr, spdStr].filter(Boolean);
       const padX   = 6, padY = 4, lineH = 13, boxW = 84;
       const boxH   = lines.length * lineH + padY * 2;
       let bx = x + iconSize + 6, by = y - boxH / 2;
