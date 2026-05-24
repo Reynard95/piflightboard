@@ -691,7 +691,7 @@ function drawBlips() {
     // Callout label for selected aircraft
     if (isSelected) {
       const cs     = (ac.flight || ac.hex || '').trim();
-      const typeStr = (ac.type || ac.t || '');
+      const typeStr = ac.t || (ac.type && !ac.type.includes('_') ? ac.type : '');
       const altStr = fmtAlt(ac.alt_baro);
       const spdStr = fmtSpd(ac.gs);
       const lines  = [cs, typeStr, altStr, spdStr].filter(Boolean);
@@ -750,7 +750,7 @@ function acFields(ac) {
     airline:  ac.airline || getAirlineCode(ac.flight) || '—',
     dist:     ac._dist !== undefined ? Math.round(ac._dist) + ' KM' : (ac.r_dst ? Math.round(ac.r_dst * 1.852) + ' KM' : '—'),
     flight:   (ac.flight || ac.hex || '').trim(),
-    typeCode: ac.type || ac.t || '',
+    typeCode: ac.t || (ac.type && !ac.type.includes('_') ? ac.type : '') || '',
     reg:      ac.reg  || ac.r  || '',
     route:    (ac.orig && ac.dest) ? `${ac.orig}→${ac.dest}` : '——',
     vs:       ac.baro_rate || 0,
