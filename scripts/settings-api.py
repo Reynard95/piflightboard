@@ -700,6 +700,163 @@ def feeder_fa_install():
 
 
 # ---------------------------------------------------------------------------
+# Vitals endpoint
+# ---------------------------------------------------------------------------
+
+# Cache previous CPU / network readings so we can compute deltas between calls
+_vitals_cache: dict = {"cpu_stat": None, "net_stat": None, "net_ts": None}
+
+
+def _read_cpu_stat() -> list[int] | None:
+    """Read aggregated CPU counters from /proc/stat."""
+    try:
+        with open("/proc/stat") as fh:
+            for line in fh:
+                if line.startswith("cpu "):
+                    return list(map(int, line.split()[1:]))
+    except Exception:
+        pass
+    return None
+
+
+def _read_net_stat() -> dict[str, tuple[int, int]]:
+    """Return {iface: (rx_bytes, tx_bytes)} from /proc/net/dev (skip loopback)."""
+    result: dict[str, tuple[int, int]] = {}
+    try:
+        with open("/proc/net/dev") as fh:
+            for line in fh:
+                if ":" not in line:
+                    continue
+                iface, data = line.strip().split(":", 1)
+                iface = iface.strip()
+                if iface == "lo":
+                    continue
+                parts = data.split()
+                result[iface] = (int(parts[0]), int(parts[8]))
+    except Exception:
+        pass
+    return result
+
+
+def _fmt_uptime(secs: float) -> str:
+    secs = int(secs)
+    days, rem = divmod(secs, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins = rem // 60
+    if days:
+        return f"{days}d {hours:02d}h {mins:02d}m"
+    return f"{hours:02d}h {mins:02d}m"
+
+
+@app.route("/api/vitals", methods=["GET"])
+def api_vitals():
+    """
+    Return live system stats — no auth required.
+    First call returns cpu_pct=null (no previous reading to diff against).
+    """
+    now = time.time()
+
+    # ── CPU % ────────────────────────────────────────────────
+    cpu_stat = _read_cpu_stat()
+    cpu_pct = None
+    if cpu_stat and _vitals_cache["cpu_stat"]:
+        prev = _vitals_cache["cpu_stat"]
+        deltas = [a - b for a, b in zip(cpu_stat, prev)]
+        total = sum(deltas)
+        idle  = deltas[3] + (deltas[4] if len(deltas) > 4 else 0)
+        cpu_pct = round((1 - idle / total) * 100, 1) if total > 0 else 0.0
+    _vitals_cache["cpu_stat"] = cpu_stat
+
+    # ── CPU temperature ──────────────────────────────────────
+    cpu_temp = None
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp") as fh:
+            cpu_temp = round(int(fh.read().strip()) / 1000, 1)
+    except Exception:
+        pass
+
+    # ── Memory ───────────────────────────────────────────────
+    mem: dict[str, int] = {}
+    try:
+        with open("/proc/meminfo") as fh:
+            for line in fh:
+                k, *rest = line.split()
+                if k.rstrip(":") in ("MemTotal", "MemAvailable"):
+                    mem[k.rstrip(":")] = int(rest[0])
+    except Exception:
+        pass
+    mem_total_mb = mem.get("MemTotal", 0) // 1024
+    mem_avail_mb = mem.get("MemAvailable", 0) // 1024
+    mem_used_mb  = mem_total_mb - mem_avail_mb
+    mem_pct      = round(mem_used_mb / mem_total_mb * 100, 1) if mem_total_mb else 0.0
+
+    # ── Disk ─────────────────────────────────────────────────
+    disk_total_gb = disk_used_gb = disk_pct = 0.0
+    try:
+        st = os.statvfs("/")
+        disk_total_gb = round(st.f_blocks * st.f_frsize / 1e9, 1)
+        disk_free_gb  = round(st.f_bavail * st.f_frsize / 1e9, 1)
+        disk_used_gb  = round(disk_total_gb - disk_free_gb, 1)
+        disk_pct      = round(disk_used_gb / disk_total_gb * 100, 1) if disk_total_gb else 0.0
+    except Exception:
+        pass
+
+    # ── Network rates ─────────────────────────────────────────
+    net_stat   = _read_net_stat()
+    net_rx_bps = 0
+    net_tx_bps = 0
+    if net_stat and _vitals_cache["net_stat"] and _vitals_cache["net_ts"]:
+        dt = now - _vitals_cache["net_ts"]
+        if dt > 0:
+            prev_net = _vitals_cache["net_stat"]
+            rx_now  = sum(v[0] for v in net_stat.values())
+            tx_now  = sum(v[1] for v in net_stat.values())
+            rx_prev = sum(v[0] for v in prev_net.values())
+            tx_prev = sum(v[1] for v in prev_net.values())
+            net_rx_bps = max(0, round((rx_now - rx_prev) / dt))
+            net_tx_bps = max(0, round((tx_now - tx_prev) / dt))
+    _vitals_cache["net_stat"] = net_stat
+    _vitals_cache["net_ts"]   = now
+
+    # ── Uptime & load ─────────────────────────────────────────
+    uptime_str = "—"
+    load = [0.0, 0.0, 0.0]
+    try:
+        with open("/proc/uptime") as fh:
+            uptime_str = _fmt_uptime(float(fh.read().split()[0]))
+        with open("/proc/loadavg") as fh:
+            parts = fh.read().split()
+            load = [float(parts[0]), float(parts[1]), float(parts[2])]
+    except Exception:
+        pass
+
+    # ── Hostname ──────────────────────────────────────────────
+    hostname = "pi"
+    try:
+        with open("/etc/hostname") as fh:
+            hostname = fh.read().strip()
+    except Exception:
+        pass
+
+    return jsonify({
+        "cpu_pct":      cpu_pct,
+        "cpu_temp":     cpu_temp,
+        "mem_total_mb": mem_total_mb,
+        "mem_used_mb":  mem_used_mb,
+        "mem_pct":      mem_pct,
+        "disk_total_gb": disk_total_gb,
+        "disk_used_gb":  disk_used_gb,
+        "disk_pct":     disk_pct,
+        "net_rx_bps":   net_rx_bps,
+        "net_tx_bps":   net_tx_bps,
+        "uptime":       uptime_str,
+        "load":         load,
+        "hostname":     hostname,
+        "cpu_cores":    os.cpu_count() or 1,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 

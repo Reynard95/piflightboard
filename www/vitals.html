@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Vitals</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vitals.css">
+</head>
+<body>
+
+<div class="vitals-shell">
+
+  <!-- Header -->
+  <div class="vitals-header">
+    <div class="live-dot"></div>
+    <div class="live-label">LIVE</div>
+    <div class="vitals-title">SYS VITALS</div>
+    <div class="header-hostname" id="v-hostname">—</div>
+    <div class="header-time" id="v-time">--:--</div>
+  </div>
+
+  <!-- 6-card grid -->
+  <div class="vitals-grid">
+
+    <!-- CPU -->
+    <div class="vitals-card" id="card-cpu">
+      <div class="card-label">CPU</div>
+      <canvas class="sparkline" id="cpu-sparkline"></canvas>
+      <div class="card-value" id="v-cpu-pct">—</div>
+      <div class="card-sub" id="v-cpu-sub">WAITING FOR DATA</div>
+    </div>
+
+    <!-- Temperature -->
+    <div class="vitals-card" id="card-temp">
+      <div class="card-label">TEMPERATURE</div>
+      <div class="card-value-unit">
+        <span class="card-value" id="v-temp">—</span>
+        <span class="card-unit">°C</span>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-fill" id="bar-temp"></div>
+      </div>
+      <div class="card-sub" id="v-temp-sub">—</div>
+    </div>
+
+    <!-- Memory -->
+    <div class="vitals-card" id="card-mem">
+      <div class="card-label">MEMORY</div>
+      <div class="card-value" id="v-mem-pct">—</div>
+      <div class="bar-wrap">
+        <div class="bar-fill" id="bar-mem"></div>
+      </div>
+      <div class="card-sub" id="v-mem-sub">— / — MB</div>
+    </div>
+
+    <!-- Disk -->
+    <div class="vitals-card" id="card-disk">
+      <div class="card-label">DISK</div>
+      <div class="card-value" id="v-disk-pct">—</div>
+      <div class="bar-wrap">
+        <div class="bar-fill" id="bar-disk"></div>
+      </div>
+      <div class="card-sub" id="v-disk-sub">— / — GB</div>
+    </div>
+
+    <!-- Network -->
+    <div class="vitals-card" id="card-net">
+      <div class="card-label">NETWORK</div>
+      <div class="net-row">
+        <span class="net-arrow tx">↑</span>
+        <span class="net-label">TX</span>
+        <span class="card-value net-val" id="v-net-tx">—</span>
+      </div>
+      <div class="net-row">
+        <span class="net-arrow rx">↓</span>
+        <span class="net-label">RX</span>
+        <span class="card-value net-val" id="v-net-rx">—</span>
+      </div>
+    </div>
+
+    <!-- System -->
+    <div class="vitals-card" id="card-sys">
+      <div class="card-label">SYSTEM</div>
+      <div class="sys-row">
+        <span class="sys-lbl">UPTIME</span>
+        <span class="card-value sys-val" id="v-uptime">—</span>
+      </div>
+      <div class="sys-row load-row">
+        <span class="sys-lbl">LOAD</span>
+        <span class="card-value sys-val" id="v-load">—</span>
+      </div>
+      <div class="sys-load-labels">
+        <span>1M</span><span>5M</span><span>15M</span>
+      </div>
+    </div>
+
+  </div><!-- /.vitals-grid -->
+</div><!-- /.vitals-shell -->
+
+<script src="vitals.js"></script>
+</body>
+</html>

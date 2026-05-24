@@ -1,0 +1,287 @@
+/* vitals.css — System Vitals display styles */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:     #050200;
+  --fg:     #FFA040;
+  --fg-mid: #CC7020;
+  --fg-dim: #7A4010;
+  --sep:    #3A1E08;
+  --warn:   #FFC040;
+  --danger: #FF5050;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+}
+
+/* CRT scanlines */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent  0px,
+    transparent  2px,
+    rgba(0,0,0,0.28) 2px,
+    rgba(0,0,0,0.28) 3px
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   SHELL
+   ══════════════════════════════════════════════════════════ */
+
+.vitals-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════ */
+
+.vitals-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--sep);
+  flex-shrink: 0;
+}
+
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--fg);
+  flex-shrink: 0;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.live-label {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+}
+
+.vitals-title {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: var(--fg-dim);
+  letter-spacing: 0.28em;
+  flex: 1;
+  text-align: center;
+}
+
+.header-hostname {
+  font-size: 12px;
+  color: var(--fg-mid);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.header-time {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   GRID
+   ══════════════════════════════════════════════════════════ */
+
+.vitals-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CARDS
+   ══════════════════════════════════════════════════════════ */
+
+.vitals-card {
+  border-right: 1px solid var(--sep);
+  border-bottom: 1px solid var(--sep);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Remove right border on last column */
+.vitals-card:nth-child(3),
+.vitals-card:nth-child(6) { border-right: none; }
+/* Remove bottom border on last row */
+.vitals-card:nth-child(4),
+.vitals-card:nth-child(5),
+.vitals-card:nth-child(6) { border-bottom: none; }
+
+.card-label {
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.30em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.card-value {
+  font-family: 'VT323', monospace;
+  font-size: clamp(36px, 5vw, 60px);
+  line-height: 1;
+  color: var(--fg);
+  letter-spacing: 0.04em;
+}
+
+.card-value.warn   { color: var(--warn); }
+.card-value.danger { color: var(--danger); }
+
+.card-sub {
+  font-size: 12px;
+  color: var(--fg-mid);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Card: CPU ── */
+.sparkline {
+  width: 100%;
+  height: 60px;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* ── Card: Temperature — value + unit inline ── */
+.card-value-unit {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.card-unit {
+  font-family: 'VT323', monospace;
+  font-size: clamp(20px, 3vw, 32px);
+  color: var(--fg-mid);
+  letter-spacing: 0.06em;
+}
+
+/* ── Progress bar ── */
+.bar-wrap {
+  height: 5px;
+  background: var(--sep);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--fg);
+  border-radius: 2px;
+  transition: width 0.4s ease, background 0.3s;
+}
+
+.bar-fill.warn   { background: var(--warn); }
+.bar-fill.danger { background: var(--danger); }
+
+/* ── Card: Network ── */
+.net-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.net-arrow {
+  font-family: 'VT323', monospace;
+  font-size: 26px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.net-arrow.tx { color: var(--fg); }
+.net-arrow.rx { color: var(--fg-mid); }
+
+.net-label {
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.20em;
+  flex-shrink: 0;
+  width: 22px;
+}
+
+.net-val {
+  font-size: clamp(24px, 3.5vw, 46px) !important;
+}
+
+/* ── Card: System ── */
+.sys-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.sys-lbl {
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.20em;
+  flex-shrink: 0;
+  width: 52px;
+}
+
+.sys-val {
+  font-size: clamp(22px, 3vw, 38px) !important;
+}
+
+.sys-load-labels {
+  display: flex;
+  gap: 0;
+  padding-left: 64px;
+}
+.sys-load-labels span {
+  font-size: 9px;
+  color: var(--fg-dim);
+  letter-spacing: 0.15em;
+  flex: 1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — narrow screens
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 700px) {
+  .vitals-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+  .vitals-card:nth-child(3),
+  .vitals-card:nth-child(6) { border-right: 1px solid var(--sep); }
+  .vitals-card:nth-child(2),
+  .vitals-card:nth-child(4) { border-right: none; }
+  .vitals-card:nth-child(4),
+  .vitals-card:nth-child(5),
+  .vitals-card:nth-child(6) { border-bottom: 1px solid var(--sep); }
+  .vitals-card:nth-child(5),
+  .vitals-card:nth-child(6) { border-bottom: none; }
+}

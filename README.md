@@ -166,6 +166,7 @@ sudo bash /opt/flighttracker/scripts/reset.sh
 | `http://flighttracker.local/` | Flight board — full layout (data grid + telemetry) |
 | `http://flighttracker.local/main.html?focus` | Focus layout — giant route airports + compact strip |
 | `http://flighttracker.local/radar.html` | PPI radar — rotating sweep + aircraft cards |
+| `http://flighttracker.local/vitals.html` | System vitals — CPU, temperature, memory, disk, network |
 | `http://flighttracker.local/setup.html` | Setup and settings page (PIN protected) |
 
 ## E-ink Displays
