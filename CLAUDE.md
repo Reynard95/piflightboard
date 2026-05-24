@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 There is no build step. All files in `www/` are static HTML/CSS/JS deployed directly to the Pi.
 
-**Normal workflow:** push to `main` → GitHub Actions SSHes into the Pi via Tailscale → runs `git pull` + `scripts/deploy.sh`. The deploy script copies `www/*` to `/usr/local/share/tar1090/html`, reloads lighttpd, and restarts the route proxy if its files changed.
+**Normal workflow:** push to `main` → GitHub Actions SSHes into the Pi via Tailscale → runs `git pull` + `scripts/deploy.sh`. The deploy script copies `www/*` to `/var/www/flightboard`, installs the lighttpd config, reloads lighttpd, and restarts the route proxy if its files changed.
 
 **Manual deploy on the Pi:**
 ```bash
@@ -39,7 +39,7 @@ RTL-SDR dongle
     └─► readsb (ADS-B decoder) ──► /run/readsb/aircraft.json   (updated ~1s)
                                                 │
                                      lighttpd serves at
-                                  /tar1090/data/aircraft.json
+                                        /data/aircraft.json
                                                 │
                                Browser JS polls every FETCH_MS
                                   (default 10s, URL ?refresh=N)
@@ -52,7 +52,7 @@ RTL-SDR dongle
 
 ### Web UIs
 
-All pages live in `www/` and are served by lighttpd under `/tar1090/`.
+All pages live in `www/` and are served by lighttpd from `/var/www/flightboard` at the root path.
 
 | Page | Description |
 |------|-------------|
@@ -88,22 +88,18 @@ Three-tier fallback, evaluated **after** the route fetch completes:
 
 `aircraftKey(ac)` returns a coarse string key (callsign + rounded alt/speed/track/vrate). On each data fetch, `fetchAircraft()` compares the current aircraft's key against `lastRenderedKey` and only calls `showIndex()` if it differs. This avoids unnecessary full-panel e-ink refreshes on quiet cruises. `showIndex()` always updates `lastRenderedKey` at entry.
 
-### lighttpd aliases
+### lighttpd config
 
-The tar1090 installer writes `/etc/lighttpd/conf-enabled/88-tar1090.conf` which already defines:
-- `/tar1090/data/` → `/run/readsb/`
-- `/tar1090/db-*/` → tar1090's aircraft database
-- `/tar1090` → `/usr/local/share/tar1090/html`
+`config/lighttpd-flightboard.conf` is installed as `/etc/lighttpd/conf-enabled/50-flightboard.conf`. It is a standalone file that owns everything — no dependency on tar1090 or its config.
 
-`config/lighttpd-tar1090.conf` (installed as `87-flighttracker.conf`) defines **only** the two entries that tar1090 omits:
-- `/tar1090/airline_logos/` → `images/airline_logos/` in this repo
-- `/tar1090/country_flags/` → `images/country_flags/` in this repo
+It defines:
+- `server.document-root` → `/var/www/flightboard` (overrides lighttpd's default `/var/www/html`)
+- `/data/` → `/run/readsb/` (live ADS-B feed)
+- `/db/` → `/opt/flighttracker/db/` (aircraft hex DB, cloned from wiedehopf/tar1090-db)
+- `/airline_logos/` → `images/airline_logos/` in this repo
+- `/country_flags/` → `images/country_flags/` in this repo
 
-**Do not add `/tar1090/data/`, `/tar1090/db-*/`, or `/tar1090` to our config.** lighttpd crashes with `Duplicate array-key` if any alias key appears more than once across all conf-enabled files.
-
-**The `87-` prefix is load-order critical.** lighttpd processes `alias.url` entries in the order they are added across all conf files. `88-tar1090.conf` contains a catch-all `/tar1090/` entry that matches everything under that path. Our more-specific `/tar1090/airline_logos/` and `/tar1090/country_flags/` entries must be added to the array *before* that catch-all — otherwise lighttpd matches `/tar1090/` first and the image paths never resolve. Naming our file `87-*` ensures it loads before `88-tar1090.conf`.
-
-`config/lighttpd-assets.conf` is intentionally a comments-only placeholder — the deploy script copies it to `89-flighttracker-assets.conf` but it contains no active directives.
+`config/lighttpd-tar1090.conf` and `config/lighttpd-assets.conf` are kept as deprecated stubs for reference only — neither is installed by deploy.sh or install.sh.
 
 ## Key configuration
 

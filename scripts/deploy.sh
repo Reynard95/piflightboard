@@ -5,22 +5,39 @@
 set -e
 
 REPO_DIR="/opt/flighttracker"
-WEB_DIR="/usr/local/share/tar1090/html"
+WEB_DIR="/var/www/flightboard"
 CONFIG_DIR="/etc/lighttpd/conf-enabled"
 READSB_DEFAULT="/etc/default/readsb"
 SYSTEMD_DIR="/etc/systemd/system"
 
 echo "[deploy] Starting deployment..."
 
+# ── Version check ──────────────────────────────────────────
+# If the stack version has changed (or no install stamp exists),
+# trigger a full reset + reinstall in the background and exit.
+# The SSH session closes cleanly; progress is logged to reinstall.log.
+REPO_VERSION=$(cat "$REPO_DIR/VERSION" 2>/dev/null || echo "0")
+INSTALLED_VERSION=$(cat "$REPO_DIR/.installed-version" 2>/dev/null || echo "none")
+
+if [ "$REPO_VERSION" != "$INSTALLED_VERSION" ]; then
+  echo "[deploy] Version mismatch — installed: $INSTALLED_VERSION, repo: $REPO_VERSION"
+  echo "[deploy] Triggering auto-reinstall in background..."
+  echo "[deploy] Progress: tail -f $REPO_DIR/reinstall.log"
+  nohup sudo bash "$REPO_DIR/scripts/auto-reinstall.sh" \
+    > "$REPO_DIR/reinstall.log" 2>&1 &
+  echo "[deploy] Reinstall started (PID $!). Exiting deploy — nothing else to do."
+  exit 0
+fi
+
+echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
+
 # ── Web files ──────────────────────────────────────────────
 echo "[deploy] Copying web files..."
 sudo cp "$REPO_DIR"/www/* "$WEB_DIR/"
 
-# ── lighttpd aliases for local assets ─────────────────────
-# 87-* loads before 88-tar1090.conf so our specific aliases win over the catch-all /tar1090/
-echo "[deploy] Installing lighttpd asset aliases..."
-sudo cp "$REPO_DIR/config/lighttpd-tar1090.conf" "$CONFIG_DIR/87-flighttracker.conf"
-sudo cp "$REPO_DIR/config/lighttpd-assets.conf"  "$CONFIG_DIR/89-flighttracker-assets.conf"
+# ── lighttpd config ────────────────────────────────────────
+echo "[deploy] Installing lighttpd config..."
+sudo cp "$REPO_DIR/config/lighttpd-flightboard.conf" "$CONFIG_DIR/50-flightboard.conf"
 
 # ── lighttpd reload ────────────────────────────────────────
 echo "[deploy] Reloading lighttpd..."
@@ -46,6 +63,16 @@ if [ -f "$REPO_DIR/config/route-proxy.service" ]; then
   sudo systemctl daemon-reload
   sudo systemctl enable route-proxy
   sudo systemctl restart route-proxy
+fi
+
+# ── settings API ────────────────────────────────────────────
+if [ -f "$REPO_DIR/config/settings-api.service" ]; then
+  sudo cp "$REPO_DIR/scripts/settings-api.py" /usr/local/bin/settings-api.py
+  sudo chmod +x /usr/local/bin/settings-api.py
+  sudo cp "$REPO_DIR/config/settings-api.service" "$SYSTEMD_DIR/settings-api.service"
+  sudo systemctl daemon-reload
+  sudo systemctl enable settings-api
+  sudo systemctl restart settings-api
 fi
 
 echo "[deploy] Done! Deployment complete."

@@ -1,0 +1,798 @@
+/* ============================================================
+   setup.css — Flight Board Setup / Settings Page
+   Dark cyberdeck aesthetic
+   ============================================================ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ── CSS Variables ── */
+:root {
+  --bg:       #0a0a0f;
+  --surface:  #12121a;
+  --surface2: #1a1a26;
+  --border:   #1e1e2e;
+  --border2:  #2a2a3e;
+  --accent:   #00d4ff;
+  --accent2:  #7c3aed;
+  --text:     #e2e8f0;
+  --text-dim: #64748b;
+  --text-faint: #3a4a5e;
+  --ok:       #22c55e;
+  --warn:     #f59e0b;
+  --err:      #ef4444;
+
+  --radius:   8px;
+  --radius-lg: 12px;
+  --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+  --transition: 0.18s ease;
+}
+
+/* ── Base ── */
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── Layout wrapper ── */
+#app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* ── Page header ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  font-size: 1.3rem;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.page-header .back-link {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.page-header .back-link:hover {
+  color: var(--accent);
+}
+
+/* ============================================================
+   PIN GATE
+   ============================================================ */
+
+.pin-gate {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.pin-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 48px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.pin-card .pin-icon {
+  font-size: 2.4rem;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.pin-card h2 {
+  font-size: 1.1rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.pin-card .pin-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 28px;
+  letter-spacing: 0.08em;
+}
+
+/* Large PIN input */
+.pin-input {
+  width: 100%;
+  background: var(--bg);
+  border: 2px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+  padding: 14px 16px;
+  outline: none;
+  -webkit-text-security: disc;
+  transition: border-color var(--transition);
+}
+
+.pin-input:focus {
+  border-color: var(--accent);
+}
+
+.pin-input::placeholder {
+  color: var(--text-faint);
+  letter-spacing: 0.2em;
+  font-size: 1.2rem;
+}
+
+.pin-error {
+  color: var(--err);
+  font-size: 0.82rem;
+  margin-top: 10px;
+  min-height: 1.2em;
+  letter-spacing: 0.05em;
+}
+
+.pin-card .btn {
+  width: 100%;
+  margin-top: 20px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: #00b8e0;
+  border-color: #00b8e0;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border2);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--err);
+  border-color: var(--err);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--err);
+  color: var(--bg);
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  letter-spacing: 0.08em;
+}
+
+/* ============================================================
+   STEP INDICATOR
+   ============================================================ */
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32px;
+  gap: 0;
+}
+
+.step-indicator .step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.step-indicator .step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 16px);
+  right: calc(-50% + 16px);
+  height: 2px;
+  background: var(--border2);
+  z-index: 0;
+}
+
+.step-indicator .step-item.done::after {
+  background: var(--accent);
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  z-index: 1;
+  position: relative;
+  transition: all var(--transition);
+}
+
+.step-item.active .step-dot {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.25);
+}
+
+.step-item.done .step-dot {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--bg);
+}
+
+.step-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-top: 6px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.step-item.active .step-label {
+  color: var(--accent);
+}
+
+.step-item.done .step-label {
+  color: var(--ok);
+}
+
+/* ============================================================
+   WIZARD STEP CARD
+   ============================================================ */
+
+.wizard-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  margin-bottom: 24px;
+}
+
+.wizard-step.hidden {
+  display: none;
+}
+
+.wizard-step h2 {
+  font-size: 1rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.wizard-step .step-desc {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 28px;
+  line-height: 1.7;
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   SETTING SECTION (settings panel)
+   ============================================================ */
+
+.setting-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
+.setting-section h3 {
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ============================================================
+   FIELD ROW
+   ============================================================ */
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.field-row label {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.field-row input[type="text"],
+.field-row input[type="number"],
+.field-row input[type="password"],
+input.field-input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color var(--transition);
+  flex: 1;
+  min-width: 100px;
+}
+
+.field-row input:focus,
+input.field-input:focus {
+  border-color: var(--accent);
+}
+
+/* Nudge button cluster */
+.nudge-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nudge-group input {
+  width: 110px;
+  text-align: center;
+  flex: none;
+}
+
+.btn-nudge {
+  width: 32px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.1rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  font-family: var(--font-mono);
+}
+
+.btn-nudge:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.field-hint a {
+  color: var(--accent);
+}
+
+/* ============================================================
+   STATUS BADGE
+   ============================================================ */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px transparent;
+}
+
+.status-dot.ok   { background: var(--ok);   box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+.status-dot.warn { background: var(--warn);  box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+.status-dot.err  { background: var(--err);   box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+.status-dot.off  { background: var(--text-faint); }
+
+.status-badge.ok   .status-label { color: var(--ok); }
+.status-badge.warn .status-label { color: var(--warn); }
+.status-badge.err  .status-label { color: var(--err); }
+
+/* ============================================================
+   TERMINAL (SSE log output)
+   ============================================================ */
+
+.terminal-wrap {
+  margin-top: 16px;
+  display: none;
+}
+
+.terminal-wrap.visible {
+  display: block;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0d0d14;
+  border: 1px solid var(--border2);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 7px 14px;
+}
+
+.terminal-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.terminal-status {
+  font-size: 0.8rem;
+}
+
+.terminal {
+  background: #060609;
+  border: 1px solid var(--border2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 14px 16px;
+  height: 220px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #4ade80;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal .t-line {
+  display: block;
+}
+
+.terminal .t-cmd {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.terminal .t-err {
+  color: var(--err);
+}
+
+/* ============================================================
+   FEEDER SUB-SECTION
+   ============================================================ */
+
+.feeder-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+}
+
+.feeder-block h4 {
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ============================================================
+   TAB BAR (settings panel)
+   ============================================================ */
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 28px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-bottom: -2px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* ============================================================
+   SERVICE TABLE
+   ============================================================ */
+
+.service-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.service-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.service-row:last-child {
+  border-bottom: none;
+}
+
+.service-name {
+  font-size: 0.88rem;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  min-width: 120px;
+  flex: 1;
+}
+
+.service-row .status-badge {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* ============================================================
+   SUMMARY (wizard done step)
+   ============================================================ */
+
+.summary-list {
+  list-style: none;
+  margin: 16px 0 24px;
+}
+
+.summary-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.summary-list li:last-child {
+  border-bottom: none;
+}
+
+.summary-list li .summary-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.summary-list li .summary-key {
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  min-width: 130px;
+}
+
+.summary-list li .summary-val {
+  color: var(--text);
+  flex: 1;
+}
+
+/* ============================================================
+   MISC HELPERS
+   ============================================================ */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+.text-dim  { color: var(--text-dim); }
+.text-ok   { color: var(--ok); }
+.text-warn { color: var(--warn); }
+.text-err  { color: var(--err); }
+.text-accent { color: var(--accent); }
+
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+
+.hidden { display: none !important; }
+
+/* Spinner */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+/* Glowing accent border on active cards */
+.card-glow {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+/* ── Responsive ── */
+@media (max-width: 560px) {
+  .wizard-step,
+  .setting-section {
+    padding: 20px 18px;
+  }
+
+  .pin-card {
+    padding: 28px 24px;
+  }
+
+  .field-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-row label {
+    min-width: unset;
+  }
+
+  .field-row input[type="text"],
+  .field-row input[type="number"],
+  .field-row input[type="password"],
+  input.field-input {
+    width: 100%;
+  }
+
+  .service-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tab {
+    padding: 10px 14px;
+  }
+}

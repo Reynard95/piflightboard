@@ -141,7 +141,7 @@ function updateHistory(ac) {
 
 const routeCache = {};
 
-const DB_PATH = '/tar1090/db-28a5940';
+const DB_PATH = '/db';
 
 function getAirlineCode(callsign) {
   if (!callsign) return null;
@@ -154,7 +154,7 @@ async function lookupHex(hex) {
   const prefixes = [hex.slice(0,3), hex.slice(0,2), hex.slice(0,1)];
   for (const p of prefixes) {
     try {
-      const r = await fetch(`${DB_PATH}/${p}.json`);
+      const r = await fetch(`${DB_PATH}/${p}.js`);
       if (!r.ok) continue;
       const data = await r.json();
       const key  = hex.slice(p.length);
@@ -231,7 +231,7 @@ async function enrichAircraft(ac) {
 
 async function fetchAircraft() {
   try {
-    const r = await fetch('/tar1090/data/aircraft.json?_=' + Date.now());
+    const r = await fetch('/data/aircraft.json?_=' + Date.now());
     if (!r.ok) return;
     const data = await r.json();
     let list = (data.aircraft || []).filter(a => a.lat && a.lon);

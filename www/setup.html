@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flight Board Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="setup.css">
+</head>
+<body>
+
+<!-- PIN GATE — full-screen, shown until authenticated -->
+<div id="pin-gate" class="pin-gate">
+  <div class="pin-card">
+    <div class="pin-icon">&#128274;</div>
+    <h2 id="pin-gate-title">Flight Board</h2>
+    <p class="pin-subtitle" id="pin-gate-subtitle">Enter your PIN to continue</p>
+    <input
+      id="pin-input"
+      class="pin-input"
+      type="password"
+      inputmode="numeric"
+      maxlength="32"
+      placeholder="&#9679;&#9679;&#9679;&#9679;"
+      autocomplete="current-password"
+      autofocus
+    >
+    <div class="pin-error" id="pin-error"></div>
+    <button class="btn btn-primary mt-16" id="pin-submit">Unlock</button>
+  </div>
+</div>
+
+<!-- MAIN APP — hidden until authenticated -->
+<div id="app" class="hidden">
+
+  <div class="page-header">
+    <h1>&#9992; Flight Board Setup</h1>
+    <a href="/" class="back-link">&#8592; Back to board</a>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       WIZARD (first-run: setup_complete === false)
+  ════════════════════════════════════════════════ -->
+  <div id="wizard" class="hidden">
+
+    <!-- Step indicator -->
+    <div class="step-indicator" id="step-indicator">
+      <div class="step-item active" id="step-item-1">
+        <div class="step-dot">1</div>
+        <span class="step-label">Location</span>
+      </div>
+      <div class="step-item" id="step-item-2">
+        <div class="step-dot">2</div>
+        <span class="step-label">Feeders</span>
+      </div>
+      <div class="step-item" id="step-item-3">
+        <div class="step-dot">3</div>
+        <span class="step-label">Done</span>
+      </div>
+    </div>
+
+    <!-- ── Step 1: Location ── -->
+    <div class="wizard-step" id="wiz-step-1">
+      <h2>Receiver Location</h2>
+      <p class="step-desc">
+        Set the latitude and longitude of your RTL-SDR receiver.
+        This is used to calculate aircraft distances. Use decimal degrees.
+      </p>
+
+      <div class="field-row">
+        <label>Latitude</label>
+        <div class="nudge-group">
+          <button class="btn-nudge" id="lat-minus" title="&#8722;0.001">&#8722;</button>
+          <input type="number" id="lat-input" step="0.001" min="-90" max="90"
+                 placeholder="51.5074" class="field-input">
+          <button class="btn-nudge" id="lat-plus" title="+0.001">+</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label>Longitude</label>
+        <div class="nudge-group">
+          <button class="btn-nudge" id="lon-minus" title="&#8722;0.001">&#8722;</button>
+          <input type="number" id="lon-input" step="0.001" min="-180" max="180"
+                 placeholder="-0.1278" class="field-input">
+          <button class="btn-nudge" id="lon-plus" title="+0.001">+</button>
+        </div>
+      </div>
+
+      <p class="field-hint" id="geo-hint"></p>
+
+      <div class="wizard-actions">
+        <button class="btn btn-secondary btn-sm" id="use-location-btn">
+          &#128205; Use my location
+        </button>
+        <button class="btn btn-primary" id="save-location-btn">
+          Save &amp; Next
+        </button>
+      </div>
+      <div class="pin-error" id="location-error"></div>
+    </div>
+
+    <!-- ── Step 2: Feeders ── -->
+    <div class="wizard-step hidden" id="wiz-step-2">
+      <h2>Data Feeders</h2>
+      <p class="step-desc">
+        Optionally share your ADS-B data with flight tracking networks.
+        Both sections are skippable — you can configure these later in Settings.
+      </p>
+
+      <!-- FR24 block -->
+      <div class="feeder-block" id="fr24-block">
+        <h4>
+          Flightradar24
+          <span id="fr24-install-badge" class="status-badge">
+            <span class="status-dot off"></span>
+            <span class="status-label">checking...</span>
+          </span>
+        </h4>
+
+        <div class="field-row">
+          <label>FR24 Key</label>
+          <input type="text" id="fr24-key-wiz" placeholder="e.g. abc123def456..."
+                 class="field-input" spellcheck="false" autocomplete="off">
+        </div>
+        <p class="field-hint">
+          Get your sharing key at
+          <a href="https://www.flightradar24.com/account/data-sharing" target="_blank" rel="noopener">
+            flightradar24.com/account/data-sharing
+          </a>
+        </p>
+
+        <div class="wizard-actions" style="margin-top:12px;">
+          <button class="btn btn-primary btn-sm" id="fr24-install-btn-wiz">
+            Install &amp; Configure
+          </button>
+          <button class="btn btn-ghost btn-sm" id="fr24-configure-only-btn-wiz">
+            Configure only (already installed)
+          </button>
+        </div>
+
+        <!-- SSE terminal -->
+        <div class="terminal-wrap" id="fr24-terminal-wiz">
+          <div class="terminal-header">
+            <span class="terminal-title">Install log</span>
+            <span class="terminal-status" id="fr24-terminal-status-wiz"></span>
+          </div>
+          <pre class="terminal" id="fr24-terminal-out-wiz"></pre>
+        </div>
+      </div>
+
+      <!-- FlightAware block -->
+      <div class="feeder-block" id="fa-block">
+        <h4>
+          FlightAware / PiAware
+          <span id="fa-install-badge" class="status-badge">
+            <span class="status-dot off"></span>
+            <span class="status-label">checking...</span>
+          </span>
+        </h4>
+
+        <div class="field-row">
+          <label>Feeder ID</label>
+          <input type="text" id="fa-id-wiz" placeholder="e.g. abc-123-def-456..."
+                 class="field-input" spellcheck="false" autocomplete="off">
+        </div>
+        <p class="field-hint">
+          Claim your feeder at
+          <a href="https://flightaware.com/adsb/piaware/claim" target="_blank" rel="noopener">
+            flightaware.com/adsb/piaware/claim
+          </a>
+        </p>
+
+        <div class="wizard-actions" style="margin-top:12px;">
+          <button class="btn btn-primary btn-sm" id="fa-install-btn-wiz">
+            Install &amp; Configure
+          </button>
+          <button class="btn btn-ghost btn-sm" id="fa-configure-only-btn-wiz">
+            Configure only (already installed)
+          </button>
+        </div>
+
+        <!-- SSE terminal -->
+        <div class="terminal-wrap" id="fa-terminal-wiz">
+          <div class="terminal-header">
+            <span class="terminal-title">Install log</span>
+            <span class="terminal-status" id="fa-terminal-status-wiz"></span>
+          </div>
+          <pre class="terminal" id="fa-terminal-out-wiz"></pre>
+        </div>
+      </div>
+
+      <div class="wizard-actions">
+        <button class="btn btn-ghost" id="back-to-step1">&#8592; Back</button>
+        <button class="btn btn-secondary" id="skip-feeders-btn">Skip for now</button>
+        <button class="btn btn-primary" id="done-feeders-btn">Next &#8594;</button>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Done ── -->
+    <div class="wizard-step hidden" id="wiz-step-3">
+      <h2>Setup Complete</h2>
+      <p class="step-desc">
+        Your flight board is configured and ready to go.
+      </p>
+
+      <ul class="summary-list" id="wizard-summary">
+        <!-- Populated by JS -->
+      </ul>
+
+      <div class="wizard-actions">
+        <a href="/" class="btn btn-primary">&#9992; Go to flight board</a>
+        <button class="btn btn-ghost" id="go-to-settings-btn">Open Settings</button>
+      </div>
+    </div>
+
+  </div><!-- /#wizard -->
+
+  <!-- ═══════════════════════════════════════════════
+       SETTINGS PANEL (returning users)
+  ════════════════════════════════════════════════ -->
+  <div id="settings-panel" class="hidden">
+
+    <div class="tab-bar" id="settings-tabs">
+      <button class="tab active" data-tab="location">Location</button>
+      <button class="tab" data-tab="feeders">Feeders</button>
+      <button class="tab" data-tab="services">Services</button>
+      <button class="tab" data-tab="account">Account</button>
+    </div>
+
+    <!-- ── Tab: Location ── -->
+    <div class="tab-panel active" id="tab-location">
+      <div class="setting-section">
+        <h3>Receiver Location</h3>
+
+        <div class="field-row">
+          <label>Latitude</label>
+          <div class="nudge-group">
+            <button class="btn-nudge" id="s-lat-minus">&#8722;</button>
+            <input type="number" id="s-lat-input" step="0.001" min="-90" max="90"
+                   placeholder="51.5074" class="field-input">
+            <button class="btn-nudge" id="s-lat-plus">+</button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label>Longitude</label>
+          <div class="nudge-group">
+            <button class="btn-nudge" id="s-lon-minus">&#8722;</button>
+            <input type="number" id="s-lon-input" step="0.001" min="-180" max="180"
+                   placeholder="-0.1278" class="field-input">
+            <button class="btn-nudge" id="s-lon-plus">+</button>
+          </div>
+        </div>
+
+        <p class="field-hint" id="s-geo-hint"></p>
+
+        <div class="wizard-actions">
+          <button class="btn btn-secondary btn-sm" id="s-use-location-btn">
+            &#128205; Use my location
+          </button>
+          <button class="btn btn-primary" id="s-save-location-btn">
+            Save &amp; Restart readsb
+          </button>
+        </div>
+        <div class="pin-error" id="s-location-error"></div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Feeders ── -->
+    <div class="tab-panel" id="tab-feeders">
+
+      <!-- FR24 -->
+      <div class="setting-section">
+        <h3>
+          Flightradar24
+          <span id="s-fr24-svc-badge" class="status-badge" style="float:right;">
+            <span class="status-dot off"></span>
+            <span class="status-label">checking...</span>
+          </span>
+        </h3>
+
+        <div class="field-row">
+          <label>FR24 Key</label>
+          <input type="text" id="s-fr24-key" placeholder="e.g. abc123def456..."
+                 class="field-input" spellcheck="false" autocomplete="off">
+        </div>
+        <p class="field-hint">
+          <a href="https://www.flightradar24.com/account/data-sharing" target="_blank" rel="noopener">
+            Get your sharing key &#8599;
+          </a>
+        </p>
+
+        <div class="wizard-actions">
+          <button class="btn btn-primary btn-sm" id="s-fr24-install-btn">
+            Install &amp; Configure
+          </button>
+          <button class="btn btn-secondary btn-sm" id="s-fr24-configure-btn">
+            Configure only
+          </button>
+        </div>
+
+        <div class="terminal-wrap" id="s-fr24-terminal">
+          <div class="terminal-header">
+            <span class="terminal-title">Install log</span>
+            <span class="terminal-status" id="s-fr24-terminal-status"></span>
+          </div>
+          <pre class="terminal" id="s-fr24-terminal-out"></pre>
+        </div>
+      </div>
+
+      <!-- FlightAware -->
+      <div class="setting-section">
+        <h3>
+          FlightAware / PiAware
+          <span id="s-fa-svc-badge" class="status-badge" style="float:right;">
+            <span class="status-dot off"></span>
+            <span class="status-label">checking...</span>
+          </span>
+        </h3>
+
+        <div class="field-row">
+          <label>Feeder ID</label>
+          <input type="text" id="s-fa-id" placeholder="e.g. abc-123-def-456..."
+                 class="field-input" spellcheck="false" autocomplete="off">
+        </div>
+        <p class="field-hint">
+          <a href="https://flightaware.com/adsb/piaware/claim" target="_blank" rel="noopener">
+            Claim your feeder &#8599;
+          </a>
+        </p>
+
+        <div class="wizard-actions">
+          <button class="btn btn-primary btn-sm" id="s-fa-install-btn">
+            Install &amp; Configure
+          </button>
+          <button class="btn btn-secondary btn-sm" id="s-fa-configure-btn">
+            Configure only
+          </button>
+        </div>
+
+        <div class="terminal-wrap" id="s-fa-terminal">
+          <div class="terminal-header">
+            <span class="terminal-title">Install log</span>
+            <span class="terminal-status" id="s-fa-terminal-status"></span>
+          </div>
+          <pre class="terminal" id="s-fa-terminal-out"></pre>
+        </div>
+      </div>
+
+    </div><!-- /#tab-feeders -->
+
+    <!-- ── Tab: Services ── -->
+    <div class="tab-panel" id="tab-services">
+      <div class="setting-section">
+        <h3>Service Status</h3>
+        <div id="service-table">
+          <!-- Populated by JS -->
+          <div class="text-dim" style="font-size:0.85rem;">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Account ── -->
+    <div class="tab-panel" id="tab-account">
+      <div class="setting-section">
+        <h3>Change PIN</h3>
+
+        <div class="field-row">
+          <label>New PIN</label>
+          <input type="password" id="new-pin-input" class="field-input"
+                 placeholder="4–32 chars" maxlength="32" autocomplete="new-password">
+        </div>
+        <div class="field-row">
+          <label>Confirm</label>
+          <input type="password" id="confirm-pin-input" class="field-input"
+                 placeholder="repeat PIN" maxlength="32" autocomplete="new-password">
+        </div>
+
+        <div class="wizard-actions">
+          <button class="btn btn-primary" id="change-pin-btn">Update PIN</button>
+        </div>
+        <div class="pin-error" id="pin-change-error"></div>
+      </div>
+    </div>
+
+  </div><!-- /#settings-panel -->
+
+</div><!-- /#app -->
+
+<script src="setup.js"></script>
+</body>
+</html>

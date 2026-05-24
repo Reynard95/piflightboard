@@ -1,7 +1,7 @@
 /* ── CONFIG ── */
-const AIRCRAFT_JSON = '/tar1090/data/aircraft.json';
+const AIRCRAFT_JSON = '/data/aircraft.json';
 const ROUTE_API     = 'http://flighttracker.local:8088';
-const DB_PATH       = '/tar1090/db-28a5940/';
+const DB_PATH       = '/db/';
 const CYCLE_MS      = 60000;   /* 60s per aircraft — minimise e-ink refreshes */
 
 /* ── URL PARAMS ── */
@@ -303,8 +303,8 @@ async function showIndex(idx) {
     routeDurStr = fmtDuration((distTotal  / gsKmh) * 60);
   }
 
-  const logoUrl      = icaoCode ? `/tar1090/airline_logos/airline_logo_${icaoCode}.png` : '';
-  const flagUrl      = countryCode ? `/tar1090/country_flags/country_flag_${countryCode}.png` : '';
+  const logoUrl      = icaoCode ? `/airline_logos/airline_logo_${icaoCode}.png` : '';
+  const flagUrl      = countryCode ? `/country_flags/country_flag_${countryCode}.png` : '';
   const flagHtml     = flagUrl
     ? `<img src="${flagUrl}" alt="${countryCode}" class="flag-img" onerror="this.style.display='none'">`
     : '';

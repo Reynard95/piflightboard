@@ -1,0 +1,20 @@
+[Unit]
+Description=Flightboard Settings API
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+ExecStart=/usr/bin/python3 /usr/local/bin/settings-api.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Hardening — settings-api only needs to write two specific paths
+ReadWritePaths=/opt/flighttracker/config /etc/default /etc/fr24feed.ini /run/readsb
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

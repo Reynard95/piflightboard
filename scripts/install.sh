@@ -6,11 +6,12 @@
 set -e
 
 REPO_DIR="/opt/flighttracker"
-WEB_DIR="/usr/local/share/tar1090/html"
+WEB_DIR="/var/www/flightboard"
+DB_DIR="$REPO_DIR/db"
 DEPLOY_USER="${SUDO_USER:-$(whoami)}"
 
 echo "============================================"
-echo "  Flighttracker Clean Install"
+echo "  Flightboard Clean Install"
 echo "============================================"
 
 # ── 1. System update ───────────────────────────────────────
@@ -21,7 +22,8 @@ apt update && apt upgrade -y
 echo "[2/10] Installing dependencies..."
 apt install -y \
   build-essential git librtlsdr-dev pkg-config \
-  zlib1g-dev libzstd-dev zstd lighttpd curl wget libncurses-dev
+  zlib1g-dev libzstd-dev zstd lighttpd curl wget libncurses-dev \
+  python3 python3-pip python3-flask python3-flask-cors
 
 # ── 2b. Fix repo ownership so deploy user can git pull ─────
 echo "[2b/10] Setting repo ownership..."
@@ -97,10 +99,11 @@ cat > /etc/tmpfiles.d/readsb.conf << 'EOF'
 d /run/readsb 0755 readsb readsb -
 EOF
 
-# ── Aircraft database for readsb ──────────────────────────
-echo "[6b/10] Downloading aircraft database..."
+# Aircraft CSV for the readsb binary (hex→type lookups at decode time)
+echo "[6b/10] Downloading aircraft CSV for readsb..."
 wget -O /usr/local/share/aircraft.csv.gz \
   https://github.com/wiedehopf/tar1090-db/raw/csv/aircraft.csv.gz
+
 echo "[7/10] Installing readsb service..."
 cp /tmp/readsb/debian/readsb.service /etc/systemd/system/
 sed -i 's|/usr/bin/readsb|/usr/local/bin/readsb|g' /etc/systemd/system/readsb.service
@@ -109,47 +112,83 @@ systemctl daemon-reload
 systemctl enable readsb
 systemctl start readsb
 
-# ── 8. tar1090 web UI ─────────────────────────────────────
-echo "[8/10] Installing tar1090..."
-bash -c "$(wget -nv -O - https://github.com/wiedehopf/tar1090/raw/master/install.sh)" || {
-  echo "    tar1090 install script failed or unavailable."
-  echo "    Install manually: https://github.com/wiedehopf/tar1090"
-}
+# ── 8. Aircraft hex database for the browser UI ───────────
+# Cloned directly from wiedehopf/tar1090-db — no tar1090 install needed.
+# The db/ directory contains per-prefix .js files (valid JSON, .js extension)
+# served at /db/ by lighttpd.
+echo "[8/10] Cloning aircraft hex database..."
+rm -rf /tmp/tar1090-db
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/wiedehopf/tar1090-db.git /tmp/tar1090-db
+cd /tmp/tar1090-db
+git sparse-checkout set db
+mkdir -p "$DB_DIR"
+cp -r db/* "$DB_DIR/"
+# Decompress any zstd-compressed files (repo ships some compressed)
+cd "$DB_DIR"
+for f in *.js; do
+  if [ -f "$f" ] && file "$f" | grep -q -i zst; then
+    zstd -d "$f" -o "${f}.tmp" && mv "${f}.tmp" "$f" || true
+  fi
+done
+chown -R www-data:www-data "$DB_DIR"
+rm -rf /tmp/tar1090-db
 
-# Decompress aircraft db if tar1090 installed successfully
-if [ -d /usr/local/share/tar1090/git-db/db/ ]; then
-  echo "[8b/10] Decompressing aircraft database..."
-  cd /usr/local/share/tar1090/git-db/db/
-  for f in *.js; do
-    zstd -d "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
-  done
-else
-  echo "    Skipping db decompress — tar1090 not installed."
-fi
+# ── 9. Web root and lighttpd ───────────────────────────────
+echo "[9/10] Configuring web root and lighttpd..."
+mkdir -p "$WEB_DIR"
+cp "$REPO_DIR"/www/* "$WEB_DIR/"
+chown -R www-data:www-data "$WEB_DIR"
 
-# Install dedicated lighttpd config for local asset aliases
-echo "[8c/10] Installing lighttpd asset aliases config..."
-cp "$REPO_DIR/config/lighttpd-assets.conf" /etc/lighttpd/conf-enabled/89-flighttracker-assets.conf
-echo "[9/10] Configuring lighttpd..."
-# Install as 87-* so it loads before 88-tar1090.conf — our specific aliases
-# (/tar1090/airline_logos/, /tar1090/country_flags/) must be added to the
-# alias.url array before tar1090's catch-all /tar1090/ entry, otherwise
-# lighttpd matches the catch-all first and the image paths never resolve.
-cp "$REPO_DIR/config/lighttpd-tar1090.conf" /etc/lighttpd/conf-enabled/87-flighttracker.conf
-if [ -d "$WEB_DIR" ]; then
-  cp "$REPO_DIR"/www/* "$WEB_DIR/"
-fi
+# Install our standalone config — 50- prefix loads after lighttpd defaults (10-)
+# and sets server.document-root, overriding the default /var/www/html.
+# No dependency on tar1090's 88-tar1090.conf.
+cp "$REPO_DIR/config/lighttpd-flightboard.conf" /etc/lighttpd/conf-enabled/50-flightboard.conf
+
+lighttpd -tt -f /etc/lighttpd/lighttpd.conf  # validate before enabling
 systemctl enable lighttpd
 systemctl restart lighttpd
 
-# ── 10. Route proxy ────────────────────────────────────────
-echo "[10/10] Installing route proxy..."
+# ── 10. Route proxy + Settings API ────────────────────────
+echo "[10/10] Installing route proxy and settings API..."
+
 cp "$REPO_DIR/scripts/route-proxy.py" /usr/local/bin/route-proxy.py
 chmod +x /usr/local/bin/route-proxy.py
 cp "$REPO_DIR/config/route-proxy.service" /etc/systemd/system/route-proxy.service
+
+cp "$REPO_DIR/scripts/settings-api.py" /usr/local/bin/settings-api.py
+chmod +x /usr/local/bin/settings-api.py
+cp "$REPO_DIR/config/settings-api.service" /etc/systemd/system/settings-api.service
+
+# Create initial settings file if it doesn't exist
+mkdir -p "$REPO_DIR/config"
+if [ ! -f "$REPO_DIR/config/settings.json" ]; then
+  cat > "$REPO_DIR/config/settings.json" << 'EOF'
+{
+  "pin_hash": "",
+  "location": { "lat": 0.0, "lon": 0.0 },
+  "setup_complete": false
+}
+EOF
+  chown nobody:nogroup "$REPO_DIR/config/settings.json"
+  chmod 660 "$REPO_DIR/config/settings.json"
+fi
+
+# Sudoers rules so settings-api (runs as nobody) can write configs and restart services
+cat > /etc/sudoers.d/flighttracker-settings-api << 'EOF'
+nobody ALL=(ALL) NOPASSWD: /bin/cp /etc/default/readsb, /usr/bin/systemctl restart readsb, /usr/bin/systemctl restart fr24feed, /usr/bin/systemctl restart piaware, /usr/bin/systemctl restart route-proxy, /usr/bin/apt-get install *, /usr/bin/dpkg -i *, /bin/bash /tmp/install_fr24.sh
+EOF
+chmod 440 /etc/sudoers.d/flighttracker-settings-api
+
 systemctl daemon-reload
 systemctl enable route-proxy
 systemctl start route-proxy
+systemctl enable settings-api
+systemctl start settings-api
+
+# Stamp the installed version so deploy.sh can detect future mismatches
+cp "$REPO_DIR/VERSION" "$REPO_DIR/.installed-version"
+echo "[done] Installed version: $(cat "$REPO_DIR/VERSION")"
 
 echo ""
 echo "============================================"
@@ -160,6 +199,7 @@ echo "  1. sudo tailscale up        (authenticate Tailscale)"
 echo "  2. tailscale ip -4          (note IP for GitHub secrets)"
 echo "  3. Add GitHub secrets — see README.md"
 echo ""
-echo "  Web UI:   http://$(hostname).local/tar1090"
-echo "  Board:    http://$(hostname).local/tar1090/flightboard.html"
+echo "  Web UI:   http://$(hostname).local/"
+echo "  Radar:    http://$(hostname).local/radar.html"
+echo "  Setup:    http://$(hostname).local/setup.html"
 echo "============================================"
