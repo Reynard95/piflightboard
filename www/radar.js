@@ -10,17 +10,17 @@
 
 const _fp = new URLSearchParams(location.search);
 
-const RANGE_OPTS   = [100, 150, 200, 250];
-let   rangeMode    = _fp.get('range') || '250';   // '100'|'150'|'200'|'250'|'auto'
-let   rangeKm      = rangeMode === 'auto' ? 250 : (parseInt(rangeMode, 10) || 250);
-const FETCH_MS     = Math.max(1000, (_fp.get('refresh') ? parseFloat(_fp.get('refresh')) : 5) * 1000);
-const RADIUS_KM    = _fp.has('radius') ? parseFloat(_fp.get('radius')) : null;
-const CLOSEST_ONLY = _fp.has('closest');
-const SQUARE_LAYOUT = _fp.has('square');
+const RANGE_OPTS    = [100, 150, 200, 250];
+let   rangeMode     = _fp.get('range') || '250';   // '100'|'150'|'200'|'250'|'auto'
+let   rangeKm       = rangeMode === 'auto' ? 250 : (parseInt(rangeMode, 10) || 250);
+let   refreshSec    = _fp.get('refresh') ? Math.max(1, parseFloat(_fp.get('refresh'))) : 5;
+let   radiusKm      = _fp.has('radius') ? parseFloat(_fp.get('radius')) : null;
+let   closestOnly   = _fp.has('closest');
+let   squareLayout  = _fp.has('square');
 let   sweepEnabled  = _fp.get('sweep') !== 'off';
 let   metricUnits   = _fp.get('units') === 'metric';
 
-if (SQUARE_LAYOUT) document.body.classList.add('square-layout');
+if (squareLayout) document.body.classList.add('square-layout');
 
 /* ══════════════════════════════════════════════════════════
    CANVAS SETUP
@@ -35,7 +35,7 @@ function sizeCanvas() {
   const footerH = footer ? footer.offsetHeight : 40;
   const isNarrow = window.innerWidth < 700;
   let available;
-  if (SQUARE_LAYOUT) {
+  if (squareLayout) {
     // Square mode: canvas = min(full width, 58% of viewport height)
     // radar-left width is 100% (CSS handles it); don't constrain via JS
     available = Math.min(window.innerWidth, Math.floor(window.innerHeight * 0.58) - footerH);
@@ -273,8 +273,8 @@ async function fetchAircraft() {
     list = list.map(a => ({ ...a, _dist: distKm(a) }));
 
     // Radius filter
-    if (RADIUS_KM) {
-      const full = list.filter(a => a._dist <= RADIUS_KM);
+    if (radiusKm) {
+      const full = list.filter(a => a._dist <= radiusKm);
       list = full.length ? full : list; // fallback if empty
     }
 
@@ -282,7 +282,7 @@ async function fetchAircraft() {
     list.sort((a, b) => (a._dist || 9999) - (b._dist || 9999));
 
     // Closest-only mode
-    if (CLOSEST_ONLY) {
+    if (closestOnly) {
       list = list.slice(0, 1);
     }
 
@@ -879,24 +879,31 @@ function applyThemeByName(name) {
 
 function persistUrlParams() {
   const u = new URL(location.href);
-  u.searchParams.set('theme',  currentTheme);
-  u.searchParams.set('range',  rangeMode);
-  u.searchParams.set('sweep',  sweepEnabled ? 'on' : 'off');
-  u.searchParams.set('units',  metricUnits  ? 'metric' : 'imperial');
+  u.searchParams.set('theme',   currentTheme);
+  u.searchParams.set('range',   rangeMode);
+  u.searchParams.set('refresh', String(refreshSec));
+  u.searchParams.set('sweep',   sweepEnabled ? 'on' : 'off');
+  u.searchParams.set('units',   metricUnits  ? 'metric' : 'imperial');
+  if (radiusKm) u.searchParams.set('radius', String(radiusKm));
+  else          u.searchParams.delete('radius');
+  if (closestOnly) u.searchParams.set('closest', '');
+  else             u.searchParams.delete('closest');
+  if (squareLayout) u.searchParams.set('square', '');
+  else              u.searchParams.delete('square');
   history.replaceState(null, '', u);
 }
 
 let currentTheme = _fp.get('theme') || 'color';
 
 function initMenuState() {
-  // Range
-  markActive('menu-range',  'data-val', rangeMode);
-  // Sweep
-  markActive('menu-sweep',  'data-val', sweepEnabled ? 'on' : 'off');
-  // Units
-  markActive('menu-units',  'data-val', metricUnits ? 'metric' : 'imperial');
-  // Theme
-  markActive('menu-theme',  'data-val', currentTheme);
+  markActive('menu-range',   'data-val', rangeMode);
+  markActive('menu-refresh', 'data-val', String(refreshSec));
+  markActive('menu-radius',  'data-val', radiusKm ? String(radiusKm) : 'off');
+  markActive('menu-closest', 'data-val', closestOnly ? 'on' : 'off');
+  markActive('menu-sweep',   'data-val', sweepEnabled ? 'on' : 'off');
+  markActive('menu-units',   'data-val', metricUnits ? 'metric' : 'imperial');
+  markActive('menu-layout',  'data-val', squareLayout ? 'square' : 'normal');
+  markActive('menu-theme',   'data-val', currentTheme);
 }
 
 function markActive(groupId, attr, value) {
@@ -916,6 +923,38 @@ document.getElementById('menu-range').addEventListener('click', e => {
   markActive('menu-range', 'data-val', rangeMode);
 });
 
+// Refresh rate group
+let fetchIntervalId = null;
+function restartFetchInterval() {
+  clearInterval(fetchIntervalId);
+  fetchIntervalId = setInterval(fetchAircraft, refreshSec * 1000);
+}
+document.getElementById('menu-refresh').addEventListener('click', e => {
+  const btn = e.target.closest('.menu-opt');
+  if (!btn) return;
+  refreshSec = parseInt(btn.dataset.val, 10);
+  markActive('menu-refresh', 'data-val', btn.dataset.val);
+  restartFetchInterval();
+});
+
+// Radius filter group
+document.getElementById('menu-radius').addEventListener('click', e => {
+  const btn = e.target.closest('.menu-opt');
+  if (!btn) return;
+  radiusKm = btn.dataset.val === 'off' ? null : parseInt(btn.dataset.val, 10);
+  markActive('menu-radius', 'data-val', btn.dataset.val);
+  fetchAircraft();
+});
+
+// Aircraft filter group (closest only)
+document.getElementById('menu-closest').addEventListener('click', e => {
+  const btn = e.target.closest('.menu-opt');
+  if (!btn) return;
+  closestOnly = btn.dataset.val === 'on';
+  markActive('menu-closest', 'data-val', btn.dataset.val);
+  fetchAircraft();
+});
+
 // Sweep group
 document.getElementById('menu-sweep').addEventListener('click', e => {
   const btn = e.target.closest('.menu-opt');
@@ -931,6 +970,17 @@ document.getElementById('menu-units').addEventListener('click', e => {
   metricUnits = btn.dataset.val === 'metric';
   markActive('menu-units', 'data-val', btn.dataset.val);
   renderCards();
+});
+
+// Layout group (wide / square)
+document.getElementById('menu-layout').addEventListener('click', e => {
+  const btn = e.target.closest('.menu-opt');
+  if (!btn) return;
+  squareLayout = btn.dataset.val === 'square';
+  document.body.classList.toggle('square-layout', squareLayout);
+  markActive('menu-layout', 'data-val', btn.dataset.val);
+  sizeCanvas();
+  drawFrame();
 });
 
 // Theme group
@@ -963,5 +1013,5 @@ document.getElementById('menu-overlay').addEventListener('click', e => {
    ══════════════════════════════════════════════════════════ */
 
 fetchAircraft();
-setInterval(fetchAircraft, FETCH_MS);
+restartFetchInterval();
 requestAnimationFrame(drawFrame);
