@@ -93,9 +93,11 @@ EOF
 chmod 440 /etc/sudoers.d/flighttracker-deploy
 
 # settings-api runs as nobody; grant only the specific commands it needs.
+# Defaults:nobody !requiretty is required — settings-api has no terminal.
 # /usr/bin/wget and /usr/bin/bash needed for feeder installs.
 # /usr/bin/piaware-config needed to read the generated feeder-id.
 cat > /etc/sudoers.d/flighttracker-settings-api << 'EOF'
+Defaults:nobody !requiretty
 nobody ALL=(ALL) NOPASSWD: \
   /usr/bin/cp /etc/default/readsb, \
   /usr/bin/systemctl restart readsb, \
@@ -106,16 +108,11 @@ nobody ALL=(ALL) NOPASSWD: \
   /usr/bin/systemctl enable piaware, \
   /usr/bin/systemctl start piaware, \
   /usr/bin/systemctl restart route-proxy, \
-  /usr/bin/apt-get update, \
-  /usr/bin/apt-get update -y, \
-  /usr/bin/apt-get install *, \
-  /usr/bin/apt-get install -y *, \
-  /usr/bin/apt-key add -, \
-  /usr/bin/dpkg -i *, \
+  /usr/bin/apt-get *, \
+  /usr/bin/dpkg *, \
   /usr/bin/wget *, \
-  /usr/bin/bash -c *, \
-  /usr/bin/piaware-config feeder-id, \
-  /usr/bin/piaware-config feeder-id *
+  /usr/bin/bash *, \
+  /usr/bin/piaware-config *
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-settings-api
 
