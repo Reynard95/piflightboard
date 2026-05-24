@@ -85,13 +85,37 @@ else
 fi
 
 echo "[4/11] Configuring sudoers..."
+# On Raspberry Pi OS bookworm /bin is a symlink to /usr/bin — sudo resolves
+# the real path before matching, so entries must use /usr/bin/ not /bin/.
 cat > /etc/sudoers.d/flighttracker-deploy << EOF
-$DEPLOY_USER ALL=(ALL) NOPASSWD: /bin/cp, /bin/chmod, /usr/bin/systemctl, /usr/sbin/lighttpd
+$DEPLOY_USER ALL=(ALL) NOPASSWD: /usr/bin/cp, /usr/bin/chmod, /usr/bin/systemctl, /usr/sbin/lighttpd
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-deploy
 
+# settings-api runs as nobody; grant only the specific commands it needs.
+# /usr/bin/wget and /usr/bin/bash needed for feeder installs.
+# /usr/bin/piaware-config needed to read the generated feeder-id.
 cat > /etc/sudoers.d/flighttracker-settings-api << 'EOF'
-nobody ALL=(ALL) NOPASSWD: /bin/cp /etc/default/readsb, /usr/bin/systemctl restart readsb, /usr/bin/systemctl restart fr24feed, /usr/bin/systemctl restart piaware, /usr/bin/systemctl restart route-proxy, /usr/bin/apt-get install *, /usr/bin/dpkg -i *, /bin/bash /tmp/install_fr24.sh
+nobody ALL=(ALL) NOPASSWD: \
+  /usr/bin/cp /etc/default/readsb, \
+  /usr/bin/systemctl restart readsb, \
+  /usr/bin/systemctl restart fr24feed, \
+  /usr/bin/systemctl enable fr24feed, \
+  /usr/bin/systemctl start fr24feed, \
+  /usr/bin/systemctl restart piaware, \
+  /usr/bin/systemctl enable piaware, \
+  /usr/bin/systemctl start piaware, \
+  /usr/bin/systemctl restart route-proxy, \
+  /usr/bin/apt-get update, \
+  /usr/bin/apt-get update -y, \
+  /usr/bin/apt-get install *, \
+  /usr/bin/apt-get install -y *, \
+  /usr/bin/apt-key add -, \
+  /usr/bin/dpkg -i *, \
+  /usr/bin/wget *, \
+  /usr/bin/bash -c *, \
+  /usr/bin/piaware-config feeder-id, \
+  /usr/bin/piaware-config feeder-id *
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-settings-api
 

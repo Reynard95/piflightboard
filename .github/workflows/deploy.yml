@@ -29,6 +29,7 @@ jobs:
           username: ${{ secrets.PI_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
+            git config --global --add safe.directory /opt/flighttracker
             cd /opt/flighttracker
             git pull origin main
             bash scripts/deploy.sh
