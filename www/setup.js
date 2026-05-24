@@ -373,98 +373,60 @@ function updateInstallBadge(badgeId, installed) {
   }
 }
 
-// Wizard FR24 buttons
+// Wizard FR24 — install only, signup via FR24's built-in web UI on port 8754
 $('fr24-install-btn-wiz').addEventListener('click', async () => {
-  const key = $('fr24-key-wiz').value.trim();
-  await wizardFeederAction('fr24', true, key, 'fr24-terminal-wiz', 'fr24-terminal-out-wiz', 'fr24-terminal-status-wiz');
-});
-$('fr24-configure-only-btn-wiz').addEventListener('click', async () => {
-  const key = $('fr24-key-wiz').value.trim();
-  await wizardFeederAction('fr24', false, key, 'fr24-terminal-wiz', 'fr24-terminal-out-wiz', 'fr24-terminal-status-wiz');
-});
-
-// Wizard FA buttons
-$('fa-install-btn-wiz').addEventListener('click', async () => {
-  const id = $('fa-id-wiz').value.trim();
-  await wizardFeederAction('flightaware', true, id, 'fa-terminal-wiz', 'fa-terminal-out-wiz', 'fa-terminal-status-wiz');
-});
-$('fa-configure-only-btn-wiz').addEventListener('click', async () => {
-  const id = $('fa-id-wiz').value.trim();
-  await wizardFeederAction('flightaware', false, id, 'fa-terminal-wiz', 'fa-terminal-out-wiz', 'fa-terminal-status-wiz');
-});
-
-/**
- * Handle a feeder action (install+configure or configure-only) in the wizard.
- * @param {'fr24'|'flightaware'} feeder
- * @param {boolean} doInstall
- * @param {string} keyOrId
- * @param {string} terminalWrapId
- * @param {string} terminalOutId
- * @param {string} statusId
- */
-async function wizardFeederAction(feeder, doInstall, keyOrId, terminalWrapId, terminalOutId, statusId) {
-  if (!keyOrId) {
-    alert(`Please enter a ${feeder === 'fr24' ? 'FR24 key' : 'feeder ID'} first.`);
-    return;
-  }
-
-  const termWrap = $(terminalWrapId);
-  const termOut  = $(terminalOutId);
-  const termStatus = $(statusId);
+  const termWrap   = $('fr24-terminal-wiz');
+  const termOut    = $('fr24-terminal-out-wiz');
+  const termStatus = $('fr24-terminal-status-wiz');
 
   termWrap.classList.add('visible');
   termOut.textContent = '';
   termStatus.innerHTML = '<span class="spinner"></span>';
 
-  if (doInstall) {
-    // SSE install stream
-    const success = await runSseInstall(
-      feeder === 'fr24' ? '/api/feeder/fr24/install' : '/api/feeder/flightaware/install',
-      termOut,
-      termStatus
-    );
-    if (!success) return;
+  const success = await runSseInstall('/api/feeder/fr24/install', termOut, termStatus);
+  if (success) {
+    // Show post-install panel with link to FR24's built-in signup web UI
+    const host = window.location.hostname;
+    $('fr24-webui-link').href = `http://${host}:8754`;
+    $('fr24-post-install').classList.remove('hidden');
+    wizardState.fr24Done = true;
+    await checkFeederInstallStatus();
   }
+});
 
-  // Configure after install (or configure-only)
-  await configureFeeder(feeder, keyOrId, termOut, termStatus);
+// Wizard FA — install PiAware, then show generated feeder ID
+$('fa-install-btn-wiz').addEventListener('click', async () => {
+  const termWrap   = $('fa-terminal-wiz');
+  const termOut    = $('fa-terminal-out-wiz');
+  const termStatus = $('fa-terminal-status-wiz');
 
-  if (feeder === 'fr24') wizardState.fr24Done = true;
-  else wizardState.faDone = true;
+  termWrap.classList.add('visible');
+  termOut.textContent = '';
+  termStatus.innerHTML = '<span class="spinner"></span>';
 
-  // Re-check install badges
-  await checkFeederInstallStatus();
-}
+  const success = await runSseInstall('/api/feeder/flightaware/install', termOut, termStatus);
+  if (success) {
+    await showFaFeederId('fa-feeder-id-display');
+    $('fa-post-install').classList.remove('hidden');
+    wizardState.faDone = true;
+    await checkFeederInstallStatus();
+  }
+});
 
-/**
- * POST configure endpoint; appends result to terminal.
- */
-async function configureFeeder(feeder, keyOrId, termOut, termStatus) {
-  const isFr24 = feeder === 'fr24';
-  const endpoint = isFr24 ? '/api/feeder/fr24/configure' : '/api/feeder/flightaware/configure';
-  const body = isFr24
-    ? JSON.stringify({ key: keyOrId })
-    : JSON.stringify({ feeder_id: keyOrId });
+$('fa-configure-only-btn-wiz').addEventListener('click', async () => {
+  await showFaFeederId('fa-feeder-id-display');
+  $('fa-post-install').classList.remove('hidden');
+  wizardState.faDone = true;
+});
 
-  appendTermLine(termOut, `Configuring ${isFr24 ? 'FR24' : 'PiAware'}...`);
+/** Fetch and display the PiAware feeder ID. */
+async function showFaFeederId(elementId) {
   try {
-    const res = await apiFetch(endpoint, { method: 'POST', body });
+    const res  = await apiFetch('/api/feeder/flightaware/feeder-id');
     const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      appendTermLine(termOut, data.message || 'Configured.', 'ok');
-      termStatus.textContent = '✓';
-      termStatus.style.color = 'var(--ok)';
-    } else {
-      appendTermLine(termOut, `Error: ${data.error || 'Configure failed'}`, 'err');
-      termStatus.textContent = '✗';
-      termStatus.style.color = 'var(--err)';
-    }
-  } catch (err) {
-    if (err.message !== 'Unauthorised') {
-      appendTermLine(termOut, `Request error: ${err.message}`, 'err');
-      termStatus.textContent = '✗';
-      termStatus.style.color = 'var(--err)';
-    }
+    $(elementId).textContent = data.feeder_id || 'Run: sudo piaware-config feeder-id';
+  } catch (_) {
+    $(elementId).textContent = 'Run: sudo piaware-config feeder-id';
   }
 }
 
@@ -603,49 +565,69 @@ async function loadFeederStatuses() {
     const statuses = await res.json();
     updateServiceBadge('s-fr24-svc-badge', statuses.fr24feed);
     updateServiceBadge('s-fa-svc-badge',   statuses.piaware);
+
+    // Auto-reveal post-install panels if feeders are already installed
+    if (statuses.fr24feed && statuses.fr24feed.status !== 'not installed') {
+      showFr24PostInstall('s-fr24-webui-link', 's-fr24-post-install');
+    }
+    if (statuses.piaware && statuses.piaware.status !== 'not installed') {
+      // Only fetch feeder ID if the panel isn't already shown
+      if ($('s-fa-post-install').classList.contains('hidden')) {
+        await showFaFeederId('s-fa-feeder-id-display');
+        $('s-fa-post-install').classList.remove('hidden');
+      }
+    }
   } catch (_) {}
 }
 
+// Settings panel — FR24 install
 $('s-fr24-install-btn').addEventListener('click', async () => {
-  const key = $('s-fr24-key').value.trim();
-  await settingsFeederAction('fr24', true, key, 's-fr24-terminal', 's-fr24-terminal-out', 's-fr24-terminal-status');
-});
-$('s-fr24-configure-btn').addEventListener('click', async () => {
-  const key = $('s-fr24-key').value.trim();
-  await settingsFeederAction('fr24', false, key, 's-fr24-terminal', 's-fr24-terminal-out', 's-fr24-terminal-status');
-});
-$('s-fa-install-btn').addEventListener('click', async () => {
-  const id = $('s-fa-id').value.trim();
-  await settingsFeederAction('flightaware', true, id, 's-fa-terminal', 's-fa-terminal-out', 's-fa-terminal-status');
-});
-$('s-fa-configure-btn').addEventListener('click', async () => {
-  const id = $('s-fa-id').value.trim();
-  await settingsFeederAction('flightaware', false, id, 's-fa-terminal', 's-fa-terminal-out', 's-fa-terminal-status');
-});
-
-async function settingsFeederAction(feeder, doInstall, keyOrId, wrapId, outId, statusId) {
-  if (!keyOrId) {
-    alert(`Please enter a ${feeder === 'fr24' ? 'FR24 key' : 'feeder ID'} first.`);
-    return;
-  }
-  const termWrap   = $(wrapId);
-  const termOut    = $(outId);
-  const termStatus = $(statusId);
+  const termWrap   = $('s-fr24-terminal');
+  const termOut    = $('s-fr24-terminal-out');
+  const termStatus = $('s-fr24-terminal-status');
 
   termWrap.classList.add('visible');
   termOut.textContent = '';
   termStatus.innerHTML = '<span class="spinner"></span>';
 
-  if (doInstall) {
-    const success = await runSseInstall(
-      feeder === 'fr24' ? '/api/feeder/fr24/install' : '/api/feeder/flightaware/install',
-      termOut,
-      termStatus
-    );
-    if (!success) return;
+  const success = await runSseInstall('/api/feeder/fr24/install', termOut, termStatus);
+  if (success) {
+    showFr24PostInstall('s-fr24-webui-link', 's-fr24-post-install');
+    await loadFeederStatuses();
   }
-  await configureFeeder(feeder, keyOrId, termOut, termStatus);
-  await loadFeederStatuses();
+});
+
+$('s-fr24-already-btn').addEventListener('click', () => {
+  showFr24PostInstall('s-fr24-webui-link', 's-fr24-post-install');
+});
+
+// Settings panel — PiAware install
+$('s-fa-install-btn').addEventListener('click', async () => {
+  const termWrap   = $('s-fa-terminal');
+  const termOut    = $('s-fa-terminal-out');
+  const termStatus = $('s-fa-terminal-status');
+
+  termWrap.classList.add('visible');
+  termOut.textContent = '';
+  termStatus.innerHTML = '<span class="spinner"></span>';
+
+  const success = await runSseInstall('/api/feeder/flightaware/install', termOut, termStatus);
+  if (success) {
+    await showFaFeederId('s-fa-feeder-id-display');
+    $('s-fa-post-install').classList.remove('hidden');
+    await loadFeederStatuses();
+  }
+});
+
+$('s-fa-already-btn').addEventListener('click', async () => {
+  await showFaFeederId('s-fa-feeder-id-display');
+  $('s-fa-post-install').classList.remove('hidden');
+});
+
+function showFr24PostInstall(linkId, panelId) {
+  const host = window.location.hostname;
+  $(linkId).href = `http://${host}:8754`;
+  $(panelId).classList.remove('hidden');
 }
 
 // ── Services tab ──

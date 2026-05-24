@@ -488,8 +488,21 @@ def api_service_restart():
 
 
 # ---------------------------------------------------------------------------
-# Feeder — install status
+# Feeder — install status & feeder-id
 # ---------------------------------------------------------------------------
+
+@app.route("/api/feeder/flightaware/feeder-id", methods=["GET"])
+@require_auth
+def feeder_fa_feeder_id():
+    """Return the PiAware feeder UUID generated on this Pi."""
+    result = subprocess.run(
+        ["sudo", "piaware-config", "feeder-id"],
+        capture_output=True, text=True
+    )
+    feeder_id = result.stdout.strip() if result.returncode == 0 else ""
+    # piaware-config prints just the UUID on success; empty means not yet set
+    return jsonify({"feeder_id": feeder_id or None})
+
 
 @app.route("/api/feeder/fr24/install-status", methods=["GET"])
 def feeder_fr24_status():
@@ -611,27 +624,40 @@ def feeder_fr24_install():
 @require_auth
 def feeder_fa_install():
     """
-    SSE endpoint: download and install PiAware.
+    SSE endpoint: add the FlightAware apt repo and install PiAware.
+    Uses the official piaware-repository .deb (works on bookworm/arm64).
     Streams installer output line by line.
     """
-    PIAWARE_DEB_URL = (
-        "https://flightaware.com/adsb/piaware/files/packages/focal/"
-        "piaware_5.0_arm64.deb"
+    REPO_DEB_URL = (
+        "https://flightaware.com/adsb/piaware/files/packages/bookworm/"
+        "pool/main/p/piaware/piaware-repository_1.1_all.deb"
     )
-    DEB_PATH = "/tmp/piaware.deb"
+    REPO_DEB_PATH = "/tmp/piaware-repo.deb"
 
     def generate():
-        yield sse_line("Downloading PiAware package...")
-        for event in stream_subprocess(["sudo", "wget", "-O", DEB_PATH, PIAWARE_DEB_URL]):
+        yield sse_line("Downloading FlightAware apt repository package...")
+        for event in stream_subprocess(
+            ["sudo", "wget", "-O", REPO_DEB_PATH, REPO_DEB_URL]
+        ):
             yield event
 
-        yield sse_line("Installing PiAware .deb...")
-        for event in stream_subprocess(["sudo", "dpkg", "-i", DEB_PATH]):
+        yield sse_line("Installing FlightAware apt repository...")
+        for event in stream_subprocess(["sudo", "dpkg", "-i", REPO_DEB_PATH]):
             yield event
 
-        yield sse_line("Fixing dependencies...")
-        for event in stream_subprocess(["sudo", "apt-get", "install", "-f", "-y"]):
+        yield sse_line("Updating package lists...")
+        for event in stream_subprocess(["sudo", "apt-get", "update", "-y"]):
             yield event
+
+        yield sse_line("Installing piaware...")
+        for event in stream_subprocess(
+            ["sudo", "apt-get", "install", "-y", "--no-install-recommends", "piaware"]
+        ):
+            yield event
+
+        # Enable and start the service
+        subprocess.run(["sudo", "systemctl", "enable", "piaware"], capture_output=True)
+        subprocess.run(["sudo", "systemctl", "start",  "piaware"], capture_output=True)
 
         installed = is_binary_installed("piaware")
         yield sse_line(

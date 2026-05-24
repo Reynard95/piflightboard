@@ -117,25 +117,14 @@
             <span class="status-label">checking...</span>
           </span>
         </h4>
-
-        <div class="field-row">
-          <label>FR24 Key</label>
-          <input type="text" id="fr24-key-wiz" placeholder="e.g. abc123def456..."
-                 class="field-input" spellcheck="false" autocomplete="off">
-        </div>
         <p class="field-hint">
-          Get your sharing key at
-          <a href="https://www.flightradar24.com/account/data-sharing" target="_blank" rel="noopener">
-            flightradar24.com/account/data-sharing
-          </a>
+          Sharing your data unlocks a free FR24 Business subscription.
+          After install, sign up via the FR24 web UI that runs on this Pi.
         </p>
 
         <div class="wizard-actions" style="margin-top:12px;">
           <button class="btn btn-primary btn-sm" id="fr24-install-btn-wiz">
-            Install &amp; Configure
-          </button>
-          <button class="btn btn-ghost btn-sm" id="fr24-configure-only-btn-wiz">
-            Configure only (already installed)
+            Install FR24 Feed
           </button>
         </div>
 
@@ -146,6 +135,17 @@
             <span class="terminal-status" id="fr24-terminal-status-wiz"></span>
           </div>
           <pre class="terminal" id="fr24-terminal-out-wiz"></pre>
+        </div>
+
+        <!-- Shown after successful install -->
+        <div class="post-install hidden" id="fr24-post-install">
+          <p class="field-hint ok-text">&#10003; Installed! Complete your FR24 signup in the built-in web UI:</p>
+          <a id="fr24-webui-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            Open FR24 Setup UI &#8599;
+          </a>
+          <p class="field-hint" style="margin-top:8px;">
+            Log in with your FR24 account and follow the wizard. Your sharing key will be generated automatically.
+          </p>
         </div>
       </div>
 
@@ -158,25 +158,17 @@
             <span class="status-label">checking...</span>
           </span>
         </h4>
-
-        <div class="field-row">
-          <label>Feeder ID</label>
-          <input type="text" id="fa-id-wiz" placeholder="e.g. abc-123-def-456..."
-                 class="field-input" spellcheck="false" autocomplete="off">
-        </div>
         <p class="field-hint">
-          Claim your feeder at
-          <a href="https://flightaware.com/adsb/piaware/claim" target="_blank" rel="noopener">
-            flightaware.com/adsb/piaware/claim
-          </a>
+          Sharing your data unlocks a free FlightAware Enterprise account.
+          After install, claim your feeder on the FlightAware website.
         </p>
 
         <div class="wizard-actions" style="margin-top:12px;">
           <button class="btn btn-primary btn-sm" id="fa-install-btn-wiz">
-            Install &amp; Configure
+            Install PiAware
           </button>
           <button class="btn btn-ghost btn-sm" id="fa-configure-only-btn-wiz">
-            Configure only (already installed)
+            Already installed
           </button>
         </div>
 
@@ -187,6 +179,18 @@
             <span class="terminal-status" id="fa-terminal-status-wiz"></span>
           </div>
           <pre class="terminal" id="fa-terminal-out-wiz"></pre>
+        </div>
+
+        <!-- Shown after successful install -->
+        <div class="post-install hidden" id="fa-post-install">
+          <p class="field-hint ok-text">&#10003; Installed! Your feeder ID:</p>
+          <code class="feeder-id-display" id="fa-feeder-id-display">loading...</code>
+          <div class="wizard-actions" style="margin-top:8px;">
+            <a href="https://flightaware.com/adsb/piaware/claim" target="_blank" rel="noopener"
+               class="btn btn-secondary btn-sm">
+              Claim at FlightAware &#8599;
+            </a>
+          </div>
         </div>
       </div>
 
@@ -279,24 +283,17 @@
             <span class="status-label">checking...</span>
           </span>
         </h3>
-
-        <div class="field-row">
-          <label>FR24 Key</label>
-          <input type="text" id="s-fr24-key" placeholder="e.g. abc123def456..."
-                 class="field-input" spellcheck="false" autocomplete="off">
-        </div>
         <p class="field-hint">
-          <a href="https://www.flightradar24.com/account/data-sharing" target="_blank" rel="noopener">
-            Get your sharing key &#8599;
-          </a>
+          Sharing your data unlocks a free FR24 Business subscription.
+          After install, sign up via the FR24 web UI that runs on this Pi.
         </p>
 
-        <div class="wizard-actions">
+        <div class="wizard-actions" style="margin-top:12px;">
           <button class="btn btn-primary btn-sm" id="s-fr24-install-btn">
-            Install &amp; Configure
+            Install FR24 Feed
           </button>
-          <button class="btn btn-secondary btn-sm" id="s-fr24-configure-btn">
-            Configure only
+          <button class="btn btn-ghost btn-sm" id="s-fr24-already-btn">
+            Already installed
           </button>
         </div>
 
@@ -306,6 +303,17 @@
             <span class="terminal-status" id="s-fr24-terminal-status"></span>
           </div>
           <pre class="terminal" id="s-fr24-terminal-out"></pre>
+        </div>
+
+        <!-- Shown after successful install or "Already installed" -->
+        <div class="post-install hidden" id="s-fr24-post-install">
+          <p class="field-hint ok-text">&#10003; Installed! Complete your FR24 signup in the built-in web UI:</p>
+          <a id="s-fr24-webui-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            Open FR24 Setup UI &#8599;
+          </a>
+          <p class="field-hint" style="margin-top:8px;">
+            Log in with your FR24 account and follow the wizard. Your sharing key will be generated automatically.
+          </p>
         </div>
       </div>
 
@@ -318,24 +326,17 @@
             <span class="status-label">checking...</span>
           </span>
         </h3>
-
-        <div class="field-row">
-          <label>Feeder ID</label>
-          <input type="text" id="s-fa-id" placeholder="e.g. abc-123-def-456..."
-                 class="field-input" spellcheck="false" autocomplete="off">
-        </div>
         <p class="field-hint">
-          <a href="https://flightaware.com/adsb/piaware/claim" target="_blank" rel="noopener">
-            Claim your feeder &#8599;
-          </a>
+          Sharing your data unlocks a free FlightAware Enterprise account.
+          After install, claim your feeder on the FlightAware website.
         </p>
 
-        <div class="wizard-actions">
+        <div class="wizard-actions" style="margin-top:12px;">
           <button class="btn btn-primary btn-sm" id="s-fa-install-btn">
-            Install &amp; Configure
+            Install PiAware
           </button>
-          <button class="btn btn-secondary btn-sm" id="s-fa-configure-btn">
-            Configure only
+          <button class="btn btn-ghost btn-sm" id="s-fa-already-btn">
+            Already installed
           </button>
         </div>
 
@@ -345,6 +346,18 @@
             <span class="terminal-status" id="s-fa-terminal-status"></span>
           </div>
           <pre class="terminal" id="s-fa-terminal-out"></pre>
+        </div>
+
+        <!-- Shown after successful install or "Already installed" -->
+        <div class="post-install hidden" id="s-fa-post-install">
+          <p class="field-hint ok-text">&#10003; Installed! Your feeder ID:</p>
+          <code class="feeder-id-display" id="s-fa-feeder-id-display">loading...</code>
+          <div class="wizard-actions" style="margin-top:8px;">
+            <a href="https://flightaware.com/adsb/piaware/claim" target="_blank" rel="noopener"
+               class="btn btn-secondary btn-sm">
+              Claim at FlightAware &#8599;
+            </a>
+          </div>
         </div>
       </div>
 
