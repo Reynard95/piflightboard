@@ -606,6 +606,11 @@ def feeder_fr24_install():
         ):
             yield event
 
+        # Step 4: enable and start the service so the web UI on :8754 is available
+        yield sse_line("Enabling fr24feed service...")
+        subprocess.run(["sudo", "systemctl", "enable", "fr24feed"], capture_output=True)
+        subprocess.run(["sudo", "systemctl", "start", "fr24feed"], capture_output=True)
+
         # Final
         installed = is_binary_installed("fr24feed")
         yield sse_line(
@@ -628,31 +633,46 @@ def feeder_fr24_install():
 def feeder_fa_install():
     """
     SSE endpoint: add the FlightAware apt repo and install PiAware.
-    Uses the official piaware-repository .deb (works on bookworm/arm64).
-    Streams installer output line by line.
+
+    Bypasses the flightaware-apt-repository .deb (unreliable download) and
+    replicates what it does directly:
+      1. Fetch the GPG keyring from GitHub (piaware-support repo)
+      2. Write the apt sources list entry
+      3. apt-get update + install piaware
     """
-    # URL from official FlightAware install page (flightaware.com/adsb/piaware/install)
-    REPO_DEB_URL = (
-        "https://www.flightaware.com/adsb/piaware/files/packages/pool/piaware/f/"
-        "flightaware-apt-repository/flightaware-apt-repository_1.2_all.deb"
+    # GPG keyring from the official piaware-support GitHub repo
+    KEYRING_URL = (
+        "https://raw.githubusercontent.com/flightaware/piaware-support/"
+        "master/etc/apt/trusted.gpg.d/flightaware-archive-keyring.gpg"
     )
-    REPO_DEB_PATH = "/tmp/flightaware-apt-repository.deb"
+    KEYRING_PATH = "/usr/share/keyrings/flightaware-archive-keyring.gpg"
+    SOURCES_PATH = "/etc/apt/sources.list.d/flightaware-apt-repository.list"
+    SOURCES_ENTRY = (
+        f"deb [signed-by={KEYRING_PATH}] "
+        "https://www.flightaware.com/adsb/piaware/files/packages bookworm piaware"
+    )
 
     def generate():
-        yield sse_line("Downloading FlightAware apt repository package...")
+        # Step 1: download GPG keyring
+        yield sse_line("Adding FlightAware apt repository...")
         for event in stream_subprocess(
-            ["sudo", "wget", "-O", REPO_DEB_PATH, REPO_DEB_URL]
+            ["sudo", "wget", "-qO", KEYRING_PATH, KEYRING_URL]
         ):
             yield event
 
-        yield sse_line("Installing FlightAware apt repository...")
-        for event in stream_subprocess(["sudo", "dpkg", "-i", REPO_DEB_PATH]):
+        # Step 2: write sources list
+        for event in stream_subprocess(
+            ["sudo", "bash", "-c",
+             f'echo "{SOURCES_ENTRY}" > {SOURCES_PATH}']
+        ):
             yield event
 
+        # Step 3: apt-get update
         yield sse_line("Updating package lists...")
         for event in stream_subprocess(["sudo", "apt-get", "update", "-y"]):
             yield event
 
+        # Step 4: install piaware
         yield sse_line("Installing piaware...")
         for event in stream_subprocess(
             ["sudo", "apt-get", "install", "-y", "--no-install-recommends", "piaware"]
