@@ -30,8 +30,12 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             git config --global --add safe.directory /opt/flighttracker
-            rm -f /opt/flighttracker/.git/FETCH_HEAD
             cd /opt/flighttracker
-            git pull origin main
+            if ! git pull origin main; then
+              echo "[deploy] git pull failed — triggering full reinstall via systemd..."
+              sudo systemctl start flightboard-reinstall
+              echo "[deploy] Reinstall started. Monitor: sudo journalctl -u flightboard-reinstall -f"
+              exit 0
+            fi
             bash scripts/deploy.sh
           timeout: 120s
