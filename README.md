@@ -163,6 +163,7 @@ sudo bash /opt/flighttracker/scripts/reset.sh
 
 | URL | Description |
 |-----|-------------|
+| `http://flighttracker.local/dashboard.html` | **Cockpit dashboard** — all 5 screens tiled in a CRT instrument panel |
 | `http://flighttracker.local/` | Flight board — full layout (data grid + telemetry) |
 | `http://flighttracker.local/main.html?focus` | Focus layout — giant route airports + compact strip |
 | `http://flighttracker.local/radar.html` | PPI radar — rotating sweep + aircraft cards |
@@ -472,6 +473,7 @@ piflightboard/
 │   ├── vitals.html                     # system vitals dashboard (CPU, temp, mem, disk, net)
 │   ├── vitals.css                      # vitals styles
 │   ├── vitals.js                       # vitals fetch + sparkline + DOM updates
+│   ├── dashboard.html                  # cockpit dashboard — all 5 screens as CRT panels
 │   ├── spectrum.html                   # RF spectrum waterfall (88–1100 MHz)
 │   ├── spectrum.css                    # spectrum styles
 │   ├── spectrum.js                     # waterfall canvas, color LUT, fetch loop
