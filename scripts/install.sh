@@ -32,9 +32,10 @@ done
 # ── 1. Stop any running services ──────────────────────────
 # Must happen before copying binaries — Linux refuses to overwrite a running executable.
 echo "[1/11] Stopping any existing services..."
-for svc in readsb lighttpd route-proxy settings-api flightboard-reinstall; do
+for svc in readsb lighttpd route-proxy settings-api; do
   systemctl stop "$svc" 2>/dev/null || true
 done
+# Note: do NOT stop flightboard-reinstall here — this script may be running inside it
 
 # ── 2. System update ───────────────────────────────────────
 echo "[2/11] Updating system..."
