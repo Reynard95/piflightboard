@@ -236,10 +236,13 @@ systemctl start settings-api
 # Must happen last — some earlier steps (git clone of tar1090-db) run as root
 # and temporarily affect the working directory.
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$REPO_DIR"
-# config/settings.json and config/ need to stay writable by nobody (settings-api)
+# config/ must be writable by nobody so settings-api can create .tmp files
+chown nobody:nogroup "$REPO_DIR/config"
+chmod 770 "$REPO_DIR/config"
 chown nobody:nogroup "$REPO_DIR/config/settings.json" 2>/dev/null || true
 chmod 660 "$REPO_DIR/config/settings.json" 2>/dev/null || true
-chown root:root "$REPO_DIR/config/readsb.conf" 2>/dev/null || true
+# /etc/default/readsb must be writable by nobody so settings-api can update lat/lon
+chmod 666 /etc/default/readsb
 
 cp "$REPO_DIR/VERSION" "$REPO_DIR/.installed-version"
 echo "[done] Installed version: $(cat "$REPO_DIR/VERSION")"
