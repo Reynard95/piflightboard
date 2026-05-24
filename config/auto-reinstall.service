@@ -11,6 +11,10 @@ StandardError=append:/opt/flighttracker/reinstall.log
 # Run as root — needs to install packages, write system configs, restart services
 User=root
 
+# The full install takes 10-15 mins (apt, building readsb, cloning repos).
+# Without this systemd kills it at the default 90s timeout.
+TimeoutStartSec=infinity
+
 # Do NOT auto-restart — if it fails, it fails. Check the log.
 Restart=no
 
