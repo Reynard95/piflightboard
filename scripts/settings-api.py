@@ -19,6 +19,7 @@ import re
 import secrets
 import subprocess
 import time
+import urllib.request
 from functools import wraps
 
 from flask import Flask, Response, jsonify, request, stream_with_context
@@ -1005,6 +1006,118 @@ def api_spectrum():
         "min_db":        -90,
         "max_db":        -20,
     })
+
+
+# ---------------------------------------------------------------------------
+# Weather (Open-Meteo — free, no API key)
+# ---------------------------------------------------------------------------
+
+_weather_cache: dict = {"data": None, "ts": 0.0}
+WEATHER_TTL = 600   # seconds (10 minutes)
+
+# WMO weather interpretation codes → short text
+_WMO_CODES: dict[int, str] = {
+    0: "CLEAR",
+    1: "MOSTLY CLEAR", 2: "PARTLY CLOUDY", 3: "OVERCAST",
+    45: "FOG", 48: "RIME FOG",
+    51: "LIGHT DRIZZLE", 53: "DRIZZLE", 55: "HEAVY DRIZZLE",
+    56: "FREEZING DRIZZLE", 57: "HVY FRZG DRIZZLE",
+    61: "LIGHT RAIN", 63: "RAIN", 65: "HEAVY RAIN",
+    66: "FREEZING RAIN", 67: "HVY FRZG RAIN",
+    71: "LIGHT SNOW", 73: "SNOW", 75: "HEAVY SNOW",
+    77: "SNOW GRAINS",
+    80: "LIGHT SHOWERS", 81: "SHOWERS", 82: "HEAVY SHOWERS",
+    85: "SNOW SHOWERS", 86: "HVY SNOW SHOWERS",
+    95: "THUNDERSTORM",
+    96: "THUNDER + HAIL", 99: "THUNDER + HVY HAIL",
+}
+
+
+@app.route("/api/weather", methods=["GET"])
+def api_weather():
+    """
+    Return current weather + 24-hour forecast from Open-Meteo.
+    Uses the receiver location stored in settings.json.
+    Results are cached for WEATHER_TTL seconds.
+    """
+    now = time.time()
+    if _weather_cache["data"] and now - _weather_cache["ts"] < WEATHER_TTL:
+        return jsonify(_weather_cache["data"])
+
+    settings = load_settings()
+    loc = settings.get("location", {})
+    lat = loc.get("lat", 0.0)
+    lon = loc.get("lon", 0.0)
+    if not lat and not lon:
+        return jsonify({"error": "Location not configured — visit /setup.html"}), 503
+
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lon}"
+        "&current=temperature_2m,relative_humidity_2m,apparent_temperature,"
+        "dew_point_2m,precipitation,weather_code,cloud_cover,pressure_msl,"
+        "wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,uv_index"
+        "&hourly=temperature_2m,precipitation_probability,precipitation,"
+        "wind_speed_10m,wind_direction_10m,weather_code"
+        "&forecast_days=2&timezone=auto"
+    )
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "piflightboard/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = json.loads(resp.read())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    c = raw["current"]
+    h = raw["hourly"]
+
+    # Find the current hour index in the hourly arrays
+    cur_time = c["time"]   # e.g. "2025-05-24T14:00"
+    times    = h["time"]
+    cur_idx  = 0
+    for i, t in enumerate(times):
+        if t >= cur_time:
+            cur_idx = i
+            break
+
+    # Slice next 25 hours (current + 24 ahead)
+    sl = slice(cur_idx, cur_idx + 25)
+    forecast = {
+        "times":       times[sl],
+        "temps":       h["temperature_2m"][sl],
+        "precip_prob": h["precipitation_probability"][sl],
+        "precip":      h["precipitation"][sl],
+        "wind_speed":  h["wind_speed_10m"][sl],
+        "wind_dir":    h["wind_direction_10m"][sl],
+        "weather_code":h["weather_code"][sl],
+    }
+
+    data = {
+        "temperature":  c["temperature_2m"],
+        "feels_like":   c["apparent_temperature"],
+        "dew_point":    c.get("dew_point_2m"),
+        "humidity":     c["relative_humidity_2m"],
+        "precipitation":c["precipitation"],
+        "weather_code": c["weather_code"],
+        "condition":    _WMO_CODES.get(c["weather_code"], "UNKNOWN"),
+        "cloud_cover":  c["cloud_cover"],
+        "pressure":     c["pressure_msl"],
+        "wind_speed":   c["wind_speed_10m"],
+        "wind_dir":     c["wind_direction_10m"],
+        "wind_gusts":   c["wind_gusts_10m"],
+        "visibility":   c.get("visibility"),
+        "uv_index":     c.get("uv_index"),
+        "lat":          lat,
+        "lon":          lon,
+        "timezone":     raw.get("timezone", "UTC"),
+        "updated":      cur_time,
+        "forecast":     forecast,
+    }
+
+    _weather_cache["data"] = data
+    _weather_cache["ts"]   = now
+    return jsonify(data)
 
 
 # ---------------------------------------------------------------------------

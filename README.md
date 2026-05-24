@@ -168,6 +168,7 @@ sudo bash /opt/flighttracker/scripts/reset.sh
 | `http://flighttracker.local/radar.html` | PPI radar — rotating sweep + aircraft cards |
 | `http://flighttracker.local/vitals.html` | System vitals — CPU, temperature, memory, disk, network |
 | `http://flighttracker.local/spectrum.html` | RF spectrum waterfall — broadband scan 88–1100 MHz |
+| `http://flighttracker.local/weather.html` | Weather dashboard — current conditions + 24h forecast |
 | `http://flighttracker.local/setup.html` | Setup and settings page (PIN protected) |
 
 ## E-ink Displays
@@ -473,6 +474,9 @@ piflightboard/
 │   ├── vitals.js                       # vitals fetch + sparkline + DOM updates
 │   ├── spectrum.html                   # RF spectrum waterfall (88–1100 MHz)
 │   ├── spectrum.css                    # spectrum styles
-│   └── spectrum.js                     # waterfall canvas, color LUT, fetch loop
+│   ├── spectrum.js                     # waterfall canvas, color LUT, fetch loop
+│   ├── weather.html                    # weather dashboard (current + 24h forecast)
+│   ├── weather.css                     # weather styles
+│   └── weather.js                      # weather fetch, forecast chart, DOM updates
 └── README.md
 ```

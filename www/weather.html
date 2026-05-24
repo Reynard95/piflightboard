@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="weather.css">
+</head>
+<body>
+
+<div class="wx-shell">
+
+  <!-- Header -->
+  <div class="wx-header">
+    <div class="live-dot"></div>
+    <div class="live-label">LIVE</div>
+    <div class="wx-title">WEATHER</div>
+    <div class="header-loc" id="w-loc">—</div>
+    <div class="header-updated" id="w-updated">—</div>
+    <div class="header-time" id="w-time">--:--</div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="wx-body">
+
+    <!-- Row 1: condition cards -->
+    <div class="wx-cards">
+
+      <div class="wx-card" id="card-temp">
+        <div class="card-label">TEMPERATURE</div>
+        <div class="card-value-unit">
+          <span class="card-value" id="w-temp">—</span>
+          <span class="card-unit">°C</span>
+        </div>
+        <div class="card-sub" id="w-feels">FEELS LIKE —</div>
+        <div class="card-sub" id="w-dewpoint">DEW —</div>
+      </div>
+
+      <div class="wx-card" id="card-wind">
+        <div class="card-label">WIND</div>
+        <div class="wind-dir-row">
+          <span class="wind-arrow" id="w-wind-arrow">—</span>
+          <span class="card-value wind-val" id="w-wind-spd">—</span>
+          <span class="card-unit">km/h</span>
+        </div>
+        <div class="card-sub" id="w-wind-dir">—</div>
+        <div class="card-sub" id="w-wind-gust">GUSTS —</div>
+      </div>
+
+      <div class="wx-card" id="card-pressure">
+        <div class="card-label">PRESSURE</div>
+        <div class="card-value-unit">
+          <span class="card-value" id="w-pressure">—</span>
+          <span class="card-unit">hPa</span>
+        </div>
+        <div class="card-sub" id="w-pressure-trend">—</div>
+        <div class="card-sub" id="w-humidity">HUMIDITY —</div>
+      </div>
+
+      <div class="wx-card condition-card" id="card-condition">
+        <div class="card-label">CONDITIONS</div>
+        <div class="condition-text" id="w-condition">—</div>
+        <div class="card-sub" id="w-cloud">CLOUD —</div>
+        <div class="card-sub" id="w-visibility">VIS —</div>
+        <div class="card-sub" id="w-uv">UV INDEX —</div>
+      </div>
+
+    </div><!-- /.wx-cards -->
+
+    <!-- Row 2: forecast chart -->
+    <div class="forecast-wrap">
+      <div class="forecast-label">24 H FORECAST</div>
+      <canvas id="forecast-canvas"></canvas>
+    </div>
+
+    <!-- Row 3: precipitation detail -->
+    <div class="wx-footer">
+      <div class="footer-metric">
+        <div class="fm-label">PRECIP NOW</div>
+        <div class="fm-value" id="w-precip">— mm</div>
+      </div>
+      <div class="footer-sep"></div>
+      <div class="footer-metric">
+        <div class="fm-label">CLOUD COVER</div>
+        <div class="fm-value" id="w-cloud2">—%</div>
+      </div>
+      <div class="footer-sep"></div>
+      <div class="footer-metric">
+        <div class="fm-label">VISIBILITY</div>
+        <div class="fm-value" id="w-vis2">— km</div>
+      </div>
+      <div class="footer-sep"></div>
+      <div class="footer-metric">
+        <div class="fm-label">UV INDEX</div>
+        <div class="fm-value" id="w-uv2">—</div>
+      </div>
+      <div class="footer-sep"></div>
+      <div class="footer-metric">
+        <div class="fm-label">DEW POINT</div>
+        <div class="fm-value" id="w-dew2">— °C</div>
+      </div>
+      <div class="footer-sep"></div>
+      <div class="footer-metric">
+        <div class="fm-label">HUMIDITY</div>
+        <div class="fm-value" id="w-hum2">—%</div>
+      </div>
+    </div>
+
+  </div><!-- /.wx-body -->
+</div><!-- /.wx-shell -->
+
+<script src="weather.js"></script>
+</body>
+</html>
