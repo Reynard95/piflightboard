@@ -301,7 +301,129 @@ The airline name resolves in order: local `AIRLINES` dictionary in `data.js` →
 
 ## Radar Display
 
-`radar.html` renders a live plan-position-indicator (PPI) radar with a rotating sweep arm, country outlines, airport markers, and an aircraft card grid. See URL parameters above — `?theme=`, `?range=`, `?refresh=`, `?radius=`, `?closest`, `?sweep=off`, `?units=metric` all apply.
+`radar.html` renders a live PPI (plan-position-indicator) radar. Features:
+
+- Rotating CSS sweep arm with phosphor persistence — aircraft blips flash bright as the sweep passes and fade until it returns
+- CRT scanline overlay for a retro screen look
+- Country outlines and airport markers on the canvas
+- Aircraft panel — switchable between tile (card) and compact list view
+- Click any blip on the canvas to select it and scroll its card into view
+- All settings are saved back to the URL so bookmarks remember your configuration
+
+---
+
+### Radar URL Parameters
+
+All parameters can also be changed live from the **☰ MENU** overlay — changes persist to the URL automatically.
+
+#### `?theme=`
+
+Sets the colour scheme. Default: `color`.
+
+| Value | Colour | Inspired by |
+|-------|--------|-------------|
+| `color` | Amber `#FFA040` on near-black | Generic phosphor CRT (default) |
+| `airbus` | Steel blue `#7EB3E8` on dark navy | Airbus EFIS displays |
+| `boeing` | Gold `#C8A84B` on dark brown | Boeing 7-series flight decks |
+| `embraer` | Teal `#5FC4B0` on dark green-black | Embraer E-Jet cockpits |
+| `bombardier` | Coral red `#E87070` on near-black | Bombardier CRJ / Global avionics |
+| `military` | Radar green `#5EBF5E` on near-black | Classic military PPI radar |
+
+```
+radar.html?theme=military
+radar.html?theme=airbus
+```
+
+---
+
+#### `?range=`
+
+Sets the radar display radius. Default: `250`.
+
+| Value | Description |
+|-------|-------------|
+| `100` | 100 km radius |
+| `150` | 150 km radius |
+| `200` | 200 km radius |
+| `250` | 250 km radius (default) |
+| `auto` | Automatically expands to fit the furthest aircraft |
+
+```
+radar.html?range=100
+radar.html?range=auto
+```
+
+---
+
+#### `?refresh=N`
+
+How often aircraft data is fetched, in seconds. Minimum 1, default `5`.
+
+```
+radar.html?refresh=10
+```
+
+---
+
+#### `?radius=N`
+
+Restricts the aircraft list (and canvas blips) to those within **N kilometres** of the receiver. If all aircraft are outside the radius the filter is relaxed so the display is never empty.
+
+```
+radar.html?radius=100
+```
+
+---
+
+#### `?closest`
+
+Shows only the **single nearest aircraft** at all times.
+
+```
+radar.html?closest
+```
+
+---
+
+#### `?sweep=off`
+
+Disables the rotating sweep animation on load.
+
+```
+radar.html?sweep=off
+```
+
+---
+
+#### `?units=metric`
+
+Starts in **metric** mode — altitudes in metres, speeds in km/h, vertical rate in m/s. Default is imperial (ft, kt, fpm).
+
+```
+radar.html?units=metric
+```
+
+---
+
+#### `?square`
+
+Switches to a **stacked layout** — radar canvas fills the full screen with no aircraft panel. Designed for square or near-square screens (e.g. 1:1 monitors, tablets in portrait).
+
+```
+radar.html?square
+radar.html?square&theme=military
+```
+
+---
+
+### Combining Radar Parameters
+
+```
+radar.html?theme=military&range=150&units=metric
+radar.html?theme=airbus&range=auto&refresh=10&radius=200
+radar.html?square&theme=color&sweep=off
+radar.html?closest&theme=boeing&units=metric
+```
 
 ---
 
