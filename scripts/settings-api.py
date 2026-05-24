@@ -580,12 +580,15 @@ def feeder_fr24_install():
     Streams installer output line by line.
     """
     def generate():
-        # Step 1: add FR24 apt repo
+        # Step 1: add FR24 apt repo (modern GPG keyring — apt-key removed in bookworm)
         yield sse_line("Adding FR24 apt repository...")
         repo_cmd = [
             "sudo", "bash", "-c",
-            'wget -qO - https://repo-feed.flightradar24.com/signing-key.asc | apt-key add - && '
-            'echo "deb https://repo-feed.flightradar24.com flightradar24 raspberrypi-stable" '
+            'mkdir -p /etc/apt/keyrings && '
+            'wget -qO- https://repo-feed.flightradar24.com/flightradar24.2026.pub '
+            '| gpg --dearmor > /etc/apt/keyrings/flightradar24.gpg && '
+            'echo "deb [signed-by=/etc/apt/keyrings/flightradar24.gpg] '
+            'https://repo-feed.flightradar24.com flightradar24 raspberrypi-stable" '
             '> /etc/apt/sources.list.d/fr24feed.list'
         ]
         for event in stream_subprocess(repo_cmd):
@@ -628,11 +631,12 @@ def feeder_fa_install():
     Uses the official piaware-repository .deb (works on bookworm/arm64).
     Streams installer output line by line.
     """
+    # URL from official FlightAware install page (flightaware.com/adsb/piaware/install)
     REPO_DEB_URL = (
-        "https://flightaware.com/adsb/piaware/files/packages/bookworm/"
-        "pool/main/p/piaware/piaware-repository_1.1_all.deb"
+        "https://www.flightaware.com/adsb/piaware/files/packages/pool/piaware/f/"
+        "flightaware-apt-repository/flightaware-apt-repository_1.2_all.deb"
     )
-    REPO_DEB_PATH = "/tmp/piaware-repo.deb"
+    REPO_DEB_PATH = "/tmp/flightaware-apt-repository.deb"
 
     def generate():
         yield sse_line("Downloading FlightAware apt repository package...")
