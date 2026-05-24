@@ -81,7 +81,7 @@ canvas.addEventListener('click', e => {
     selectedHex = best.hex === selectedHex ? null : best.hex;
     renderCards();
     if (selectedHex) {
-      const card = document.querySelector(`.ac-card[data-hex="${CSS.escape(selectedHex)}"]`);
+      const card = document.querySelector(`[data-hex="${CSS.escape(selectedHex)}"]`);
       if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
@@ -740,64 +740,96 @@ function drawFrame(ts = 0) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   AIRCRAFT CARD GRID
+   AIRCRAFT CARD GRID — tile and list views
    ══════════════════════════════════════════════════════════ */
+
+let viewMode = 'tile'; // 'tile' | 'list'
+
+function acFields(ac) {
+  return {
+    airline:  ac.airline || getAirlineCode(ac.flight) || '—',
+    dist:     ac._dist !== undefined ? Math.round(ac._dist) + ' KM' : (ac.r_dst ? Math.round(ac.r_dst * 1.852) + ' KM' : '—'),
+    flight:   (ac.flight || ac.hex || '').trim(),
+    typeCode: ac.type || ac.t || '',
+    reg:      ac.reg  || ac.r  || '',
+    route:    (ac.orig && ac.dest) ? `${ac.orig}→${ac.dest}` : '——',
+    vs:       ac.baro_rate || 0,
+  };
+}
 
 function renderCards() {
   const grid = document.getElementById('ac-grid');
   grid.innerHTML = '';
+  grid.className = viewMode === 'list' ? 'ac-grid list-view' : 'ac-grid';
 
   aircraft.forEach(ac => {
-    const card = document.createElement('div');
-    card.className = 'ac-card' + (ac.hex === selectedHex ? ' selected' : '');
-    card.dataset.hex = ac.hex;
+    const f   = acFields(ac);
+    const sel = ac.hex === selectedHex;
+    const el  = document.createElement('div');
+    el.dataset.hex = ac.hex;
 
-    const airline  = ac.airline || getAirlineCode(ac.flight) || '—';
-    const dist     = ac._dist !== undefined ? Math.round(ac._dist) + ' KM' : (ac.r_dst ? Math.round(ac.r_dst * 1.852) + ' KM' : '—');
-    const flight   = (ac.flight || ac.hex || '').trim();
-    const typeCode = ac.type || ac.t || '';
-    const reg      = ac.reg  || ac.r  || '';
-    const typePart = [typeCode, reg].filter(Boolean).join(' · ') || '—';
-    const orig     = ac.orig || null;
-    const dest     = ac.dest || null;
-    const route    = (orig && dest) ? `${orig}→${dest}` : '——';
-    const vs       = ac.baro_rate || 0;
-
-    card.innerHTML = `
-      <div class="card-top-row">
-        <div class="card-airline">${escHtml(airline)}</div>
-        <div class="card-dist">${escHtml(dist)}</div>
-      </div>
-      <div class="card-flight">${escHtml(flight)}</div>
-      <div class="card-type">${escHtml(typePart)}</div>
-      <hr class="card-divider">
-      <div class="card-data">
-        <div>
-          <div class="card-field-lbl">ALTITUDE</div>
-          <div class="card-field-val">${escHtml(fmtAlt(ac.alt_baro))}</div>
-        </div>
-        <div>
-          <div class="card-field-lbl">SPEED</div>
-          <div class="card-field-val">${escHtml(fmtSpd(ac.gs))}</div>
-        </div>
-        <div>
-          <div class="card-field-lbl">ROUTE</div>
-          <div class="card-field-val">${escHtml(route)}</div>
-        </div>
-        <div>
-          <div class="card-field-lbl">VERT RATE</div>
-          <div class="card-field-val">${escHtml(fmtVs(vs))}</div>
-        </div>
-      </div>`;
-
-    card.addEventListener('click', () => {
+    const onClick = () => {
       selectedHex = ac.hex === selectedHex ? null : ac.hex;
       renderCards();
-    });
+    };
 
-    grid.appendChild(card);
+    if (viewMode === 'list') {
+      el.className = 'ac-list-row' + (sel ? ' selected' : '');
+      const typePart = [f.typeCode, f.reg].filter(Boolean).join(' · ') || '—';
+      el.innerHTML = `
+        <div class="lr-dist">${escHtml(f.dist)}</div>
+        <div class="lr-cs">${escHtml(f.flight)}</div>
+        <div class="lr-airline">${escHtml(f.airline)}</div>
+        <div class="lr-type">${escHtml(typePart)}</div>
+        <div class="lr-alt">${escHtml(fmtAlt(ac.alt_baro))}</div>
+        <div class="lr-spd">${escHtml(fmtSpd(ac.gs))}</div>
+        <div class="lr-route">${escHtml(f.route)}</div>`;
+    } else {
+      el.className = 'ac-card' + (sel ? ' selected' : '');
+      const typePart = [f.typeCode, f.reg].filter(Boolean).join(' · ') || '—';
+      el.innerHTML = `
+        <div class="card-top-row">
+          <div class="card-airline">${escHtml(f.airline)}</div>
+          <div class="card-dist">${escHtml(f.dist)}</div>
+        </div>
+        <div class="card-flight">${escHtml(f.flight)}</div>
+        <div class="card-type">${escHtml(typePart)}</div>
+        <hr class="card-divider">
+        <div class="card-data">
+          <div>
+            <div class="card-field-lbl">ALTITUDE</div>
+            <div class="card-field-val">${escHtml(fmtAlt(ac.alt_baro))}</div>
+          </div>
+          <div>
+            <div class="card-field-lbl">SPEED</div>
+            <div class="card-field-val">${escHtml(fmtSpd(ac.gs))}</div>
+          </div>
+          <div>
+            <div class="card-field-lbl">ROUTE</div>
+            <div class="card-field-val">${escHtml(f.route)}</div>
+          </div>
+          <div>
+            <div class="card-field-lbl">VERT RATE</div>
+            <div class="card-field-val">${escHtml(fmtVs(f.vs))}</div>
+          </div>
+        </div>`;
+    }
+
+    el.addEventListener('click', onClick);
+    grid.appendChild(el);
   });
 }
+
+/* ── View toggle (tile / list) ── */
+document.getElementById('view-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.view-opt');
+  if (!btn) return;
+  viewMode = btn.dataset.view;
+  document.querySelectorAll('#view-toggle .view-opt').forEach(b =>
+    b.classList.toggle('active', b === btn)
+  );
+  renderCards();
+});
 
 function escHtml(s) {
   return String(s)

@@ -423,6 +423,142 @@ body.square-layout .ac-grid {
 }
 
 /* ══════════════════════════════════════════════════════════
+   VIEW TOGGLE  (tile ⊞ / list ≡ buttons in header)
+   ══════════════════════════════════════════════════════════ */
+
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.view-opt {
+  background: none;
+  border: 1px solid var(--sep);
+  color: var(--fg-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+.view-opt:hover  { border-color: var(--fg-mid); color: var(--fg-mid); }
+.view-opt.active { border-color: var(--fg);     color: var(--fg); }
+
+/* ══════════════════════════════════════════════════════════
+   LIST VIEW  (.ac-grid.list-view + .ac-list-row)
+   ══════════════════════════════════════════════════════════ */
+
+.ac-grid.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  grid-template-columns: unset;
+}
+
+.ac-list-row {
+  display: grid;
+  /* dist | callsign | airline | type/reg | alt | speed | route */
+  grid-template-columns: 54px 80px 1fr 1fr 88px 72px 72px;
+  align-items: center;
+  gap: 0 10px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--sep);
+  cursor: pointer;
+  transition: background 0.1s;
+  min-width: 0;
+}
+.ac-list-row:hover    { background: rgba(255,255,255,0.03); }
+.ac-list-row.selected { background: rgba(255,255,255,0.06); }
+
+/* Shared column base */
+.ac-list-row > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Distance — dim small label */
+.lr-dist {
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 0.08em;
+}
+
+/* Callsign — bright mono */
+.lr-cs {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: var(--fg);
+  letter-spacing: 0.08em;
+}
+
+/* Airline — mid */
+.lr-airline {
+  font-size: 12px;
+  color: var(--fg-mid);
+  letter-spacing: 0.06em;
+}
+
+/* Type / reg — dim */
+.lr-type {
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 0.06em;
+}
+
+/* Altitude */
+.lr-alt {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--fg);
+  letter-spacing: 0.05em;
+  text-align: right;
+}
+
+/* Speed */
+.lr-spd {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--fg-mid);
+  letter-spacing: 0.05em;
+  text-align: right;
+}
+
+/* Route */
+.lr-route {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--fg-dim);
+  letter-spacing: 0.05em;
+  text-align: right;
+}
+
+/* Larger screens — scale up list text slightly */
+@media (min-width: 1400px) {
+  .ac-list-row {
+    grid-template-columns: 60px 90px 1fr 1fr 100px 82px 82px;
+    gap: 0 14px;
+    padding: 7px 16px;
+  }
+  .lr-dist    { font-size: 12px; }
+  .lr-cs      { font-size: 21px; }
+  .lr-airline { font-size: 13px; }
+  .lr-type    { font-size: 12px; }
+  .lr-alt, .lr-spd, .lr-route { font-size: 19px; }
+}
+
+/* Narrow screens — hide less important columns */
+@media (max-width: 699px) {
+  .ac-list-row {
+    grid-template-columns: 48px 70px 1fr 80px 64px;
+  }
+  .lr-type, .lr-route { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
    SCROLLBAR STYLE (Webkit)
    ══════════════════════════════════════════════════════════ */
 
