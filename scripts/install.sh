@@ -14,6 +14,21 @@ echo "============================================"
 echo "  Flightboard Clean Install"
 echo "============================================"
 
+# ── 0. Wait for network ────────────────────────────────────
+echo "[0/10] Waiting for network and DNS..."
+for i in $(seq 1 24); do
+  if curl -s --max-time 5 https://github.com > /dev/null 2>&1; then
+    echo "      Network ready."
+    break
+  fi
+  if [ "$i" -eq 24 ]; then
+    echo "ERROR: No network after 2 minutes. Check your connection and retry."
+    exit 1
+  fi
+  echo "      Attempt $i/24 — retrying in 5s..."
+  sleep 5
+done
+
 # ── 1. System update ───────────────────────────────────────
 echo "[1/10] Updating system..."
 apt update && apt upgrade -y
