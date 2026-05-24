@@ -419,6 +419,50 @@ body.square-layout .radar-right {
 }
 
 /* ══════════════════════════════════════════════════════════
+   CSS SWEEP OVERLAY
+   Technique from gist.github.com/dgeske/5105264 — conic-gradient
+   wedge rotated with CSS animation, clipped to the radar circle.
+   ══════════════════════════════════════════════════════════ */
+
+.sweep-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* clip to the same radar circle used on the canvas (R = 43% of canvas) */
+  clip-path: circle(43% at 50% 50%);
+}
+
+.sweep-layer.sweep-off {
+  display: none;
+}
+
+.sweep-arm {
+  position: absolute;
+  inset: 0;
+  /*
+   * Conic gradient: transparent for the first 300° (5/6 of the circle),
+   * then fades in — dim trail → bright leading edge — over the last 60°.
+   * The leading edge sits at 360°/0° (top). CSS animation rotates the
+   * whole element clockwise so it sweeps around the radar.
+   */
+  background: conic-gradient(
+    from 0deg,
+    transparent       0deg,
+    transparent     300deg,
+    var(--fg-dim)   330deg,
+    var(--fg)       359deg,
+    transparent     360deg
+  );
+  opacity: 0.65;
+  animation: css-radar-sweep 3s linear infinite;
+}
+
+@keyframes css-radar-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════════════════════
    VIEW TOGGLE  (tile ⊞ / list ≡ buttons in header)
    ══════════════════════════════════════════════════════════ */
 

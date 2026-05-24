@@ -87,12 +87,11 @@ canvas.addEventListener('click', e => {
 });
 
 /* ══════════════════════════════════════════════════════════
-   SWEEP ANIMATION
+   SWEEP — handled by CSS overlay (.sweep-layer / .sweep-arm)
    ══════════════════════════════════════════════════════════ */
 
-const SWEEP_RADS_PER_MS = (2 * Math.PI * 20) / 60000; // 20 RPM
-let sweepAngle = -Math.PI / 2; // start at north
-let lastTs     = 0;
+const sweepLayer = document.getElementById('sweep-layer');
+if (!sweepEnabled) sweepLayer.classList.add('sweep-off');
 
 /* ══════════════════════════════════════════════════════════
    UNIT HELPERS
@@ -525,53 +524,6 @@ function drawBezel(cx, cy, RI, RO) {
   }
 }
 
-function drawSweep(angle) {
-  const W  = canvas.width;
-  const cx = W / 2, cy = W / 2;
-  const R  = W * 0.43;
-  const span1 = Math.PI / 6;  // 30° wide faint sector
-  const span2 = Math.PI / 18; // 10° slightly brighter
-
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.clip();
-
-  // Wide faint sector
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, R, angle - span1, angle, false);
-  ctx.closePath();
-  const grad1 = ctx.createConicalGradient
-    ? null
-    : ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-  if (grad1) {
-    grad1.addColorStop(0, 'transparent');
-    grad1.addColorStop(1, fgColor + '22');
-    ctx.fillStyle = grad1;
-  } else {
-    ctx.fillStyle = fgColor + '18';
-  }
-  ctx.fill();
-
-  // Narrower slightly brighter sector
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, R, angle - span2, angle, false);
-  ctx.closePath();
-  ctx.fillStyle = fgColor + '30';
-  ctx.fill();
-
-  // Sweep line
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + Math.cos(angle) * R, cy + Math.sin(angle) * R);
-  ctx.strokeStyle = fgColor;
-  ctx.lineWidth   = 1.5;
-  ctx.globalAlpha = 0.9;
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  ctx.restore();
-}
 
 /* ── Aircraft icon — top-down airplane silhouette ── */
 function drawPlaneIcon(x, y, trackDeg, color, size) {
@@ -721,21 +673,11 @@ function drawBlips() {
 
 /* ── Main animation frame ── */
 
-function drawFrame(ts = 0) {
+function drawFrame() {
   refreshColors();
-  const dt = lastTs ? ts - lastTs : 0;
-  lastTs = ts;
-
-  if (sweepEnabled) {
-    sweepAngle += SWEEP_RADS_PER_MS * dt;
-    if (sweepAngle > 3 * Math.PI / 2) sweepAngle -= 2 * Math.PI;
-  }
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBase();
-  if (sweepEnabled) drawSweep(sweepAngle);
   drawBlips();
-
   requestAnimationFrame(drawFrame);
 }
 
@@ -960,6 +902,7 @@ document.getElementById('menu-sweep').addEventListener('click', e => {
   const btn = e.target.closest('.menu-opt');
   if (!btn) return;
   sweepEnabled = btn.dataset.val === 'on';
+  sweepLayer.classList.toggle('sweep-off', !sweepEnabled);
   markActive('menu-sweep', 'data-val', btn.dataset.val);
 });
 
