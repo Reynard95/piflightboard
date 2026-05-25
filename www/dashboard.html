@@ -60,10 +60,11 @@ html, body {
   flex-shrink: 0;
 }
 
+/* Live status area — dot + per-panel pips + label */
 .hdr-indicators {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
@@ -71,11 +72,29 @@ html, body {
 .hdr-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: #3a3830;
+  background: #2a2820;
+  flex-shrink: 0;
+  transition: background 0.4s, box-shadow 0.4s;
+}
+.hdr-dot.ok   { background: #1a6a1a; box-shadow: 0 0 5px #1a8a1a; }
+.hdr-dot.warn { background: #6a4a10; box-shadow: 0 0 5px #8a6010; }
+
+/* Per-panel status pips */
+.hdr-pips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
 }
-.hdr-dot.ok   { background: #2a5a2a; box-shadow: 0 0 4px #2a5a2a; }
-.hdr-dot.warn { background: #5a4a1a; box-shadow: 0 0 4px #5a4a1a; }
+.hdr-pip {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #1c1c18;
+  flex-shrink: 0;
+  transition: background 0.4s;
+}
+.hdr-pip.live { background: #1a5a1a; }
+.hdr-pip.warn { background: #5a3a08; }
 
 .hdr-status {
   font-size: 9px;
@@ -95,7 +114,7 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── Toolbar (edit controls) ─────────────────────────────── */
+/* ── Toolbar ──────────────────────────────────────────────── */
 .hdr-toolbar {
   display: flex;
   align-items: center;
@@ -136,7 +155,6 @@ html, body {
   position: relative;
 }
 
-/* Override GridStack defaults to fit our dark aesthetic */
 .grid-stack {
   background: transparent !important;
 }
@@ -184,6 +202,44 @@ html, body {
     linear-gradient(to top,    #2a2a24 0, #2a2a24 2px, transparent 2px) calc(100% - 5px) calc(100% - 5px) / 10px 10px no-repeat;
 }
 
+/* ── Variant badge — always visible, top-right corner ──────── */
+.panel-var-btn {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 10;
+  background: rgba(12,10,5,0.85);
+  border: 1px solid #28200c;
+  border-radius: 3px;
+  color: #3a2e10;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.2s;
+  user-select: none;
+}
+/* Dim in normal view so it's subtle; highlight if non-default variant is active */
+.panel-var-btn.variant-active {
+  color: #CC7020;
+  border-color: #5a3a10;
+  background: rgba(204,112,32,0.12);
+}
+/* More visible in edit mode */
+body.edit-mode .panel-var-btn {
+  color: #8a5820;
+  border-color: #4a3010;
+  background: rgba(12,10,5,0.92);
+}
+body.edit-mode .panel-var-btn:hover,
+.panel-var-btn:hover {
+  color: #FFA040;
+  border-color: #8a5010;
+  background: rgba(204,112,32,0.18);
+}
+
 /* ── Panel screen (CRT glass) ─────────────────────────────── */
 .panel-screen {
   flex: 1;
@@ -192,7 +248,6 @@ html, body {
   overflow: hidden;
   position: relative;
   background: #050200;
-
   box-shadow:
     inset 0 2px 12px rgba(0,0,0,0.95),
     inset 0 0  4px  rgba(0,0,0,0.6),
@@ -200,7 +255,7 @@ html, body {
     0 0  8px rgba(255,160,64,0.06);
 }
 
-/* Vignette overlay */
+/* Vignette */
 .panel-screen::before {
   content: '';
   position: absolute;
@@ -211,7 +266,7 @@ html, body {
   background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,0.50) 100%);
 }
 
-/* Scanline overlay */
+/* Scanlines */
 .panel-screen::after {
   content: '';
   position: absolute;
@@ -235,20 +290,38 @@ iframe {
   display: block;
 }
 
-/* ── Panel label ─────────────────────────────────────────── */
+/* ── Panel label row (label + live pip) ────────────────────── */
+.panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding-top: 1px;
+  line-height: 1;
+}
+
 .panel-id {
   font-size: 8px;
   color: #222220;
   text-align: center;
   letter-spacing: 0.40em;
   text-transform: uppercase;
-  flex-shrink: 0;
-  line-height: 1;
   user-select: none;
-  padding-top: 1px;
 }
 
-/* ── Edit mode — label becomes drag handle ────────────────── */
+/* Panel live pip — tiny dot next to label */
+.panel-live-pip {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #1c1c18;
+  flex-shrink: 0;
+  transition: background 0.4s;
+}
+.panel-live-pip.live { background: #1a5a1a; }
+.panel-live-pip.warn { background: #5a3a08; }
+
+/* ── Edit mode ───────────────────────────────────────────── */
 body.edit-mode .panel-id {
   cursor: grab;
   color: #5a4a1a;
@@ -257,7 +330,6 @@ body.edit-mode .panel-id:active {
   cursor: grabbing;
 }
 
-/* Edit mode: panel glow */
 body.edit-mode .panel {
   box-shadow:
     0 6px 28px rgba(0,0,0,0.95),
@@ -267,7 +339,7 @@ body.edit-mode .panel {
     inset 0  1px 0   rgba(255,255,255,0.06);
 }
 
-/* GridStack resize handle styling */
+/* GridStack resize handle */
 .grid-stack-item > .ui-resizable-handle {
   opacity: 0;
   transition: opacity 0.2s;
@@ -287,25 +359,213 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   cursor: se-resize !important;
 }
 
-/* ── Placeholder during drag ─────────────────────────────── */
+/* ── Drag placeholder ────────────────────────────────────── */
 .grid-stack-placeholder > .placeholder-content {
   background: rgba(204,112,32,0.08) !important;
   border: 1px dashed #5a3a10 !important;
   border-radius: 9px !important;
 }
 
-/* ── Mobile overflow guard ───────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   PRESET MODAL
+   ══════════════════════════════════════════════════════════ */
+
+.preset-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s;
+}
+.preset-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.preset-modal {
+  background: linear-gradient(180deg, #1a1a16 0%, #111110 100%);
+  border: 1px solid #2c2418;
+  border-radius: 10px;
+  width: min(420px, 94vw);
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.97),
+    0 0 0 1px rgba(255,255,255,0.03),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+.preset-modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px 11px;
+  border-bottom: 1px solid #1c1c14;
+}
+
+.preset-modal-title {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #CC7020;
+  letter-spacing: 0.3em;
+}
+
+.preset-modal-close {
+  background: none;
+  border: none;
+  color: #463614;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Share Tech Mono', monospace;
+  padding: 3px 6px;
+  border-radius: 3px;
+  transition: color 0.15s;
+  line-height: 1;
+}
+.preset-modal-close:hover { color: #CC7020; }
+
+/* Preset list */
+.preset-list {
+  padding: 6px 0;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2010 transparent;
+}
+.preset-list::-webkit-scrollbar { width: 4px; }
+.preset-list::-webkit-scrollbar-track { background: transparent; }
+.preset-list::-webkit-scrollbar-thumb { background: #2a2010; border-radius: 2px; }
+
+/* Each row = marker + thumb + name + tag + delete */
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.preset-row:hover    { background: rgba(204,112,32,0.07); }
+.preset-row.current  { background: rgba(204,112,32,0.12); }
+
+.preset-row-marker {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.preset-row.current .preset-row-marker {
+  background: #CC7020;
+  box-shadow: 0 0 5px #CC7020;
+}
+
+/* Mini thumbnail grid sketch */
+.preset-thumb {
+  width: 54px;
+  height: 36px;
+  border: 1px solid #201a0c;
+  border-radius: 3px;
+  background: #0d0d0a;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.pt-block {
+  position: absolute;
+  border: 1px solid #3a2e10;
+  border-radius: 1px;
+  background: #1a1810;
+}
+.preset-row.current .preset-thumb { border-color: #5a3a10; }
+.preset-row.current .pt-block     { border-color: #8a5010; background: #221a08; }
+
+.preset-row-name {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: #6a5830;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  min-width: 0;
+}
+.preset-row.current .preset-row-name { color: #CC7020; }
+
+.preset-row-tag {
+  font-size: 7px;
+  color: #2e2410;
+  letter-spacing: 0.18em;
+  border: 1px solid #201a0c;
+  border-radius: 2px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.preset-row-del {
+  background: none;
+  border: none;
+  color: #2e200c;
+  cursor: pointer;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  font-family: 'Share Tech Mono', monospace;
+  padding: 2px 5px;
+  border-radius: 2px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.preset-row-del:hover { color: #cc3010; background: rgba(200,48,16,0.12); }
+
+.preset-modal-sep {
+  height: 1px;
+  background: #181810;
+  margin: 2px 0;
+}
+
+.preset-modal-footer {
+  padding: 11px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Mobile ──────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .cockpit { padding: 4px 4px 4px; gap: 4px; }
+  .cockpit { padding: 4px; gap: 4px; }
   .hdr-logo { font-size: 13px; letter-spacing: 0.2em; }
   .hdr-btn { display: none; }
   .hdr-btn.hdr-btn-edit { display: inline-block; }
+  .preset-thumb { display: none; }
 }
 
 </style>
 </head>
 <body>
 
+<!-- ── Preset picker overlay ──────────────────────────────── -->
+<div class="preset-overlay" id="preset-overlay" aria-hidden="true">
+  <div class="preset-modal" role="dialog" aria-label="Layout presets">
+    <div class="preset-modal-hdr">
+      <span class="preset-modal-title">LAYOUT PRESETS</span>
+      <button class="preset-modal-close" id="btn-preset-close" aria-label="Close">✕</button>
+    </div>
+    <div class="preset-list" id="preset-list"></div>
+    <div class="preset-modal-sep"></div>
+    <div class="preset-modal-footer">
+      <button class="hdr-btn" id="btn-save-preset">+ SAVE CURRENT AS PRESET</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main cockpit shell ─────────────────────────────────── -->
 <div class="cockpit">
 
   <!-- Header bar -->
@@ -313,15 +573,14 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
     <span class="hdr-logo">Flighttracker&nbsp;&nbsp;Cyberdeck</span>
     <div class="hdr-divider"></div>
     <div class="hdr-indicators">
-      <div class="hdr-dot ok" id="dot-sys"  title="System"></div>
-      <div class="hdr-dot ok" id="dot-data" title="Data feed"></div>
-      <div class="hdr-dot ok" id="dot-net"  title="Network"></div>
-      <span class="hdr-status" id="hdr-status">ALL SYSTEMS NOMINAL</span>
+      <div class="hdr-dot" id="hdr-dot"></div>
+      <div class="hdr-pips" id="hdr-pips"></div>
+      <span class="hdr-status" id="hdr-status">WAITING FOR DATA</span>
     </div>
-    <!-- Toolbar -->
     <div class="hdr-toolbar">
-      <button class="hdr-btn hdr-btn-edit" id="btn-edit"  title="Toggle edit mode">EDIT</button>
-      <button class="hdr-btn" id="btn-reset" title="Reset to default layout">RESET</button>
+      <button class="hdr-btn" id="btn-presets">PRESETS</button>
+      <button class="hdr-btn hdr-btn-edit" id="btn-edit">EDIT</button>
+      <button class="hdr-btn" id="btn-reset">RESET</button>
     </div>
     <span class="hdr-time" id="hdr-clock">--:--:--</span>
   </div>
@@ -330,57 +589,79 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   <div class="grid-wrap" id="grid-wrap">
     <div class="grid-stack" id="dashboard-grid">
 
-      <div class="grid-stack-item" gs-id="flight"   gs-x="0" gs-y="0" gs-w="7" gs-h="7">
+      <!-- Flight display -->
+      <div class="grid-stack-item" gs-id="flight" gs-x="0" gs-y="0" gs-w="7" gs-h="7">
         <div class="grid-stack-item-content">
           <div class="panel">
+            <button class="panel-var-btn" data-panel="flight">NORMAL</button>
             <div class="panel-screen">
-              <iframe data-page="main.html" title="Flight Display" loading="eager"></iframe>
+              <iframe id="iframe-flight" title="Flight Display" loading="eager"></iframe>
             </div>
-            <div class="panel-id">Flight&nbsp;Display</div>
+            <div class="panel-footer">
+              <div class="panel-live-pip" id="pip-flight"></div>
+              <div class="panel-id">Flight&nbsp;Display</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="grid-stack-item" gs-id="vitals"   gs-x="7" gs-y="0" gs-w="5" gs-h="7">
+      <!-- System vitals -->
+      <div class="grid-stack-item" gs-id="vitals" gs-x="7" gs-y="0" gs-w="5" gs-h="7">
         <div class="grid-stack-item-content">
           <div class="panel">
             <div class="panel-screen">
-              <iframe data-page="vitals.html" title="System Vitals" loading="eager"></iframe>
+              <iframe id="iframe-vitals" title="System Vitals" loading="eager"></iframe>
             </div>
-            <div class="panel-id">Sys&nbsp;Vitals</div>
+            <div class="panel-footer">
+              <div class="panel-live-pip" id="pip-vitals"></div>
+              <div class="panel-id">Sys&nbsp;Vitals</div>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- RF Spectrum -->
       <div class="grid-stack-item" gs-id="spectrum" gs-x="0" gs-y="7" gs-w="5" gs-h="5">
         <div class="grid-stack-item-content">
           <div class="panel">
             <div class="panel-screen">
-              <iframe data-page="spectrum.html" title="RF Spectrum" loading="lazy"></iframe>
+              <iframe id="iframe-spectrum" title="RF Spectrum" loading="lazy"></iframe>
             </div>
-            <div class="panel-id">RF&nbsp;Spectrum</div>
+            <div class="panel-footer">
+              <div class="panel-live-pip" id="pip-spectrum"></div>
+              <div class="panel-id">RF&nbsp;Spectrum</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="grid-stack-item" gs-id="weather"  gs-x="5" gs-y="7" gs-w="4" gs-h="5">
+      <!-- Weather -->
+      <div class="grid-stack-item" gs-id="weather" gs-x="5" gs-y="7" gs-w="4" gs-h="5">
         <div class="grid-stack-item-content">
           <div class="panel">
             <div class="panel-screen">
-              <iframe data-page="weather.html" title="Weather" loading="lazy"></iframe>
+              <iframe id="iframe-weather" title="Weather" loading="lazy"></iframe>
             </div>
-            <div class="panel-id">Weather</div>
+            <div class="panel-footer">
+              <div class="panel-live-pip" id="pip-weather"></div>
+              <div class="panel-id">Weather</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="grid-stack-item" gs-id="radar"    gs-x="9" gs-y="7" gs-w="3" gs-h="5">
+      <!-- Radar -->
+      <div class="grid-stack-item" gs-id="radar" gs-x="9" gs-y="7" gs-w="3" gs-h="5">
         <div class="grid-stack-item-content">
           <div class="panel">
+            <button class="panel-var-btn" data-panel="radar">NORMAL</button>
             <div class="panel-screen">
-              <iframe data-page="radar.html" data-extra="sweep=on" title="Radar" loading="lazy"></iframe>
+              <iframe id="iframe-radar" title="Radar" loading="lazy"></iframe>
             </div>
-            <div class="panel-id">Radar</div>
+            <div class="panel-footer">
+              <div class="panel-live-pip" id="pip-radar"></div>
+              <div class="panel-id">Radar</div>
+            </div>
           </div>
         </div>
       </div>
@@ -395,47 +676,269 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 (function () {
   'use strict';
 
-  /* ── Theme propagation ── */
+  /* ══════════════════════════════════════════════════════════
+     PANEL CONFIGURATION
+     ══════════════════════════════════════════════════════════ */
+
+  const PANEL_PAGES = {
+    flight:   'main.html',
+    vitals:   'vitals.html',
+    spectrum: 'spectrum.html',
+    weather:  'weather.html',
+    radar:    'radar.html',
+  };
+
+  /* Variant lists per panel — first entry is the default.
+     Variant badge cycles through these on click.             */
+  const PANEL_VARIANTS = {
+    flight:   ['normal', 'focus'],
+    radar:    ['normal', 'square'],
+    vitals:   ['normal'],
+    spectrum: ['normal'],
+    weather:  ['normal'],
+  };
+
+  const ALL_PANELS = Object.keys(PANEL_PAGES);
+
+  /* ── Theme ─────────────────────────────────────────────── */
   const theme = new URLSearchParams(location.search).get('theme') || 'color';
-  document.querySelectorAll('iframe[data-page]').forEach(iframe => {
-    const extra = iframe.dataset.extra ? '&' + iframe.dataset.extra : '';
-    iframe.src = iframe.dataset.page + '?theme=' + theme + extra;
+
+  /* ══════════════════════════════════════════════════════════
+     IFRAME SRC BUILDER
+     ══════════════════════════════════════════════════════════ */
+
+  function buildSrc(panelId, variant) {
+    const params = new URLSearchParams({ theme, embedded: '1' });
+
+    if (panelId === 'radar') {
+      params.set('sweep', 'on');
+      if (variant === 'square') params.set('square', '');
+    }
+    if (panelId === 'flight' && variant === 'focus') {
+      params.set('focus', '');
+    }
+
+    /* Clean up empty-value keys (e.g. ?square= → ?square) */
+    const qs = params.toString().replace(/=(?=&|$)/g, '');
+    return PANEL_PAGES[panelId] + '?' + qs;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     VARIANT STATE
+     ══════════════════════════════════════════════════════════ */
+
+  const panelVariants = {};
+  ALL_PANELS.forEach(id => { panelVariants[id] = 'normal'; });
+
+  function applyVariants() {
+    ALL_PANELS.forEach(id => {
+      const iframe = document.getElementById('iframe-' + id);
+      if (!iframe) return;
+      const src = buildSrc(id, panelVariants[id]);
+      if (iframe.getAttribute('src') !== src) iframe.src = src;
+    });
+  }
+
+  function updateVarBtnLabels() {
+    document.querySelectorAll('.panel-var-btn').forEach(btn => {
+      const id = btn.dataset.panel;
+      if (!id) return;
+      const v = panelVariants[id] || 'normal';
+      btn.textContent = v.toUpperCase();
+      btn.classList.toggle('variant-active', v !== 'normal');
+    });
+  }
+
+  function cycleVariant(panelId) {
+    const variants = PANEL_VARIANTS[panelId] || ['normal'];
+    const cur = panelVariants[panelId] || 'normal';
+    panelVariants[panelId] = variants[(variants.indexOf(cur) + 1) % variants.length];
+    applyVariants();
+    updateVarBtnLabels();
+    activePresetId = null;
+    renderPresetList();
+    saveCurrentLayout();
+  }
+
+  /* Variant button clicks */
+  document.querySelectorAll('.panel-var-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      cycleVariant(btn.dataset.panel);
+    });
   });
 
-  /* ── Header clock ── */
-  function tick() {
-    const now = new Date();
-    document.getElementById('hdr-clock').textContent =
-      String(now.getHours()).padStart(2,'0') + ':' +
-      String(now.getMinutes()).padStart(2,'0') + ':' +
-      String(now.getSeconds()).padStart(2,'0');
-  }
-  tick();
-  setInterval(tick, 1000);
+  /* ══════════════════════════════════════════════════════════
+     STORAGE KEYS
+     ══════════════════════════════════════════════════════════ */
 
-  /* ── Default layout (12-col, 12-row grid) ── */
-  const DEFAULT_LAYOUT = [
-    { id: 'flight',   x: 0, y: 0, w: 7, h: 7 },
-    { id: 'vitals',   x: 7, y: 0, w: 5, h: 7 },
-    { id: 'spectrum', x: 0, y: 7, w: 5, h: 5 },
-    { id: 'weather',  x: 5, y: 7, w: 4, h: 5 },
-    { id: 'radar',    x: 9, y: 7, w: 3, h: 5 },
+  const LAYOUT_KEY  = 'cyberdeck-layout-v4';
+  const PRESETS_KEY = 'cyberdeck-presets-v2';
+
+  /* ══════════════════════════════════════════════════════════
+     BUILT-IN PRESETS
+
+     Thumbnail geometry: 54×36 px viewbox, positions as %.
+     pt-block uses: left%, top%, width%, height% (of thumb).
+     ══════════════════════════════════════════════════════════ */
+
+  const BUILTIN_PRESETS = [
+    {
+      id:      'standard',
+      name:    'STANDARD',
+      builtin: true,
+      /* flight(7/12w × 7/12h) | vitals(5/12 × 7/12)
+         spectrum(5/12 × 5/12) | weather(4/12 × 5/12) | radar(3/12 × 5/12) */
+      thumb: [
+        { l:  0,  t: 0,  w: 58, h: 58 },   /* flight   */
+        { l: 60,  t: 0,  w: 40, h: 58 },   /* vitals   */
+        { l:  0,  t: 61, w: 41, h: 39 },   /* spectrum */
+        { l: 43,  t: 61, w: 33, h: 39 },   /* weather  */
+        { l: 78,  t: 61, w: 22, h: 39 },   /* radar    */
+      ],
+      items: [
+        { id: 'flight',   x: 0, y: 0, w: 7, h: 7,  variant: 'normal' },
+        { id: 'vitals',   x: 7, y: 0, w: 5, h: 7,  variant: 'normal' },
+        { id: 'spectrum', x: 0, y: 7, w: 5, h: 5,  variant: 'normal' },
+        { id: 'weather',  x: 5, y: 7, w: 4, h: 5,  variant: 'normal' },
+        { id: 'radar',    x: 9, y: 7, w: 3, h: 5,  variant: 'normal' },
+      ],
+    },
+    {
+      id:      'cyberdeck',
+      name:    'CYBERDECK',
+      builtin: true,
+      /* Matches screenshot layout:
+         flight(8/12w × 7/12h) | radar(4/12w × 12/12h, normal+list)
+         spectrum(4/12 × 3/12) | vitals(4/12 × 3/12)
+         weather(8/12w × 2/12h) at bottom                          */
+      thumb: [
+        { l:  0,  t:  0, w: 66, h: 58 },   /* flight   */
+        { l: 68,  t:  0, w: 32, h: 100},   /* radar    */
+        { l:  0,  t: 60, w: 33, h: 25 },   /* spectrum */
+        { l: 35,  t: 60, w: 31, h: 25 },   /* vitals   */
+        { l:  0,  t: 87, w: 66, h: 13 },   /* weather  */
+      ],
+      items: [
+        { id: 'flight',   x: 0, y: 0, w: 8, h: 7,  variant: 'normal' },
+        { id: 'spectrum', x: 0, y: 7, w: 4, h: 3,  variant: 'normal' },
+        { id: 'vitals',   x: 4, y: 7, w: 4, h: 3,  variant: 'normal' },
+        { id: 'weather',  x: 0, y: 10, w: 8, h: 2, variant: 'normal' },
+        { id: 'radar',    x: 8, y: 0, w: 4, h: 12, variant: 'normal' },
+      ],
+    },
+    {
+      id:      'focus',
+      name:    'FOCUS',
+      builtin: true,
+      /* Large flight-focus(8/12 × 9/12) | radar-square(4/12 × 9/12) tall
+         vitals(4/12 × 3/12) | weather(4/12 × 3/12) | spectrum(4/12 × 3/12) */
+      thumb: [
+        { l:  0,  t:  0, w: 66, h: 75 },   /* flight   */
+        { l: 68,  t:  0, w: 32, h: 75 },   /* radar    */
+        { l:  0,  t: 77, w: 33, h: 23 },   /* vitals   */
+        { l: 35,  t: 77, w: 31, h: 23 },   /* weather  */
+        { l: 68,  t: 77, w: 32, h: 23 },   /* spectrum */
+      ],
+      items: [
+        { id: 'flight',   x: 0, y: 0, w: 8, h: 9,  variant: 'focus'  },
+        { id: 'radar',    x: 8, y: 0, w: 4, h: 9,  variant: 'square' },
+        { id: 'vitals',   x: 0, y: 9, w: 4, h: 3,  variant: 'normal' },
+        { id: 'weather',  x: 4, y: 9, w: 4, h: 3,  variant: 'normal' },
+        { id: 'spectrum', x: 8, y: 9, w: 4, h: 3,  variant: 'normal' },
+      ],
+    },
+    {
+      id:      'command',
+      name:    'COMMAND',
+      builtin: true,
+      /* Radar dominant (8/12w, full height, normal+list) | right column:
+         flight-focus(4/12 × 4/12) | weather(4/12 × 5/12)
+         spectrum(2/12 × 3/12) + vitals(2/12 × 3/12) side-by-side */
+      thumb: [
+        { l:  0,  t:  0, w: 66, h: 100},   /* radar    */
+        { l: 68,  t:  0, w: 32, h: 33 },   /* flight   */
+        { l: 68,  t: 35, w: 32, h: 41 },   /* weather  */
+        { l: 68,  t: 78, w: 15, h: 22 },   /* spectrum */
+        { l: 85,  t: 78, w: 15, h: 22 },   /* vitals   */
+      ],
+      items: [
+        { id: 'radar',    x: 0, y: 0,  w: 8, h: 12, variant: 'normal' },
+        { id: 'flight',   x: 8, y: 0,  w: 4, h: 4,  variant: 'focus'  },
+        { id: 'weather',  x: 8, y: 4,  w: 4, h: 5,  variant: 'normal' },
+        { id: 'spectrum', x: 8, y: 9,  w: 2, h: 3,  variant: 'normal' },
+        { id: 'vitals',   x: 10, y: 9, w: 2, h: 3,  variant: 'normal' },
+      ],
+    },
   ];
 
-  const STORAGE_KEY = 'cyberdeck-layout-v2';
+  let activePresetId = null;
 
-  /* ── Compute cell height to fill the grid-wrap exactly ── */
+  /* ══════════════════════════════════════════════════════════
+     CUSTOM PRESET STORAGE
+     ══════════════════════════════════════════════════════════ */
+
+  function getCustomPresets() {
+    try { return JSON.parse(localStorage.getItem(PRESETS_KEY)) || []; }
+    catch (_) { return []; }
+  }
+
+  function saveCustomPresets(arr) {
+    try { localStorage.setItem(PRESETS_KEY, JSON.stringify(arr)); } catch (_) {}
+  }
+
+  /* ── Capture current layout as a preset items array ─────── */
+  function captureItems() {
+    return grid.save(false).map(p => ({
+      id:      p.id,
+      x:       p.x,  y: p.y,
+      w:       p.w,  h: p.h,
+      variant: panelVariants[p.id] || 'normal',
+    }));
+  }
+
+  /* ── Persist current layout to localStorage ─────────────── */
+  function saveCurrentLayout() {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(captureItems())); }
+    catch (_) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     APPLY A PRESET
+     ══════════════════════════════════════════════════════════ */
+
+  let applyingPreset = false;
+
+  function applyPreset(preset) {
+    applyingPreset = true;
+
+    preset.items.forEach(item => {
+      panelVariants[item.id] = item.variant || 'normal';
+    });
+
+    const gsItems = preset.items.map(({ variant, ...rest }) => rest);
+    grid.load(gsItems, true);
+
+    applyVariants();
+    updateVarBtnLabels();
+
+    activePresetId = preset.id;
+    applyingPreset = false;
+
+    saveCurrentLayout();
+    renderPresetList();
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     GRIDSTACK INIT
+     ══════════════════════════════════════════════════════════ */
+
   function computeCellHeight() {
-    const wrap = document.getElementById('grid-wrap');
-    const h    = wrap.offsetHeight;
-    /* 12 rows fill the wrap exactly.
-       GridStack: totalHeight = rows * cellHeight + (rows+1) * margin */
-    const rows   = 12;
-    const margin = 6;
+    const rows = 12, margin = 6;
+    const h = document.getElementById('grid-wrap').offsetHeight;
     return Math.max(20, Math.floor((h - margin * (rows + 1)) / rows));
   }
 
-  /* ── Responsive column count ── */
   function colCount() {
     const w = window.innerWidth;
     if (w < 480)  return 1;
@@ -444,47 +947,160 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
     return 12;
   }
 
-  /* ── Init GridStack ── */
   const grid = GridStack.init({
-    column:         colCount(),
-    cellHeight:     computeCellHeight(),
-    margin:         6,
-    animate:        false,
-    draggable:      { handle: '.panel-id' },
-    resizable:      { handles: 'se' },
-    float:          false,
-    staticGrid:     true,   /* start locked; user unlocks with EDIT */
+    column:     colCount(),
+    cellHeight: computeCellHeight(),
+    margin:     6,
+    animate:    false,
+    draggable:  { handle: '.panel-id' },
+    resizable:  { handles: 'se' },
+    float:      false,
+    staticGrid: true,
     columnOpts: {
       breakpoints: [
-        { w: 480,  c: 1  },
-        { w: 768,  c: 2  },
-        { w: 1024, c: 6  },
+        { w: 480,  c: 1 },
+        { w: 768,  c: 2 },
+        { w: 1024, c: 6 },
       ],
       layout: 'moveScale',
     },
   }, '#dashboard-grid');
 
-  /* ── Restore saved layout ── */
+  /* ── Restore saved layout ──────────────────────────────── */
+  let initDone = false;
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const layout = JSON.parse(saved);
-      /* Only restore if it has all 5 panels */
-      if (Array.isArray(layout) && layout.length === DEFAULT_LAYOUT.length) {
-        grid.load(layout);
+    const raw = localStorage.getItem(LAYOUT_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved) && saved.length === ALL_PANELS.length) {
+        saved.forEach(item => {
+          if (item.variant) panelVariants[item.id] = item.variant;
+        });
+        applyingPreset = true;
+        grid.load(saved.map(({ variant, ...rest }) => rest));
+        applyingPreset = false;
       }
+    } else {
+      activePresetId = 'standard';
     }
-  } catch (_) { /* ignore parse errors */ }
+  } catch (_) {}
+  initDone = true;
 
-  /* ── Save layout on change ── */
+  applyVariants();
+  updateVarBtnLabels();
+
+  /* Persist on user drag/resize */
   grid.on('change', () => {
-    try {
-      const layout = grid.save(false);  /* false = don't include HTML */
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-    } catch (_) {}
+    if (!initDone || applyingPreset) return;
+    activePresetId = null;
+    renderPresetList();
+    saveCurrentLayout();
   });
 
-  /* ── Edit mode toggle ── */
+  /* Responsive resize */
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      grid.column(colCount());
+      grid.cellHeight(computeCellHeight());
+    }, 150);
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     HEADER CLOCK
+     ══════════════════════════════════════════════════════════ */
+
+  function tick() {
+    const d = new Date();
+    document.getElementById('hdr-clock').textContent =
+      String(d.getHours()).padStart(2, '0') + ':' +
+      String(d.getMinutes()).padStart(2, '0') + ':' +
+      String(d.getSeconds()).padStart(2, '0');
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  /* ══════════════════════════════════════════════════════════
+     PANEL LIVE STATUS  (postMessage from child iframes)
+     ══════════════════════════════════════════════════════════ */
+
+  const panelStatus = {};
+  const STATUS_TTL  = 15000; /* ms — panel is stale if silent longer than this */
+
+  /* Build header pips once (one per panel in order) */
+  const pipsContainer = document.getElementById('hdr-pips');
+  ALL_PANELS.forEach(id => {
+    const pip = document.createElement('div');
+    pip.className = 'hdr-pip';
+    pip.dataset.panel = id;
+    pip.title = id;
+    pipsContainer.appendChild(pip);
+  });
+
+  window.addEventListener('message', e => {
+    if (e.data?.type === 'panel-status' && e.data.panel) {
+      panelStatus[e.data.panel] = Date.now();
+      updateLiveIndicators();
+      return;
+    }
+    /* Radar selected an aircraft — sync the flight display */
+    if (e.data?.type === 'radar-select') {
+      const flightWin = document.getElementById('iframe-flight')?.contentWindow;
+      if (flightWin) {
+        try { flightWin.postMessage({ type: 'select-aircraft', hex: e.data.hex }, '*'); } catch (_) {}
+      }
+    }
+  });
+
+  function updateLiveIndicators() {
+    const now  = Date.now();
+    const live = ALL_PANELS.filter(id => panelStatus[id] && (now - panelStatus[id]) < STATUS_TTL);
+    const dot  = document.getElementById('hdr-dot');
+    const lbl  = document.getElementById('hdr-status');
+
+    /* Main dot */
+    dot.classList.remove('ok', 'warn');
+    if (live.length === ALL_PANELS.length) {
+      dot.classList.add('ok');
+    } else if (live.length > 0) {
+      dot.classList.add('warn');
+    }
+
+    /* Status label */
+    if (!editMode) {
+      if (live.length === ALL_PANELS.length) {
+        lbl.textContent = 'ALL PANELS LIVE';
+      } else if (live.length > 0) {
+        lbl.textContent = live.length + '/' + ALL_PANELS.length + ' PANELS LIVE';
+      } else {
+        lbl.textContent = 'WAITING FOR DATA';
+      }
+    }
+
+    /* Per-panel pips in header */
+    pipsContainer.querySelectorAll('.hdr-pip').forEach(pip => {
+      const id  = pip.dataset.panel;
+      const age = panelStatus[id] ? now - panelStatus[id] : Infinity;
+      pip.classList.toggle('live', age < STATUS_TTL);
+      pip.classList.toggle('warn', age >= STATUS_TTL && panelStatus[id]);
+    });
+
+    /* Per-panel pips in panel footers */
+    ALL_PANELS.forEach(id => {
+      const pip = document.getElementById('pip-' + id);
+      if (!pip) return;
+      const age = panelStatus[id] ? now - panelStatus[id] : Infinity;
+      pip.classList.toggle('live', age < STATUS_TTL);
+      pip.classList.toggle('warn', age >= STATUS_TTL && panelStatus[id]);
+    });
+  }
+  setInterval(updateLiveIndicators, 5000);
+
+  /* ══════════════════════════════════════════════════════════
+     EDIT MODE
+     ══════════════════════════════════════════════════════════ */
+
   let editMode = false;
   const btnEdit = document.getElementById('btn-edit');
 
@@ -493,29 +1109,125 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
     grid.setStatic(!on);
     btnEdit.classList.toggle('active', on);
     document.body.classList.toggle('edit-mode', on);
-    document.getElementById('hdr-status').textContent =
-      on ? 'EDIT MODE — DRAG LABEL TO MOVE' : 'ALL SYSTEMS NOMINAL';
+    if (on) {
+      document.getElementById('hdr-status').textContent = 'EDIT MODE — DRAG LABEL TO MOVE';
+    } else {
+      updateLiveIndicators();
+    }
   }
-
   btnEdit.addEventListener('click', () => setEditMode(!editMode));
 
-  /* ── Reset layout ── */
+  /* Reset to STANDARD */
   document.getElementById('btn-reset').addEventListener('click', () => {
-    grid.load(DEFAULT_LAYOUT, true);  /* true = removes extra items */
-    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+    applyPreset(BUILTIN_PRESETS[0]);
+    try { localStorage.removeItem(LAYOUT_KEY); } catch (_) {}
   });
 
-  /* ── Responsive resize ── */
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      const cols = colCount();
-      const ch   = computeCellHeight();
-      grid.column(cols);
-      grid.cellHeight(ch);
-    }, 150);
+  /* ══════════════════════════════════════════════════════════
+     PRESET OVERLAY
+     ══════════════════════════════════════════════════════════ */
+
+  const overlay    = document.getElementById('preset-overlay');
+  const btnPresets = document.getElementById('btn-presets');
+
+  function openPresets()  {
+    renderPresetList();
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    btnPresets.classList.add('active');
+  }
+  function closePresets() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    btnPresets.classList.remove('active');
+  }
+
+  btnPresets.addEventListener('click', () =>
+    overlay.classList.contains('open') ? closePresets() : openPresets()
+  );
+  document.getElementById('btn-preset-close').addEventListener('click', closePresets);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closePresets(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closePresets();
   });
+
+  /* ── Render preset list ────────────────────────────────── */
+
+  /* Build the mini SVG thumbnail from thumb spec */
+  function buildThumb(blocks) {
+    if (!blocks) return '<div class="preset-thumb"></div>';
+    const inner = (blocks || []).map(b =>
+      `<div class="pt-block" style="left:${b.l}%;top:${b.t}%;width:${b.w}%;height:${b.h}%"></div>`
+    ).join('');
+    return `<div class="preset-thumb">${inner}</div>`;
+  }
+
+  function renderPresetList() {
+    const list   = document.getElementById('preset-list');
+    const custom = getCustomPresets();
+    const all    = [...BUILTIN_PRESETS, ...custom];
+
+    list.innerHTML = all.map(preset => {
+      const cur    = preset.id === activePresetId;
+      const tag    = preset.builtin ? 'BUILT-IN' : 'CUSTOM';
+      const delBtn = preset.builtin
+        ? ''
+        : `<button class="preset-row-del" data-id="${esc(preset.id)}" title="Delete">DEL</button>`;
+      return `
+        <button class="preset-row${cur ? ' current' : ''}" data-id="${esc(preset.id)}">
+          <span class="preset-row-marker"></span>
+          ${buildThumb(preset.thumb)}
+          <span class="preset-row-name">${esc(preset.name)}</span>
+          <span class="preset-row-tag">${tag}</span>
+          ${delBtn}
+        </button>`;
+    }).join('');
+
+    list.querySelectorAll('.preset-row').forEach(row => {
+      row.addEventListener('click', e => {
+        if (e.target.classList.contains('preset-row-del')) return;
+        const found = all.find(p => p.id === row.dataset.id);
+        if (found) { applyPreset(found); closePresets(); }
+      });
+    });
+    list.querySelectorAll('.preset-row-del').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        deleteCustomPreset(btn.dataset.id);
+      });
+    });
+  }
+
+  /* ── Save current layout as named custom preset ──────────── */
+  document.getElementById('btn-save-preset').addEventListener('click', () => {
+    const name = (prompt('Preset name:') || '').trim();
+    if (!name) return;
+    const id     = 'custom-' + Date.now();
+    const custom = getCustomPresets();
+    custom.push({
+      id,
+      name:    name.toUpperCase(),
+      builtin: false,
+      thumb:   null,        /* custom presets have no thumbnail for now */
+      items:   captureItems(),
+    });
+    saveCustomPresets(custom);
+    activePresetId = id;
+    renderPresetList();
+  });
+
+  /* ── Delete custom preset ──────────────────────────────── */
+  function deleteCustomPreset(id) {
+    saveCustomPresets(getCustomPresets().filter(p => p.id !== id));
+    if (activePresetId === id) activePresetId = null;
+    renderPresetList();
+  }
+
+  /* ── HTML escape ─────────────────────────────────────────── */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+  }
 
 })();
 </script>

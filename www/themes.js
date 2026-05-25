@@ -143,4 +143,7 @@
 
   /* Focus mode (main.html) */
   if (params.has('focus')) root.classList.add('focus-mode');
+
+  /* Embedded in dashboard iframe */
+  if (params.has('embedded')) root.classList.add('embedded');
 })();

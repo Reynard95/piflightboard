@@ -1,4 +1,5 @@
 /* vitals.js — System Vitals fetch + render */
+/* fmtBytes, fmtPct  ← provided by utils.js */
 
 const FETCH_MS      = 2000;
 const SPARKLINE_LEN = 90;   /* samples to keep (~3 min at 2s) */
@@ -20,17 +21,6 @@ function cls(el, pct, thresholds) {
   el.classList.remove('warn', 'danger');
   if (pct >= thresholds.danger) el.classList.add('danger');
   else if (pct >= thresholds.warn) el.classList.add('warn');
-}
-
-function fmtBytes(bps) {
-  if (bps === null || bps === undefined) return '—';
-  if (bps >= 1_000_000) return (bps / 1_000_000).toFixed(1) + ' MB/s';
-  if (bps >= 1_000)     return (bps / 1_000).toFixed(1) + ' KB/s';
-  return Math.round(bps) + ' B/s';
-}
-
-function fmtPct(v) {
-  return v === null ? '—' : Math.round(v) + '%';
 }
 
 /* ── Sparkline ── */
@@ -182,6 +172,7 @@ async function fetchVitals() {
     if (!res.ok) return;
     const d = await res.json();
     render(d);
+    try { window.parent.postMessage({ type: 'panel-status', panel: 'vitals', ok: true }, '*'); } catch (_) {}
   } catch (_) { /* network error — silent */ }
 }
 

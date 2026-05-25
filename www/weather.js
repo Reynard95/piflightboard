@@ -29,10 +29,7 @@ function degToArrow(deg) {
   return arrows[idx];
 }
 
-/* ── Formatting helpers ── */
-
-function fmt1(v) { return v !== null && v !== undefined ? v.toFixed(1) : '—'; }
-function fmtRound(v) { return v !== null && v !== undefined ? Math.round(v).toString() : '—'; }
+/* fmt1, fmtRound  ← provided by utils.js */
 
 /* ── UV index category ── */
 
@@ -279,6 +276,7 @@ async function fetchWeather() {
     const d = await res.json();
     if (d.error) { set('w-condition', d.error); return; }
     render(d);
+    try { window.parent.postMessage({ type: 'panel-status', panel: 'weather', ok: true }, '*'); } catch (_) {}
   } catch (_) { /* network error — silent */ }
 }
 

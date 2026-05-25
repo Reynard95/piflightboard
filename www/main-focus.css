@@ -17,7 +17,7 @@
 }
 
 /* ── Override shared main.css sizes for logo, type, reg, flag ──────────────
- *  Scoped under html.focus-mode (added by main-themes.js when ?focus is set)
+ *  Scoped under html.focus-mode (added by themes.js when ?focus is set)
  *  so these don't bleed into the full layout when both CSS files are loaded.
  * ─────────────────────────────────────────────────────────────────────────── */
 html.focus-mode .logo-box {

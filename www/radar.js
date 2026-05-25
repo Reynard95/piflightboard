@@ -89,6 +89,7 @@ canvas.addEventListener('click', e => {
   if (best) {
     selectedHex = best.hex === selectedHex ? null : best.hex;
     renderCards();
+    broadcastSelection();
     if (selectedHex) {
       const card = document.querySelector(`[data-hex="${CSS.escape(selectedHex)}"]`);
       if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -167,6 +168,14 @@ function blipColor(ac) {
 
 let aircraft    = [];      // current filtered list
 let selectedHex = null;
+
+/* Notify dashboard whenever selection changes so it can sync
+   the flight display to show the same aircraft.            */
+function broadcastSelection() {
+  try {
+    window.parent.postMessage({ type: 'radar-select', hex: selectedHex }, '*');
+  } catch (_) {}
+}
 
 const posHistory = new Map(); // hex → [{ lat, lon, ts }, ...]
 
@@ -761,6 +770,7 @@ function renderCards() {
     const onClick = () => {
       selectedHex = ac.hex === selectedHex ? null : ac.hex;
       renderCards();
+      broadcastSelection();
     };
 
     if (viewMode === 'list') {

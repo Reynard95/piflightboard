@@ -371,6 +371,7 @@ async function fetchSpectrum() {
     /* Add new waterfall row then redraw */
     pushWaterfallRow();
     draw();
+    try { window.parent.postMessage({ type: 'panel-status', panel: 'spectrum', ok: true }, '*'); } catch (_) {}
   } catch (_) { /* network error — silent */ }
 }
 

@@ -42,6 +42,7 @@ if (FOCUS_MODE) {
 let allAircraft = [], currentIndex = 0, routeCache = {}, cycleTimer = null;
 let radiusFallback = false;
 let lastRenderedKey = '';
+let pinnedHex = null;   /* set by dashboard radar-select relay; pauses auto-cycle */
 
 /* ── CLOCK — removed from layout; kept as no-op guard ── */
 function tick() {
@@ -214,7 +215,17 @@ async function fetchAircraft() {
     allAircraft = filtered;
     updateTicker();
 
-    if (CLOSEST_ONLY) {
+    if (pinnedHex) {
+      /* Dashboard has a selected aircraft — keep it pinned */
+      const idx = allAircraft.findIndex(a => a.hex === pinnedHex);
+      if (idx !== -1) {
+        if (aircraftKey(allAircraft[idx]) !== lastRenderedKey) showIndex(idx);
+      } else {
+        /* Pinned aircraft has left range — fall back to normal cycle */
+        pinnedHex = null;
+        if (!CLOSEST_ONLY && cycleTimer === null) startCycle();
+      }
+    } else if (CLOSEST_ONLY) {
       currentIndex = 0;
       if (allAircraft.length > 0 && aircraftKey(allAircraft[0]) !== lastRenderedKey) {
         showIndex(0);
@@ -227,6 +238,7 @@ async function fetchAircraft() {
         showIndex(safeIdx);
       }
     }
+    try { window.parent.postMessage({ type: 'panel-status', panel: 'flight', ok: true }, '*'); } catch (_) {}
   } catch(e) {}
 }
 
@@ -503,6 +515,25 @@ function startCycle() {
     showIndex(currentIndex);
   }, CYCLE_MS);
 }
+
+/* ── RADAR SYNC — dashboard relays radar-select here ── */
+window.addEventListener('message', e => {
+  if (e.data?.type !== 'select-aircraft') return;
+  pinnedHex = e.data.hex || null;
+
+  if (pinnedHex) {
+    /* Pause auto-cycle and jump straight to the selected aircraft */
+    clearInterval(cycleTimer);
+    cycleTimer = null;
+    const idx = allAircraft.findIndex(a => a.hex === pinnedHex);
+    if (idx !== -1) showIndex(idx);
+  } else {
+    /* Radar deselected — resume normal cycle from where we are */
+    if (!CLOSEST_ONLY && allAircraft.length > 0 && cycleTimer === null) {
+      startCycle();
+    }
+  }
+});
 
 /* ── INIT ── */
 setInterval(fetchAircraft, FETCH_MS);
