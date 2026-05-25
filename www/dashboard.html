@@ -764,7 +764,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
      STORAGE KEYS
      ══════════════════════════════════════════════════════════ */
 
-  const LAYOUT_KEY  = 'cyberdeck-layout-v4';
+  const LAYOUT_KEY  = 'cyberdeck-layout-v5';
   const PRESETS_KEY = 'cyberdeck-presets-v2';
 
   /* ══════════════════════════════════════════════════════════
@@ -798,18 +798,18 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       /* Matches screenshot: flight left, full-height radar list right,
          spectrum+vitals middle strip, thin weather bar at bottom     */
       thumb: [
-        { l:  0,  t:  0, w: 66, h: 58 },
+        { l:  0,  t:  0, w: 66, h: 49 },
         { l: 68,  t:  0, w: 32, h: 100},
-        { l:  0,  t: 60, w: 33, h: 25 },
-        { l: 35,  t: 60, w: 31, h: 25 },
-        { l:  0,  t: 87, w: 66, h: 13 },
+        { l:  0,  t: 51, w: 33, h: 25 },
+        { l: 35,  t: 51, w: 31, h: 25 },
+        { l:  0,  t: 77, w: 66, h: 23 },
       ],
       items: [
-        { id: 'flight',   x: 0, y: 0,  w: 8, h: 7,  variant: 'normal' },
-        { id: 'spectrum', x: 0, y: 7,  w: 4, h: 3,  variant: 'normal' },
-        { id: 'vitals',   x: 4, y: 7,  w: 4, h: 3,  variant: 'normal' },
-        { id: 'weather',  x: 0, y: 10, w: 8, h: 2,  variant: 'normal' },
-        { id: 'radar',    x: 8, y: 0,  w: 4, h: 12, variant: 'normal' },
+        { id: 'flight',   x: 0, y: 0, w: 8, h: 6,  variant: 'normal' },
+        { id: 'spectrum', x: 0, y: 6, w: 4, h: 3,  variant: 'normal' },
+        { id: 'vitals',   x: 4, y: 6, w: 4, h: 3,  variant: 'normal' },
+        { id: 'weather',  x: 0, y: 9, w: 8, h: 3,  variant: 'normal' },
+        { id: 'radar',    x: 8, y: 0, w: 4, h: 12, variant: 'normal' },
       ],
     },
     {
@@ -846,8 +846,8 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       ],
       items: [
         { id: 'radar',    x: 0,  y: 0, w: 8, h: 12, variant: 'normal' },
-        { id: 'flight',   x: 8,  y: 0, w: 4, h: 4,  variant: 'focus'  },
-        { id: 'weather',  x: 8,  y: 4, w: 4, h: 5,  variant: 'normal' },
+        { id: 'flight',   x: 8,  y: 0, w: 4, h: 5,  variant: 'focus'  },
+        { id: 'weather',  x: 8,  y: 5, w: 4, h: 4,  variant: 'normal' },
         { id: 'spectrum', x: 8,  y: 9, w: 2, h: 3,  variant: 'normal' },
         { id: 'vitals',   x: 10, y: 9, w: 2, h: 3,  variant: 'normal' },
       ],
@@ -915,8 +915,11 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
   function computeCellHeight() {
     const rows = 12, margin = 6;
-    const h = document.getElementById('grid-wrap').offsetHeight;
-    return Math.max(20, Math.floor((h - margin * (rows + 1)) / rows));
+    // Use window.innerHeight minus fixed cockpit overhead so this works even
+    // before the browser has completed first layout (offsetHeight may be 0).
+    // Overhead: header(28) + cockpit padding-top(6) + padding-bottom(8) + flex-gap(6) = 48px
+    const available = window.innerHeight - 48;
+    return Math.max(20, Math.floor((available - margin * (rows + 1)) / rows));
   }
 
   function colCount() {
@@ -976,6 +979,11 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
     renderPresetList();
     saveCurrentLayout();
   });
+
+  /* Correct cell height after first paint — guards against offsetHeight=0 at init */
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    grid.cellHeight(computeCellHeight());
+  }));
 
   /* Responsive resize */
   let resizeTimer;
