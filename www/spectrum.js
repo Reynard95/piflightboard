@@ -5,7 +5,7 @@ const ML = 54;   /* margin left  (dB axis) */
 const MR = 10;   /* margin right */
 const MT = 8;    /* margin top   */
 const MB = 28;   /* margin bottom (freq axis) */
-const SPEC_RATIO = 0.28;   /* fraction of plot height for spectrum line */
+const SPEC_RATIO = 0.50;   /* fraction of plot height for spectrum line */
 
 /* ── Fetch ── */
 const FETCH_MS   = 1000;
