@@ -62,7 +62,7 @@ All pages live in `www/` and are served by lighttpd from `/var/www/flightboard` 
 
 - **`main.js`** — merged JS. `FOCUS_MODE = _fp.has('focus')` dispatches `showIndex()` to either `renderFull()` or `renderFocus()`. Resolution scaling IIFE runs only when `FOCUS_MODE` is true.
 - **`data.js`** — lookup tables: `AIRLINES`, `ICAO_TO_COUNTRY`, `ICAO_TO_IATA`, `AC_TYPES`.
-- **`main-themes.js`** — IIFE that applies `?theme=` CSS vars, adds `.portrait` for `?orientation=portrait`, and adds `.focus-mode` for `?focus`. Runs before `main.js`.
+- **`themes.js`** — IIFE that applies `?theme=` CSS vars, adds `.portrait` for `?orientation=portrait`, and adds `.focus-mode` for `?focus`. Runs before `main.js`. Used by all pages (main, radar, weather, vitals, spectrum).
 
 ### CSS layering
 
