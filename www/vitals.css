@@ -22,6 +22,7 @@
   grid-template-rows: repeat(2, 1fr);
   gap: 0;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -31,12 +32,13 @@
 .vitals-card {
   border-right: 1px solid var(--sep);
   border-bottom: 1px solid var(--sep);
-  padding: 14px 18px;
+  padding: clamp(5px, 1.4vh, 14px) clamp(7px, 1.4vw, 18px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(2px, 0.6vh, 8px);
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 /* Remove right border on last column */
@@ -48,7 +50,7 @@
 .vitals-card:nth-child(6) { border-bottom: none; }
 
 .card-label {
-  font-size: 10px;
+  font-size: clamp(7px, 0.85vw, 10px);
   color: var(--fg-dim);
   letter-spacing: 0.30em;
   text-transform: uppercase;
@@ -57,7 +59,7 @@
 
 .card-value {
   font-family: 'VT323', monospace;
-  font-size: clamp(36px, 5vw, 60px);
+  font-size: clamp(18px, 4.5vw, 56px);
   line-height: 1;
   color: var(--fg);
   letter-spacing: 0.04em;
@@ -67,7 +69,7 @@
 .card-value.danger { color: var(--danger); }
 
 .card-sub {
-  font-size: 12px;
+  font-size: clamp(8px, 0.85vw, 12px);
   color: var(--fg-mid);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -76,7 +78,7 @@
 /* ── Card: CPU ── */
 .sparkline {
   width: 100%;
-  height: 60px;
+  height: clamp(20px, 6vh, 60px);
   flex-shrink: 0;
   display: block;
 }
@@ -90,14 +92,14 @@
 
 .card-unit {
   font-family: 'VT323', monospace;
-  font-size: clamp(20px, 3vw, 32px);
+  font-size: clamp(12px, 2.5vw, 28px);
   color: var(--fg-mid);
   letter-spacing: 0.06em;
 }
 
 /* ── Progress bar ── */
 .bar-wrap {
-  height: 5px;
+  height: 4px;
   background: var(--sep);
   border-radius: 2px;
   overflow: hidden;
@@ -106,10 +108,10 @@
 
 .bar-fill {
   height: 100%;
-  width: 0%;
   background: var(--fg);
   border-radius: 2px;
-  transition: width 0.4s ease, background 0.3s;
+  transition: width 0.4s ease;
+  width: 0%;
 }
 
 .bar-fill.warn   { background: var(--warn); }
@@ -119,20 +121,19 @@
 .net-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: clamp(4px, 0.7vw, 10px);
 }
 
 .net-arrow {
   font-family: 'VT323', monospace;
-  font-size: 26px;
-  flex-shrink: 0;
+  font-size: clamp(13px, 1.8vw, 22px);
   line-height: 1;
 }
-.net-arrow.tx { color: var(--fg); }
-.net-arrow.rx { color: var(--fg-mid); }
+.net-arrow.tx { color: var(--fg-mid); }
+.net-arrow.rx { color: var(--fg); }
 
 .net-label {
-  font-size: 10px;
+  font-size: clamp(7px, 0.7vw, 10px);
   color: var(--fg-dim);
   letter-spacing: 0.20em;
   flex-shrink: 0;
@@ -140,18 +141,18 @@
 }
 
 .net-val {
-  font-size: clamp(24px, 3.5vw, 46px) !important;
+  font-size: clamp(14px, 3.2vw, 40px) !important;
 }
 
 /* ── Card: System ── */
 .sys-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: clamp(5px, 0.8vw, 12px);
 }
 
 .sys-lbl {
-  font-size: 10px;
+  font-size: clamp(7px, 0.7vw, 10px);
   color: var(--fg-dim);
   letter-spacing: 0.20em;
   flex-shrink: 0;
@@ -159,7 +160,7 @@
 }
 
 .sys-val {
-  font-size: clamp(22px, 3vw, 38px) !important;
+  font-size: clamp(14px, 2.8vw, 34px) !important;
 }
 
 .sys-load-labels {
@@ -175,21 +176,14 @@
 }
 
 /* ══════════════════════════════════════════════════════════
-   RESPONSIVE — narrow screens
+   RESPONSIVE — narrow panels → 2-col grid
    ══════════════════════════════════════════════════════════ */
 
-@media (max-width: 700px) {
+@media (max-width: 320px) {
   .vitals-grid {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(3, 1fr);
   }
-  .vitals-card:nth-child(3),
-  .vitals-card:nth-child(6) { border-right: 1px solid var(--sep); }
-  .vitals-card:nth-child(2),
-  .vitals-card:nth-child(4) { border-right: none; }
-  .vitals-card:nth-child(4),
-  .vitals-card:nth-child(5),
-  .vitals-card:nth-child(6) { border-bottom: 1px solid var(--sep); }
-  .vitals-card:nth-child(5),
-  .vitals-card:nth-child(6) { border-bottom: none; }
-}
+  /* Re-wire borders for 2-col layout */
+  .vitals-card:nth-child(3) { border-right: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
+  .vitals-car

@@ -541,6 +541,112 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   .preset-thumb { display: none; }
 }
 
+/* ══════════════════════════════════════════════════════════
+   CONFIG MODAL
+   ══════════════════════════════════════════════════════════ */
+
+.config-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s;
+}
+.config-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.config-modal {
+  background: linear-gradient(180deg, #1a1a16 0%, #111110 100%);
+  border: 1px solid #2c2418;
+  border-radius: 10px;
+  width: min(400px, 94vw);
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.97),
+    0 0 0 1px rgba(255,255,255,0.03),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+.config-modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px 11px;
+  border-bottom: 1px solid #1c1c14;
+}
+
+.config-modal-title {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #CC7020;
+  letter-spacing: 0.3em;
+}
+
+.config-body {
+  padding: 4px 0;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid #141410;
+}
+.config-row:last-child { border-bottom: none; }
+
+.config-lbl {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: #6a5830;
+  text-transform: uppercase;
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.config-opts {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.cfg-opt {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: #3a2e12;
+  background: linear-gradient(180deg, #1e1e1a 0%, #141412 100%);
+  border: 1px solid #28200c;
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  user-select: none;
+}
+.cfg-opt:hover { color: #8a6020; border-color: #4a3010; }
+.cfg-opt.active {
+  color: #CC7020;
+  border-color: #7a4a10;
+  background: linear-gradient(180deg, #221808 0%, #181005 100%);
+  box-shadow: 0 0 6px rgba(204,112,32,0.2);
+}
+
+.config-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #1c1c14;
+  display: flex;
+  justify-content: flex-end;
+}
+
 </style>
 </head>
 <body>
@@ -560,6 +666,59 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   </div>
 </div>
 
+<!-- ── Config overlay ─────────────────────────────────────── -->
+<div class="config-overlay" id="config-overlay" aria-hidden="true">
+  <div class="config-modal" role="dialog" aria-label="Panel configuration">
+    <div class="config-modal-hdr">
+      <span class="config-modal-title">PANEL CONFIG</span>
+      <button class="preset-modal-close" id="btn-config-close" aria-label="Close">✕</button>
+    </div>
+    <div class="config-body">
+
+      <div class="config-row">
+        <span class="config-lbl">Refresh</span>
+        <div class="config-opts" id="cfg-refresh">
+          <button class="cfg-opt" data-val="5">5 s</button>
+          <button class="cfg-opt" data-val="10">10 s</button>
+          <button class="cfg-opt" data-val="15">15 s</button>
+          <button class="cfg-opt" data-val="30">30 s</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <span class="config-lbl">Radar Radius</span>
+        <div class="config-opts" id="cfg-radius">
+          <button class="cfg-opt" data-val="50">50 km</button>
+          <button class="cfg-opt" data-val="100">100 km</button>
+          <button class="cfg-opt" data-val="150">150 km</button>
+          <button class="cfg-opt" data-val="200">200 km</button>
+          <button class="cfg-opt" data-val="300">300 km</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <span class="config-lbl">Closest Only</span>
+        <div class="config-opts" id="cfg-closest">
+          <button class="cfg-opt" data-val="false">Off</button>
+          <button class="cfg-opt" data-val="true">On</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <span class="config-lbl">Radar Sweep</span>
+        <div class="config-opts" id="cfg-sweep">
+          <button class="cfg-opt" data-val="on">On</button>
+          <button class="cfg-opt" data-val="off">Off</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="config-footer">
+      <button class="hdr-btn" id="btn-config-apply">APPLY &amp; RELOAD PANELS</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Main cockpit shell ─────────────────────────────────── -->
 <div class="cockpit">
 
@@ -573,6 +732,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       <span class="hdr-status" id="hdr-status">WAITING FOR DATA</span>
     </div>
     <div class="hdr-toolbar">
+      <button class="hdr-btn" id="btn-config">CONFIG</button>
       <button class="hdr-btn" id="btn-presets">PRESETS</button>
       <button class="hdr-btn hdr-btn-edit" id="btn-edit">EDIT</button>
       <button class="hdr-btn" id="btn-reset">RESET</button>
@@ -697,18 +857,46 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   const theme = new URLSearchParams(location.search).get('theme') || 'color';
 
   /* ══════════════════════════════════════════════════════════
+     PANEL CONFIG  (persisted in localStorage)
+     ══════════════════════════════════════════════════════════ */
+
+  const CONFIG_KEY     = 'cyberdeck-config-v1';
+  const DEFAULT_CONFIG = { refresh: 10, radius: 150, closest: false, sweep: 'on' };
+
+  let panelConfig = { ...DEFAULT_CONFIG };
+  try {
+    const sc = JSON.parse(localStorage.getItem(CONFIG_KEY));
+    if (sc && typeof sc === 'object') panelConfig = { ...DEFAULT_CONFIG, ...sc };
+  } catch (_) {}
+
+  function saveConfig() {
+    try { localStorage.setItem(CONFIG_KEY, JSON.stringify(panelConfig)); } catch (_) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════
      IFRAME SRC BUILDER
      ══════════════════════════════════════════════════════════ */
 
   function buildSrc(panelId, variant) {
     const params = new URLSearchParams({ theme, embedded: '1' });
 
+    /* Global config params */
+    if (panelConfig.refresh !== DEFAULT_CONFIG.refresh)
+      params.set('refresh', panelConfig.refresh);
+
     if (panelId === 'radar') {
-      params.set('sweep', 'on');
+      if (panelConfig.sweep !== 'off') params.set('sweep', 'on');
+      if (panelConfig.radius !== DEFAULT_CONFIG.radius)
+        params.set('radius', panelConfig.radius);
+      if (panelConfig.closest) params.set('closest', '');
       if (variant === 'square') params.set('square', '');
     }
-    if (panelId === 'flight' && variant === 'focus') {
-      params.set('focus', '');
+
+    if (panelId === 'flight') {
+      if (panelConfig.radius !== DEFAULT_CONFIG.radius)
+        params.set('radius', panelConfig.radius);
+      if (panelConfig.closest) params.set('closest', '');
+      if (variant === 'focus') params.set('focus', '');
     }
 
     /* Remove empty-value keys (e.g. ?square= → ?square) */
@@ -996,6 +1184,51 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   });
 
   /* ══════════════════════════════════════════════════════════
+     CONFIG MODAL
+     ══════════════════════════════════════════════════════════ */
+
+  const configOverlay = document.getElementById('config-overlay');
+
+  function openConfig() {
+    renderConfigUI();
+    configOverlay.classList.add('open');
+    configOverlay.removeAttribute('aria-hidden');
+  }
+  function closeConfig() {
+    configOverlay.classList.remove('open');
+    configOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  document.getElementById('btn-config').addEventListener('click', openConfig);
+  document.getElementById('btn-config-close').addEventListener('click', closeConfig);
+  configOverlay.addEventListener('click', e => { if (e.target === configOverlay) closeConfig(); });
+
+  function renderConfigUI() {
+    document.querySelectorAll('#cfg-refresh .cfg-opt').forEach(b =>
+      b.classList.toggle('active', +b.dataset.val === panelConfig.refresh));
+    document.querySelectorAll('#cfg-radius .cfg-opt').forEach(b =>
+      b.classList.toggle('active', +b.dataset.val === panelConfig.radius));
+    document.querySelectorAll('#cfg-closest .cfg-opt').forEach(b =>
+      b.classList.toggle('active', b.dataset.val === String(panelConfig.closest)));
+    document.querySelectorAll('#cfg-sweep .cfg-opt').forEach(b =>
+      b.classList.toggle('active', b.dataset.val === panelConfig.sweep));
+  }
+
+    b.addEventListener('click', () => { panelConfig.refresh = +b.dataset.val; renderConfigUI(); }));
+  document.querySelectorAll('#cfg-radius .cfg-opt').forEach(b =>
+    b.addEventListener('click', () => { panelConfig.radius = +b.dataset.val; renderConfigUI(); }));
+  document.querySelectorAll('#cfg-closest .cfg-opt').forEach(b =>
+    b.addEventListener('click', () => { panelConfig.closest = b.dataset.val === 'true'; renderConfigUI(); }));
+  document.querySelectorAll('#cfg-sweep .cfg-opt').forEach(b =>
+    b.addEventListener('click', () => { panelConfig.sweep = b.dataset.val; renderConfigUI(); }));
+
+  document.getElementById('btn-config-apply').addEventListener('click', () => {
+    saveConfig();
+    applyVariants(); /* reload all iframes with new URL params */
+    closeConfig();
+  });
+
+  /* ══════════════════════════════════════════════════════════
      HEADER CLOCK
      ══════════════════════════════════════════════════════════ */
 
@@ -1130,6 +1363,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   overlay.addEventListener('click', e => { if (e.target === overlay) closePresets(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && overlay.classList.contains('open')) closePresets();
+    if (e.key === 'Escape' && document.getElementById('config-overlay').classList.contains('open')) closeConfig();
   });
 
   function buildThumb(blocks) {
