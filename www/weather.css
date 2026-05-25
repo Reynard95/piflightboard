@@ -201,4 +201,49 @@
 
 @media (max-width: 500px) {
   .wx-cards {
-    grid-templat
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .wx-card:nth-child(2) { border-right: none; }
+  .wx-card:nth-child(1),
+  .wx-card:nth-child(2) { border-bottom: 1px solid var(--sep); }
+  .wx-footer {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 0;
+  }
+  .footer-metric {
+    flex: 1 1 30%;
+    padding: 5px 8px;
+  }
+  .footer-sep { display: none; }
+}
+
+@media (max-width: 280px) {
+  .wx-cards { grid-template-columns: 1fr; }
+  .wx-card  { border-right: none; border-bottom: 1px solid var(--sep); }
+  .wx-card:last-child { border-bottom: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — short panels → progressively hide sections
+   ══════════════════════════════════════════════════════════ */
+
+/* Hide forecast chart (keep cards + footer) */
+@media (max-height: 300px) {
+  .forecast-wrap { display: none; }
+}
+
+/* Hide footer strip too */
+@media (max-height: 220px) {
+  .wx-footer  { display: none; }
+  .card-sub   { display: none; }
+  .wx-card    { padding: 5px 10px; gap: 2px; }
+}
+
+/* Ultra-compact — hide labels, minimum info */
+@media (max-height: 150px) {
+  .card-label { display: none; }
+  .wx-cards   { border-bottom: none; }
+  .wx-card    { padding: 4px 8px; gap: 1px; justify-content: center; }
+  .card-value { font-size: clamp(16px, 4vw, 36px); }
+}

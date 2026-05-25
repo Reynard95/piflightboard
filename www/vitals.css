@@ -186,4 +186,39 @@
   }
   /* Re-wire borders for 2-col layout */
   .vitals-card:nth-child(3) { border-right: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
-  .vitals-car
+  .vitals-card:nth-child(6) { border-right: none; border-bottom: none; }
+  .vitals-card:nth-child(2),
+  .vitals-card:nth-child(4) { border-right: none; }
+  .vitals-card:nth-child(4),
+  .vitals-card:nth-child(5) { border-bottom: 1px solid var(--sep); }
+  .vitals-card:nth-child(5),
+  .vitals-card:nth-child(6) { border-bottom: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — short panels → hide non-essential content
+   ══════════════════════════════════════════════════════════ */
+
+/* Hide secondary text, shrink sparkline */
+@media (max-height: 240px) {
+  .card-sub        { display: none; }
+  .sys-load-labels { display: none; }
+  .sparkline       { height: clamp(16px, 4vh, 30px); }
+  .vitals-card     { gap: 2px; }
+}
+
+/* Hide sparkline and bars entirely */
+@media (max-height: 180px) {
+  .sparkline   { display: none; }
+  .bar-wrap    { display: none; }
+  .vitals-card { padding: clamp(4px, 1vh, 8px) clamp(6px, 1vw, 12px); gap: 2px; }
+}
+
+/* Ultra-compact — hide labels, max info density */
+@media (max-height: 130px) {
+  .card-label  { display: none; }
+  .vitals-card { padding: 3px 6px; gap: 1px; }
+  .card-value  { font-size: clamp(14px, 4vw, 28px); }
+  .net-val     { font-size: clamp(12px, 3vw, 22px) !important; }
+  .sys-val     { font-size: clamp(12px, 2.5vw, 20px) !important; }
+}
