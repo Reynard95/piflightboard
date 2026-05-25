@@ -1,5 +1,5 @@
 /* radar.js — PPI radar main logic
- * Depends on: data.js, radar-themes.js, radar-geo.js (all loaded before this)
+ * Depends on: data.js, themes.js, radar-geo.js (all loaded before this)
  */
 
 'use strict';
@@ -35,15 +35,21 @@ const ctx    = canvas.getContext('2d');
 const shell  = document.getElementById('radar-left');
 
 function sizeCanvas() {
-  const footer  = document.querySelector('.radar-footer');
-  const footerH = footer ? footer.offsetHeight : 40;
+  if (squareLayout) {
+    /* Square mode: fill panel with a centred square canvas, no footer/list */
+    const side = Math.min(window.innerWidth, window.innerHeight);
+    const sz   = Math.max(200, side);
+    canvas.width  = sz;
+    canvas.height = sz;
+    shell.style.width = '';
+    return;
+  }
+
+  const footer   = document.querySelector('.radar-footer');
+  const footerH  = footer ? footer.offsetHeight : 40;
   const isNarrow = window.innerWidth < 700;
   let available;
-  if (squareLayout) {
-    // Square mode: full-screen canvas, no list panel
-    available = Math.min(window.innerWidth, window.innerHeight - footerH);
-    shell.style.width = '';
-  } else if (isNarrow) {
+  if (isNarrow) {
     // Stacked: canvas takes ~55% of vh
     available = Math.min(window.innerWidth, Math.floor(window.innerHeight * 0.55) - footerH);
     shell.style.width = Math.max(220, available) + 'px';
@@ -427,7 +433,10 @@ function drawBase() {
     const dy = (ap.lat - RECEIVER.lat) * KM_PER_LAT;
     return Math.sqrt(dx * dx + dy * dy) <= rangeKm;
   });
-  document.getElementById('stat-airports').textContent = airportsInRange.length;
+  const apN = airportsInRange.length;
+  document.getElementById('stat-airports').textContent = apN;
+  const ac = document.getElementById('stat-airports-c');
+  if (ac) ac.textContent = apN;
 
   ctx.strokeStyle = fgDimColor;
   ctx.lineWidth   = 1;
@@ -825,7 +834,12 @@ function escHtml(s) {
    ══════════════════════════════════════════════════════════ */
 
 function updateStats() {
-  document.getElementById('stat-tracked').textContent = aircraft.length;
+  const n = aircraft.length;
+  document.getElementById('stat-tracked').textContent   = n;
+  const c = document.getElementById('stat-tracked-c');
+  if (c) c.textContent = n;
+  /* status to dashboard */
+  try { window.parent.postMessage({ type: 'panel-status', panel: 'radar', ok: true }, '*'); } catch (_) {}
 }
 
 

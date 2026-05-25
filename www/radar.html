@@ -15,7 +15,8 @@
     ?closest      show only the single nearest aircraft
     ?sweep=off    disable sweep animation on load
     ?units=metric start in metric mode
-    ?square       stacked layout (canvas top, list below) for square screens
+    ?square       square layout (canvas only, corner stats) for square panels
+    ?embedded=1   hide header bar (used by dashboard iframes)
 -->
 </head>
 <body>
@@ -29,6 +30,15 @@
       <!-- CSS sweep overlay — replaces canvas drawSweep() -->
       <div class="sweep-layer" id="sweep-layer">
         <div class="sweep-arm"></div>
+      </div>
+      <!-- Corner labels — shown in square mode (Apple Watch style) -->
+      <div class="radar-corner corner-bl">
+        <div class="rc-lbl">TRACKED</div>
+        <div class="rc-val" id="stat-tracked-c">0</div>
+      </div>
+      <div class="radar-corner corner-br">
+        <div class="rc-lbl">AIRPORTS</div>
+        <div class="rc-val" id="stat-airports-c">0</div>
       </div>
     </div>
     <div class="radar-footer">

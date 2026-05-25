@@ -3,7 +3,7 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  /* Defaults — overridden by radar-themes.js */
+  /* Defaults — overridden by themes.js */
   --bg:     #050200;
   --fg:     #FFA040;
   --fg-mid: #CC7020;
@@ -418,21 +418,55 @@ html, body {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SQUARE LAYOUT  (?square — stacked, canvas top, list below)
+   SQUARE LAYOUT  (?square — canvas only, corner stats)
    ══════════════════════════════════════════════════════════ */
 
 body.square-layout .radar-shell {
   flex-direction: column;
-}
-body.square-layout .radar-left {
-  width: 100% !important;
-  height: 100vh;
   align-items: center;
   justify-content: center;
 }
-body.square-layout .radar-right {
-  display: none;
+body.square-layout .radar-left {
+  width: 100vw !important;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+body.square-layout .radar-right  { display: none; }
+body.square-layout .radar-footer { display: none; }
+
+/* Corner labels (shown only in square mode) */
+.radar-corner { display: none; }
+body.square-layout .radar-corner { display: block; }
+
+.radar-corner {
+  position: absolute;
+  z-index: 15;
+  pointer-events: none;
+}
+.corner-bl { bottom: 14px; left:  14px; }
+.corner-br { bottom: 14px; right: 14px; text-align: right; }
+.corner-tl { top:    14px; left:  14px; }
+.corner-tr { top:    14px; right: 14px; text-align: right; }
+
+.rc-lbl {
+  font-size: 8px;
+  color: var(--fg-dim);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.rc-val {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--fg);
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+/* Embedded: hide header bar */
+html.embedded .radar-header { display: none; }
 
 /* ══════════════════════════════════════════════════════════
    CSS SWEEP OVERLAY
