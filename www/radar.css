@@ -434,11 +434,12 @@ body.square-layout .radar-left {
   justify-content: center;
 }
 body.square-layout .radar-right  { display: none; }
-body.square-layout .radar-footer { display: none; }
 
-/* Corner labels (shown only in square mode) */
-.radar-corner { display: none; }
-body.square-layout .radar-corner { display: block; }
+/* Corner labels — always shown on the canvas (square and wide) */
+.radar-corner { display: block; }
+
+/* Hide the footer stats bar — corners replace it in both modes */
+.radar-footer { display: none; }
 
 .radar-corner {
   position: absolute;
