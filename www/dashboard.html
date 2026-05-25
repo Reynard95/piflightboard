@@ -239,14 +239,14 @@ iframe {
 
     <div class="panel panel-flight">
       <div class="panel-screen">
-        <iframe src="main.html?theme=color" title="Flight Display" loading="eager"></iframe>
+        <iframe data-page="main.html" title="Flight Display" loading="eager"></iframe>
       </div>
       <div class="panel-id">Flight&nbsp;Display</div>
     </div>
 
     <div class="panel panel-vitals">
       <div class="panel-screen">
-        <iframe src="vitals.html" title="System Vitals" loading="eager"></iframe>
+        <iframe data-page="vitals.html" title="System Vitals" loading="eager"></iframe>
       </div>
       <div class="panel-id">Sys&nbsp;Vitals</div>
     </div>
@@ -258,21 +258,21 @@ iframe {
 
     <div class="panel panel-spectrum">
       <div class="panel-screen">
-        <iframe src="spectrum.html" title="RF Spectrum" loading="lazy"></iframe>
+        <iframe data-page="spectrum.html" title="RF Spectrum" loading="lazy"></iframe>
       </div>
       <div class="panel-id">RF&nbsp;Spectrum</div>
     </div>
 
     <div class="panel panel-weather">
       <div class="panel-screen">
-        <iframe src="weather.html" title="Weather" loading="lazy"></iframe>
+        <iframe data-page="weather.html" title="Weather" loading="lazy"></iframe>
       </div>
       <div class="panel-id">Weather</div>
     </div>
 
     <div class="panel panel-radar">
       <div class="panel-screen">
-        <iframe src="radar.html?sweep=on&square" title="Radar" loading="lazy"></iframe>
+        <iframe data-page="radar.html" data-extra="sweep=on" title="Radar" loading="lazy"></iframe>
       </div>
       <div class="panel-id">Radar</div>
     </div>
@@ -282,6 +282,15 @@ iframe {
 </div><!-- /.cockpit -->
 
 <script>
+  /* ── Propagate ?theme= to all iframes ── */
+  (function () {
+    const theme = new URLSearchParams(location.search).get('theme') || 'color';
+    document.querySelectorAll('iframe[data-page]').forEach(iframe => {
+      const extra = iframe.dataset.extra ? '&' + iframe.dataset.extra : '';
+      iframe.src = iframe.dataset.page + '?theme=' + theme + extra;
+    });
+  })();
+
   /* ── Header clock ── */
   function tick() {
     const now = new Date();
@@ -292,10 +301,6 @@ iframe {
   }
   tick();
   setInterval(tick, 1000);
-
-  /* ── Subtle status dot pulse ── */
-  /* The dots are static-green for now; a future enhancement could
-     poll /api/vitals and /api/ping to set warn/danger states. */
 </script>
 
 </body>

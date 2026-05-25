@@ -400,18 +400,6 @@ function prefillWaterfallRow(row) {
   }
 }
 
-/* ── Clock ── */
-
-function tickClock() {
-  const el = document.getElementById('s-time');
-  if (!el) return;
-  const now = new Date();
-  el.textContent =
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0') + ':' +
-    String(now.getSeconds()).padStart(2, '0');
-}
-
 /* ── Init ── */
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -420,9 +408,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   resize();
   window.addEventListener('resize', resize);
-
-  tickClock();
-  setInterval(tickClock, 1000);
 
   fetchSpectrum();
   setInterval(fetchSpectrum, FETCH_MS);

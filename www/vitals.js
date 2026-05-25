@@ -185,26 +185,11 @@ async function fetchVitals() {
   } catch (_) { /* network error — silent */ }
 }
 
-/* ── Clock ── */
-
-function tickClock() {
-  const el = document.getElementById('v-time');
-  if (!el) return;
-  const now = new Date();
-  const hh  = String(now.getHours()).padStart(2, '0');
-  const mm  = String(now.getMinutes()).padStart(2, '0');
-  const ss  = String(now.getSeconds()).padStart(2, '0');
-  el.textContent = hh + ':' + mm + ':' + ss;
-}
-
 /* ── Init ── */
 
 window.addEventListener('DOMContentLoaded', () => {
   sizeSparkline();
   window.addEventListener('resize', sizeSparkline);
-
-  tickClock();
-  setInterval(tickClock, 1000);
 
   fetchVitals();
   setInterval(fetchVitals, FETCH_MS);

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme-default="color">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,10 +39,6 @@
       <div class="rf-cell">
         <div class="rf-lbl">AIRPORTS</div>
         <div class="rf-val" id="stat-airports">0</div>
-      </div>
-      <div class="rf-cell">
-        <div class="rf-lbl">TIME</div>
-        <div class="rf-val" id="stat-time">--:--</div>
       </div>
     </div>
   </div>
@@ -139,7 +135,9 @@
     <div class="menu-section">
       <div class="menu-section-title">Theme</div>
       <div class="menu-btn-group" id="menu-theme">
-        <button class="menu-opt" data-val="color">COLOR</button>
+        <button class="menu-opt" data-val="white">WHITE</button>
+        <button class="menu-opt" data-val="black">BLACK</button>
+        <button class="menu-opt" data-val="color">AMBER</button>
         <button class="menu-opt" data-val="airbus">AIRBUS</button>
         <button class="menu-opt" data-val="boeing">BOEING</button>
         <button class="menu-opt" data-val="embraer">EMBRAER</button>
@@ -160,16 +158,8 @@
   </div>
 </div>
 
-<!-- set default theme before radar-themes.js runs -->
-<script>
-  if (!new URLSearchParams(location.search).has('theme')) {
-    const u = new URL(location.href);
-    u.searchParams.set('theme', 'color');
-    history.replaceState(null, '', u);
-  }
-</script>
 <script src="data.js"></script>
-<script src="radar-themes.js"></script>
+<script src="themes.js"></script>
 <script src="radar-geo.js"></script>
 <script src="radar.js"></script>
 </body>

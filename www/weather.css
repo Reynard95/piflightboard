@@ -2,15 +2,7 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
-  --bg:     #050200;
-  --fg:     #FFA040;
-  --fg-mid: #CC7020;
-  --fg-dim: #7A4010;
-  --sep:    #3A1E08;
-  --warn:   #FFC040;
-  --danger: #FF5050;
-}
+/* CSS variables injected by themes.js */
 
 html, body {
   width: 100%; height: 100%;

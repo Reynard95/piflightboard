@@ -43,9 +43,10 @@ let allAircraft = [], currentIndex = 0, routeCache = {}, cycleTimer = null;
 let radiusFallback = false;
 let lastRenderedKey = '';
 
-/* ── CLOCK — HH:MM, updates once per minute ── */
+/* ── CLOCK — removed from layout; kept as no-op guard ── */
 function tick() {
-  document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 5);
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toTimeString().slice(0, 5);
 }
 setInterval(tick, 60000); tick();
 

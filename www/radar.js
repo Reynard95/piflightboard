@@ -828,34 +828,27 @@ function updateStats() {
   document.getElementById('stat-tracked').textContent = aircraft.length;
 }
 
-function updateClock() {
-  const now = new Date();
-  const hh  = String(now.getHours()).padStart(2, '0');
-  const mm  = String(now.getMinutes()).padStart(2, '0');
-  document.getElementById('stat-time').textContent = `${hh}:${mm}`;
-}
-updateClock();
-setInterval(updateClock, 30000);
 
 /* ══════════════════════════════════════════════════════════
    BURGER MENU
    ══════════════════════════════════════════════════════════ */
 
-const THEMES_LIST = ['color', 'airbus', 'boeing', 'embraer', 'bombardier', 'military'];
+const THEMES_LIST = ['white', 'black', 'color', 'airbus', 'boeing', 'embraer', 'bombardier', 'military'];
 
 function applyThemeByName(name) {
-  // radar-themes.js themes object is not exported, so re-apply via URL + inline styles
-  const THEMES = {
-    color:      { '--bg':'#050200','--fg':'#FFA040','--fg-mid':'#CC7020','--fg-dim':'#7A4010','--sep':'#3A1E08','--accent':'#FF8000','--land':'#1E1208' },
-    airbus:     { '--bg':'#06080F','--fg':'#7EB3E8','--fg-mid':'#4A7AB0','--fg-dim':'#243C5A','--sep':'#152030','--accent':'#3A8FD4','--land':'#0F1828' },
-    boeing:     { '--bg':'#060508','--fg':'#C8A84B','--fg-mid':'#8A7030','--fg-dim':'#483A18','--sep':'#28200C','--accent':'#F0C040','--land':'#181208' },
-    embraer:    { '--bg':'#050A09','--fg':'#5FC4B0','--fg-mid':'#348878','--fg-dim':'#1A4840','--sep':'#0E2824','--accent':'#2EA898','--land':'#0D2018' },
-    bombardier: { '--bg':'#080505','--fg':'#E87070','--fg-mid':'#A03838','--fg-dim':'#581818','--sep':'#300C0C','--accent':'#CC4444','--land':'#200C0C' },
-    military:   { '--bg':'#030603','--fg':'#5EBF5E','--fg-mid':'#388038','--fg-dim':'#1A401A','--sep':'#0C200C','--accent':'#3A9A3A','--land':'#0C1A0A' },
-  };
-  const t = THEMES[name] || THEMES.color;
+  // window.THEMES is exported by themes.js (loaded before this script)
+  const themes = window.THEMES || {};
+  const t = themes[name] || themes.color || {};
   const root = document.documentElement;
-  Object.entries(t).forEach(([p, v]) => root.style.setProperty(p, v));
+  Object.entries(t).forEach(([p, v]) => {
+    if (!p.startsWith('_')) root.style.setProperty(p, v);
+  });
+  // E-ink: toggle no-anim
+  if (t._eink) {
+    root.classList.add('eink', 'no-anim');
+  } else {
+    root.classList.remove('eink', 'no-anim');
+  }
 }
 
 function persistUrlParams() {

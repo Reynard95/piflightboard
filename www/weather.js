@@ -282,24 +282,9 @@ async function fetchWeather() {
   } catch (_) { /* network error — silent */ }
 }
 
-/* ── Clock ── */
-
-function tickClock() {
-  const el = document.getElementById('w-time');
-  if (!el) return;
-  const now = new Date();
-  el.textContent =
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0') + ':' +
-    String(now.getSeconds()).padStart(2, '0');
-}
-
 /* ── Init ── */
 
 window.addEventListener('DOMContentLoaded', () => {
-  tickClock();
-  setInterval(tickClock, 1000);
-
   fetchWeather();
   setInterval(fetchWeather, FETCH_MS);
 
