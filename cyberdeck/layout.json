@@ -1,0 +1,65 @@
+{
+  "server_port": 5000,
+
+  "pi_zero": "flighttracker.local",
+
+  "location": {
+    "lat": 51.477,
+    "lon": -0.461
+  },
+
+  "frameless": false,
+
+  "panels": [
+    {
+      "id":     "radar",
+      "page":   "radar.html",
+      "params": "?range=250&sweep=on&refresh=5",
+      "screen": 0,
+      "x":      0,
+      "y":      0,
+      "width":  900,
+      "height": 700
+    },
+    {
+      "id":     "flight",
+      "page":   "main.html",
+      "params": "?refresh=10",
+      "screen": 0,
+      "x":      900,
+      "y":      0,
+      "width":  700,
+      "height": 700
+    },
+    {
+      "id":     "vitals",
+      "page":   "vitals.html",
+      "params": "",
+      "screen": 0,
+      "x":      0,
+      "y":      700,
+      "width":  640,
+      "height": 380
+    },
+    {
+      "id":     "weather",
+      "page":   "weather.html",
+      "params": "",
+      "screen": 0,
+      "x":      640,
+      "y":      700,
+      "width":  640,
+      "height": 380
+    },
+    {
+      "id":     "spectrum",
+      "page":   "spectrum.html",
+      "params": "?start=88&end=1100&step=2",
+      "screen": 0,
+      "x":      1280,
+      "y":      700,
+      "width":  320,
+      "height": 380
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+# Cyberdeck Aviation Console — Python dependencies
+# Install with: pip install -r requirements.txt
+
+# Web server
+flask>=3.0
+flask-cors>=4.0
+
+# System stats (cross-platform: Linux, macOS, Windows)
+psutil>=5.9
+
+# PyQt6 + WebEngine for the windowed UI
+# Note: on Raspberry Pi OS use: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine
+PyQt6>=6.6
+PyQt6-WebEngine>=6.6
