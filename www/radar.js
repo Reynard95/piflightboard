@@ -201,14 +201,14 @@ function getAirlineCode(callsign) {
 
 async function lookupHex(hex) {
   if (!hex) return null;
-  const prefixes = [hex.slice(0,3), hex.slice(0,2), hex.slice(0,1)];
+  const h = hex.toUpperCase();
+  const prefixes = [h.slice(0,3), h.slice(0,2), h.slice(0,1)];
   for (const p of prefixes) {
     try {
       const r = await fetch(`${DB_PATH}/${p}.js`);
       if (!r.ok) continue;
       const data = await r.json();
-      const key  = hex.slice(p.length);
-      if (data[key]) return data[key];
+      if (data[h]) return data[h];
     } catch (_) { /* ignore */ }
   }
   return null;

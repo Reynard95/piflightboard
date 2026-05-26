@@ -1,6 +1,6 @@
 /* ── CONFIG ── */
 const AIRCRAFT_JSON = '/data/aircraft.json';
-const ROUTE_API     = 'http://flighttracker.local:8088';
+const ROUTE_API     = 'http://localhost:8088';
 const DB_PATH       = '/db/';
 const CYCLE_MS      = 60000;   /* 60s per aircraft — minimise e-ink refreshes */
 
@@ -44,14 +44,28 @@ let radiusFallback = false;
 let lastRenderedKey = '';
 let pinnedHex = null;   /* set by dashboard radar-select relay; pauses auto-cycle */
 
-/* ── CLOCK — removed from layout; kept as no-op guard ── */
-function tick() {
-  const el = document.getElementById('clock');
-  if (el) el.textContent = new Date().toTimeString().slice(0, 5);
+/* ── CACHE HELPERS ── */
+/* Evict oldest entries when a cache exceeds MAX_ENTRIES.
+   Object.keys() returns keys in insertion order in modern JS engines,
+   so the first key is the oldest.                                     */
+const CACHE_MAX = 300;
+function cacheSet(obj, key, value) {
+  obj[key] = value;
+  const keys = Object.keys(obj);
+  if (keys.length > CACHE_MAX) delete obj[keys[0]];
 }
-setInterval(tick, 60000); tick();
 
 /* ── HELPERS ── */
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function fmt(v, d = 0) {
   if (v == null || isNaN(v)) return '---';
   return Number(v).toLocaleString('en-GB', { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -146,10 +160,10 @@ async function loadDbFile(prefix) {
   if (fileCache[prefix] !== undefined) return fileCache[prefix];
   fileCache[prefix] = null;
   try {
-    const res  = await fetch(`${DB_PATH}${prefix}.js?_=1`);
+    const res  = await fetch(`${DB_PATH}${prefix}.js`);
     if (!res.ok) return null;
     const data = JSON.parse(await res.text());
-    fileCache[prefix] = data;
+    cacheSet(fileCache, prefix, data);
     return data;
   } catch(e) { return null; }
 }
@@ -165,7 +179,7 @@ async function fetchRoute(ac) {
     if (res.ok) {
       const data = await res.json();
       const r = data?.response?.flightroute;
-      if (r) { routeCache[cs] = r; return r; }
+      if (r) { cacheSet(routeCache, cs, r); return r; }
     }
   } catch(e) {}
 
@@ -177,7 +191,7 @@ async function fetchRoute(ac) {
     if (res.ok) {
       const data = await res.json();
       const r = data?.route?.[0];
-      if (r) { routeCache[cs] = r; return r; }
+      if (r) { cacheSet(routeCache, cs, r); return r; }
     }
   } catch(e) {}
 
@@ -192,13 +206,14 @@ async function fetchAircraft() {
 
     const base = (data.aircraft || [])
       .filter(a => a.lat && a.lon && a.flight && a.flight.trim())
+      .map(a => ({ ...a, _distKm: a.r_dst != null ? a.r_dst * 1.852 : null }))
       .sort((a, b) => (b.rssi || -99) - (a.rssi || -99));
 
     let filtered = base;
     radiusFallback = false;
 
     if (RADIUS_KM !== null) {
-      const nearby = base.filter(a => a.r_dst != null && a.r_dst <= RADIUS_KM);
+      const nearby = base.filter(a => a._distKm != null && a._distKm <= RADIUS_KM);
       if (nearby.length > 0) {
         filtered = nearby;
       } else {
@@ -208,7 +223,7 @@ async function fetchAircraft() {
     }
 
     if (CLOSEST_ONLY) {
-      const withDist = filtered.filter(a => a.r_dst != null).sort((a, b) => a.r_dst - b.r_dst);
+      const withDist = filtered.filter(a => a._distKm != null).sort((a, b) => a._distKm - b._distKm);
       filtered = withDist.length > 0 ? [withDist[0]] : filtered.slice(0, 1);
     }
 
@@ -294,7 +309,7 @@ async function showIndex(idx) {
   const altBaro = ac.alt_baro === 'ground' ? 'GND' : fmt(ac.alt_baro);
   const speed   = fmt(ac.gs);
   const track   = ac.track != null ? fmt(ac.track) + '°' : '---';
-  const dist    = ac.r_dst ? ac.r_dst.toFixed(1) : '---';
+  const dist    = ac._distKm != null ? ac._distKm.toFixed(1) : '---';
 
   let status = 'EN ROUTE';
   if (ac.alt_baro === 'ground') status = 'ON GND';
@@ -365,33 +380,42 @@ function renderFull({ ac, airlineName, icaoCode, countryCode, typeCode, typeName
   const apiIata      = route?.callsign_iata || '';
   const iataFlight   = (apiIata && apiIata !== rawCallsign) ? apiIata : derived;
 
+  const eAirline     = escHtml(airlineName);
+  const eTypeCode    = escHtml(typeCode || '—');
+  const eTypeName    = escHtml(typeName || '—');
+  const eCallsign    = escHtml(rawCallsign);
+  const eIataFlight  = iataFlight ? escHtml(iataFlight) : '';
+  const eReg         = escHtml(reg);
+  const eOrigin      = escHtml(origin || '---');
+  const eDest        = escHtml(dest || '---');
+
   document.getElementById('main').innerHTML = `
     <div class="fade-in">
 
       <div class="ac-header">
         <div class="logo-box" id="logo-wrap">
-          ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${icaoCode}">` : logoFallback}
+          ${logoUrl ? `<img id="alogo" src="${escHtml(logoUrl)}" alt="${escHtml(icaoCode || '')}">` : logoFallback}
         </div>
         <div class="ac-identity">
           <div class="ac-topinfo">
-            <span class="typecode-val">${typeCode || '—'}</span>
+            <span class="typecode-val">${eTypeCode}</span>
             ${flagHtml}
-            <span class="reg-val">${rawCallsign}</span>
+            <span class="reg-val">${eCallsign}</span>
           </div>
           <div class="ac-row">
-            <div class="airline-val">${airlineName}</div>
+            <div class="airline-val">${eAirline}</div>
             <div class="ac-route">
-              <span class="route-apt${origin ? '' : ' unknown'}">${origin || '---'}</span>
+              <span class="route-apt${origin ? '' : ' unknown'}">${eOrigin}</span>
               <span class="route-arrow"> &#x25B6; </span>
-              <span class="route-apt${dest ? '' : ' unknown'}">${dest || '---'}</span>
+              <span class="route-apt${dest ? '' : ' unknown'}">${eDest}</span>
             </div>
           </div>
           <div class="ac-row">
-            <div class="callsign-val">${rawCallsign}${iataFlight ? ' — ' + iataFlight : ''}</div>
+            <div class="callsign-val">${eCallsign}${eIataFlight ? ' — ' + eIataFlight : ''}</div>
             ${etaStr !== '---' ? `<div class="route-dur-line">LDG ${etaStr}</div>` : '<div></div>'}
           </div>
           <div class="ac-row">
-            <div class="ac-type-line">${typeName || '—'}</div>
+            <div class="ac-type-line">${eTypeName}</div>
             ${routeDurStr !== '---' ? `<div class="route-dur-line">${routeDurStr} TOT</div>` : '<div></div>'}
           </div>
         </div>
@@ -441,6 +465,18 @@ function renderFocus({ ac, airlineName, rawCallsign, typeCode, typeName,
   const originCountry = (route?.origin?.country_name      || '').toUpperCase();
   const destCountry   = (route?.destination?.country_name || '').toUpperCase();
 
+  const fEAirline      = escHtml(airlineName);
+  const fECallsign     = escHtml(rawCallsign);
+  const fETypeCode     = escHtml(typeCode || '—');
+  const fETypeName     = typeName ? escHtml(typeName) : '';
+  const fEReg          = escHtml((ac.r || '').trim() || ac.hex.toUpperCase());
+  const fEOrigin       = escHtml(origin || '---');
+  const fEDest         = escHtml(dest || '---');
+  const fEOriginCity   = escHtml(originCity);
+  const fEOriginCountry = escHtml(originCountry);
+  const fEDestCity     = escHtml(destCity);
+  const fEDestCountry  = escHtml(destCountry);
+
   document.getElementById('main').innerHTML = `
     <div class="fade-in">
 
@@ -448,29 +484,29 @@ function renderFocus({ ac, airlineName, rawCallsign, typeCode, typeName,
 
         <div class="hero-top">
           <div class="logo-box" id="logo-wrap">
-            ${logoUrl ? `<img id="alogo" src="${logoUrl}" alt="${typeCode}">` : logoFallback}
+            ${logoUrl ? `<img id="alogo" src="${escHtml(logoUrl)}" alt="${escHtml(typeCode || '')}">` : logoFallback}
           </div>
           <div class="hero-identity">
-            <div class="airline-name">${airlineName}</div>
+            <div class="airline-name">${fEAirline}</div>
             <div class="hero-sub">
-              <span class="hero-callsign">${rawCallsign}</span>
+              <span class="hero-callsign">${fECallsign}</span>
             </div>
           </div>
           <div class="hero-meta">
             <div class="hero-meta-row">
-              <span class="typecode-val">${typeCode || '—'}</span>
+              <span class="typecode-val">${fETypeCode}</span>
               ${flagHtml}
-              <span class="reg-val">${(ac.r || '').trim() || ac.hex.toUpperCase()}</span>
+              <span class="reg-val">${fEReg}</span>
             </div>
-            ${typeName ? `<div class="hero-typename">${typeName}</div>` : ''}
+            ${fETypeName ? `<div class="hero-typename">${fETypeName}</div>` : ''}
           </div>
         </div>
 
         <div class="route-block">
           <div class="route-endpoint">
-            <div class="route-iata${origin ? '' : ' unknown'}">${origin || '---'}</div>
-            ${originCity    ? `<div class="route-city">${originCity}</div>`       : ''}
-            ${originCountry ? `<div class="route-country">${originCountry}</div>` : ''}
+            <div class="route-iata${origin ? '' : ' unknown'}">${fEOrigin}</div>
+            ${fEOriginCity    ? `<div class="route-city">${fEOriginCity}</div>`       : ''}
+            ${fEOriginCountry ? `<div class="route-country">${fEOriginCountry}</div>` : ''}
           </div>
           <div class="route-center">
             <div class="route-line"></div>
@@ -478,9 +514,9 @@ function renderFocus({ ac, airlineName, rawCallsign, typeCode, typeName,
             ${routeDurStr !== '---' ? `<div class="route-total">${routeDurStr} TOT</div>` : ''}
           </div>
           <div class="route-endpoint dest">
-            <div class="route-iata${dest ? '' : ' unknown'}">${dest || '---'}</div>
-            ${destCity    ? `<div class="route-city">${destCity}</div>`       : ''}
-            ${destCountry ? `<div class="route-country">${destCountry}</div>` : ''}
+            <div class="route-iata${dest ? '' : ' unknown'}">${fEDest}</div>
+            ${fEDestCity    ? `<div class="route-city">${fEDestCity}</div>`       : ''}
+            ${fEDestCountry ? `<div class="route-country">${fEDestCountry}</div>` : ''}
           </div>
         </div>
 
@@ -508,7 +544,8 @@ function renderFocus({ ac, airlineName, rawCallsign, typeCode, typeName,
 /* ── CYCLE ── */
 function startCycle() {
   if (CLOSEST_ONLY) return;
-  showIndex(0);
+  /* Resume from currentIndex so unpin/re-pin doesn't jump back to aircraft #0 */
+  showIndex(currentIndex);
   cycleTimer = setInterval(() => {
     if (!allAircraft.length) return;
     currentIndex = (currentIndex + 1) % Math.min(allAircraft.length, 30);

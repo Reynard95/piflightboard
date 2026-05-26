@@ -37,7 +37,6 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 .airline-val    { font-family: 'VT323', monospace; font-size: clamp(22px, 3.2vw, 90px); color: var(--fg);     letter-spacing: 0.06em; }
 .callsign-val   { font-family: 'VT323', monospace; font-size: clamp(22px, 1.9vw, 52px); color: var(--fg-mid); letter-spacing: 0.12em; }
 .ac-type-line   { font-family: 'VT323', monospace; font-size: clamp(16px, 1.4vw, 38px); color: var(--fg-mid); letter-spacing: 0.12em; }
-.ac-flight-line { font-family: 'VT323', monospace; font-size: clamp(16px, 1.4vw, 38px); color: var(--fg-mid); letter-spacing: 0.22em; text-transform: uppercase; }
 
 /* ── ROUTE ── */
 .ac-route   { display: flex; align-items: baseline; gap: clamp(6px, 0.6vw, 16px); }
@@ -52,12 +51,18 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 .data-value { font-family: 'VT323', monospace; font-size: clamp(20px, 3vw, 82px); color: var(--fg); letter-spacing: 0.04em; text-align: right; }
 .data-value .unit { font-size: clamp(13px, 1.1vw, 28px); color: var(--fg-dim); margin-left: 4px; }
 
-/* ── STATUS COLOURS — e-ink uses weight/decoration instead of colour ── */
-.v-blue  { color: var(--fg); }
-.v-gold  { color: var(--fg); }
-.v-pink  { color: var(--fg-mid); }
-.v-green { color: var(--fg); font-weight: 700; }   /* climbing  → bold   */
-.v-red   { color: var(--fg); font-style: italic; }  /* descending → italic */
+/* ── STATUS COLOURS ────────────────────────────────────────────────────
+ *  On colour themes: real green/red/blue for intuitive reading.
+ *  On e-ink (html.eink): no colour — use weight/decoration instead,
+ *  because e-ink displays can't render subtle hues reliably.
+ * ─────────────────────────────────────────────────────────────────── */
+.v-green { color: #33cc55; font-weight: 700; }   /* climbing  */
+.v-red   { color: #ff5555; font-style: italic; } /* descending / emergency */
+.v-blue  { color: #4499ff; }                     /* squawk 7600 (radio failure) */
+
+html.eink .v-green { color: var(--fg); }
+html.eink .v-red   { color: var(--fg); }
+html.eink .v-blue  { color: var(--fg); }
 
 /* ── TELEMETRY ── */
 .telem-row  { display: flex; gap: 0; border-top: 1px solid var(--sep); padding-top: clamp(8px, 0.9vh, 18px); flex-wrap: wrap; }

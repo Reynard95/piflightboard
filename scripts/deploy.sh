@@ -34,10 +34,16 @@ fi
 echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
 
 # ── Web files ──────────────────────────────────────────────
-# /var/www/flightboard is owned by the deploy user (set by install.sh),
-# so no sudo needed here.
-echo "[deploy] Copying web files..."
-cp -r "$REPO_DIR"/www/* "$WEB_DIR/"
+# Copy to a staging dir then atomically replace the live root so a browser
+# request during deploy never sees a half-updated file set.
+echo "[deploy] Copying web files (atomic)..."
+STAGE_DIR=$(mktemp -d "${WEB_DIR}.stage.XXXXXX")
+cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
+# Swap: move the old root aside, promote staging, remove old.
+OLD_DIR=$(mktemp -d "${WEB_DIR}.old.XXXXXX")
+mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
+mv "$STAGE_DIR" "$WEB_DIR"
+rm -rf "$OLD_DIR"
 
 # ── lighttpd config ────────────────────────────────────────
 echo "[deploy] Installing lighttpd config..."

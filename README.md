@@ -93,7 +93,7 @@ tailscale ip -4
 
 ### Step 5 — Configure via the setup page
 
-Open a browser and go to:
+Wait about 10–20 seconds after the install script finishes for lighttpd and the settings API to fully start, then open a browser and go to:
 
 ```
 http://flighttracker.local/setup.html
@@ -209,6 +209,11 @@ Controls colour scheme. Default is `white`.
 | `white` | White `#ffffff` | Black `#000000` | Standard e-ink panel (default) |
 | `black` | Black `#000000` | White `#ffffff` | Inverted / dark room |
 | `color` | Near-black `#050200` | Amber `#FFA040` | Colour e-ink or OLED panels |
+| `airbus` | Dark navy `#06080F` | Steel blue `#7EB3E8` | Airbus EFIS-inspired |
+| `boeing` | Dark brown `#060508` | Gold `#C8A84B` | Boeing 7-series flight deck |
+| `embraer` | Dark green-black `#050A09` | Teal `#5FC4B0` | Embraer E-Jet cockpit |
+| `bombardier` | Near-black `#080505` | Coral red `#E87070` | Bombardier CRJ / Global |
+| `military` | Near-black `#030603` | Radar green `#5EBF5E` | Classic military PPI radar |
 
 ```
 main.html?theme=black
@@ -235,7 +240,7 @@ main.html?focus&orientation=portrait
 
 #### `?res=`
 
-Provides the physical pixel dimensions of the e-ink panel so font sizes are computed precisely. Format: `?res=WIDTHxHEIGHT`.
+Provides the physical pixel dimensions of the e-ink panel so font sizes are computed precisely. Format: `?res=WIDTHxHEIGHT`. **Only takes effect when `?focus` is also set** — without `?focus` the parameter is silently ignored.
 
 | Panel | Size | Resolution | Parameter |
 |-------|------|-----------|-----------|
@@ -445,6 +450,14 @@ piflightboard/
 │   ├── route-proxy.service             # systemd service for CORS proxy
 │   ├── settings-api.service            # systemd service for settings API
 │   └── tmpfiles-readsb.conf            # /run/readsb permissions on boot
+├── cyberdeck/                          # standalone Textual TUI for the cyberdeck terminal
+│   ├── app.py                          # main Textual application
+│   ├── server.py                       # local data server for the TUI
+│   ├── mock_data.py                    # mock ADS-B data for development
+│   ├── layout.json                     # panel layout config
+│   ├── requirements.txt                # Python dependencies
+│   ├── install.sh                      # cyberdeck install script
+│   └── run.sh                          # launch script
 ├── images/
 │   ├── airline_logos/                  # airline_logo_KLM.png etc.
 │   └── country_flags/                  # country_flag_NL.png etc.
@@ -456,16 +469,17 @@ piflightboard/
 │   ├── route-proxy.py                  # CORS proxy for route API
 │   └── settings-api.py                 # Flask settings API on port 8089
 ├── www/
+│   ├── base.css                        # CSS reset and shared primitives
 │   ├── data.js                         # airline names, ICAO→country, ICAO→IATA, aircraft types
+│   ├── themes.js                       # ?theme=, ?orientation=, ?focus, ?embedded → CSS vars + classes
+│   ├── utils.js                        # shared formatting helpers (fmtBytes, fmtPct, etc.)
 │   ├── main.html                       # single entry point (?focus switches to focus layout)
-│   ├── main.js                         # merged JS — full layout + focus layout
+│   ├── main.js                         # full layout + focus layout logic
 │   ├── main.css                        # base styles (both layouts)
 │   ├── main-focus.css                  # focus layout overrides
-│   ├── main-themes.js                  # ?theme=, ?orientation=, ?focus → CSS class applier
 │   ├── radar.html                      # PPI radar display
 │   ├── radar.js                        # radar fetch, RAF loop, canvas draw, cards, menu
 │   ├── radar.css                       # radar layout, canvas, cards, burger menu styles
-│   ├── radar-themes.js                 # radar manufacturer-inspired themes
 │   ├── radar-geo.js                    # receiver coords, country polygons, airport list
 │   ├── setup.html                      # setup wizard + settings panel
 │   ├── setup.js                        # setup page logic (PIN auth, wizard, settings)

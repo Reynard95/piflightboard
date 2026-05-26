@@ -87,9 +87,25 @@ fi
 echo "[4/11] Configuring sudoers..."
 # !requiretty is required — GitHub Actions SSH sessions have no PTY.
 # Without it, sudo demands a password even when NOPASSWD is set.
+# Commands are scoped to exactly what deploy.sh needs; no blanket root.
 cat > /etc/sudoers.d/flighttracker-deploy << EOF
 Defaults:$DEPLOY_USER !requiretty
-$DEPLOY_USER ALL=(ALL) NOPASSWD: ALL
+$DEPLOY_USER ALL=(ALL) NOPASSWD: \
+  /usr/bin/cp /opt/flighttracker/config/lighttpd-flightboard.conf /etc/lighttpd/conf-enabled/50-flightboard.conf, \
+  /usr/sbin/lighttpd -tt -f /etc/lighttpd/lighttpd.conf, \
+  /usr/bin/systemctl reload lighttpd, \
+  /usr/bin/systemctl restart lighttpd, \
+  /usr/bin/systemctl daemon-reload, \
+  /usr/bin/systemctl enable route-proxy, \
+  /usr/bin/systemctl restart route-proxy, \
+  /usr/bin/systemctl enable settings-api, \
+  /usr/bin/systemctl restart settings-api, \
+  /usr/bin/systemctl start flightboard-reinstall, \
+  /usr/bin/cp /opt/flighttracker/config/readsb.conf /etc/default/readsb, \
+  /usr/bin/systemctl restart readsb, \
+  /usr/bin/cp /opt/flighttracker/config/tmpfiles-readsb.conf /etc/tmpfiles.d/readsb.conf, \
+  /usr/bin/cp /opt/flighttracker/config/route-proxy.service /etc/systemd/system/route-proxy.service, \
+  /usr/bin/cp /opt/flighttracker/config/settings-api.service /etc/systemd/system/settings-api.service
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-deploy
 
@@ -239,8 +255,11 @@ chown nobody:nogroup "$REPO_DIR/config"
 chmod 770 "$REPO_DIR/config"
 chown nobody:nogroup "$REPO_DIR/config/settings.json" 2>/dev/null || true
 chmod 660 "$REPO_DIR/config/settings.json" 2>/dev/null || true
-# /etc/default/readsb must be writable by nobody so settings-api can update lat/lon
-chmod 666 /etc/default/readsb
+# /etc/default/readsb must be writable by nobody so settings-api can update lat/lon.
+# Group ownership set to nogroup (nobody's group) so settings-api can write without
+# needing world-write permission.
+chown nobody:nogroup /etc/default/readsb
+chmod 640 /etc/default/readsb
 
 cp "$REPO_DIR/VERSION" "$REPO_DIR/.installed-version"
 echo "[done] Installed version: $(cat "$REPO_DIR/VERSION")"

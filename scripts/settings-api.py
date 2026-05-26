@@ -20,6 +20,7 @@ import secrets
 import subprocess
 import time
 import urllib.request
+from collections import defaultdict
 from functools import wraps
 
 from flask import Flask, Response, jsonify, request, stream_with_context
@@ -56,6 +57,12 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # In-memory token store: { token: expiry_timestamp }
 _tokens: dict[str, float] = {}
 
+# Brute-force protection: { ip: [timestamp, ...] } — sliding window per IP
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+LOGIN_WINDOW_SEC  = 60    # rolling window length
+LOGIN_MAX_TRIES   = 10    # max attempts in that window
+LOGIN_LOCKOUT_SEC = 300   # lockout after exceeding limit
+
 
 # ---------------------------------------------------------------------------
 # Helpers — settings file
@@ -85,7 +92,43 @@ def save_settings(data: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def hash_pin(pin: str) -> str:
-    return hashlib.sha256(pin.encode()).hexdigest()
+    """Return a salted PBKDF2-HMAC-SHA256 hash of the PIN.
+    Format: '<hex-salt>:<hex-dk>'  (both 32 bytes / 64 hex chars).
+    """
+    salt = secrets.token_bytes(32)
+    dk   = hashlib.pbkdf2_hmac('sha256', pin.encode(), salt, 200_000)
+    return salt.hex() + ':' + dk.hex()
+
+
+def verify_pin(pin: str, stored: str) -> bool:
+    """Constant-time PIN verification against a stored PBKDF2 hash.
+    Accepts the legacy plain-SHA256 format (64 hex chars, no colon)
+    so existing installs aren't locked out after upgrade.
+    """
+    if ':' not in stored:
+        # Legacy: plain SHA-256 — accept but caller should re-hash on next login
+        return hashlib.sha256(pin.encode()).hexdigest() == stored
+    try:
+        salt_hex, dk_hex = stored.split(':', 1)
+        salt = bytes.fromhex(salt_hex)
+        dk   = bytes.fromhex(dk_hex)
+        new_dk = hashlib.pbkdf2_hmac('sha256', pin.encode(), salt, 200_000)
+        return secrets.compare_digest(new_dk, dk)
+    except Exception:
+        return False
+
+
+def check_rate_limit(ip: str) -> bool:
+    """Return True if the IP is allowed to attempt login, False if locked out."""
+    now    = time.time()
+    window = _login_attempts[ip]
+    # Discard timestamps outside the rolling window
+    _login_attempts[ip] = [t for t in window if now - t < LOGIN_WINDOW_SEC]
+    return len(_login_attempts[ip]) < LOGIN_MAX_TRIES
+
+
+def record_login_attempt(ip: str) -> None:
+    _login_attempts[ip].append(time.time())
 
 
 def purge_expired_tokens() -> None:
@@ -360,6 +403,13 @@ def auth_set():
 @app.route("/api/auth/login", methods=["POST"])
 def auth_login():
     """Verify PIN, return a session token."""
+    ip = request.remote_addr or "unknown"
+
+    # Rate limiting — check before touching settings
+    if not check_rate_limit(ip):
+        time.sleep(1)   # slow down the response to the locked-out client
+        return jsonify({"error": "Too many attempts — try again later"}), 429
+
     settings = load_settings()
     pin_hash = settings.get("pin_hash", "")
 
@@ -373,8 +423,16 @@ def auth_login():
     if err:
         return jsonify({"error": err}), 400
 
-    if hash_pin(pin) != pin_hash:
+    record_login_attempt(ip)
+
+    if not verify_pin(pin, pin_hash):
+        time.sleep(0.5)  # constant small delay regardless of correctness
         return jsonify({"error": "Incorrect PIN"}), 401
+
+    # Opportunistically upgrade legacy plain-SHA256 hash to PBKDF2
+    if ":" not in pin_hash:
+        settings["pin_hash"] = hash_pin(pin)
+        save_settings(settings)
 
     token = issue_token()
     return jsonify({"token": token})
@@ -447,19 +505,17 @@ def api_settings_location():
     settings["location"] = {"lat": lat, "lon": lon}
     save_settings(settings)
 
-    # Write to /etc/default/readsb (requires sudo or write permission)
+    # Write to /etc/default/readsb.
+    # The service runs as nobody, which has group ownership of the file (see install.sh).
+    # If that fails (e.g. fresh install with wrong perms), return a clear error rather
+    # than attempting an unsafe fallback.
     try:
         update_readsb_location(lat, lon)
     except PermissionError:
-        # Try via sudo tee
-        content_result = subprocess.run(
-            ["sudo", "python3", "-c",
-             f"import sys; exec(open('/opt/flighttracker/scripts/settings-api.py').read()); "
-             f"update_readsb_location({lat}, {lon})"],
-            capture_output=True, text=True
-        )
-        if content_result.returncode != 0:
-            return jsonify({"error": "Could not write readsb config", "detail": content_result.stderr}), 500
+        return jsonify({
+            "error": "Cannot write /etc/default/readsb — permission denied",
+            "detail": "Run install.sh to fix file ownership (chown nobody:nogroup /etc/default/readsb && chmod 640 /etc/default/readsb)"
+        }), 500
 
     # Restart readsb
     ok, msg = restart_service("readsb")
