@@ -10,6 +10,7 @@ const FOCUS_MODE   = _fp.has('focus');
 const RADIUS_KM    = (() => { const v = parseFloat(_fp.get('radius')); return isFinite(v) && v > 0 ? v : null; })();
 const CLOSEST_ONLY = _fp.has('closest');
 const FETCH_MS     = (() => { const v = parseFloat(_fp.get('refresh')); return isFinite(v) && v >= 5 ? Math.round(v * 1000) : 10000; })();
+const LIST_MODE    = _fp.has('list');
 
 /* ── RESOLUTION SCALING (focus mode only) ────────────────────────────────────
  *  ?res=WIDTHxHEIGHT  overrides --sz-* CSS tokens for pixel-perfect sizing.
@@ -230,7 +231,9 @@ async function fetchAircraft() {
     allAircraft = filtered;
     updateTicker();
 
-    if (pinnedHex) {
+    if (LIST_MODE) {
+      renderList();
+    } else if (pinnedHex) {
       /* Dashboard has a selected aircraft — keep it pinned */
       const idx = allAircraft.findIndex(a => a.hex === pinnedHex);
       if (idx !== -1) {
@@ -277,6 +280,48 @@ function updateTicker() {
     `<span class="ac-item${i === currentIndex ? ' active' : ''}" onclick="showIndex(${i})">${ac.flight.trim()}</span>`
   ).join('<span class="ac-sep">·</span>');
   document.getElementById('ac-list').innerHTML = items;
+}
+
+/* ── LIST VIEW ── */
+function renderList() {
+  const container = document.getElementById('main');
+  if (!allAircraft.length) {
+    container.innerHTML = '<div class="no-signal"><div class="no-signal-title">SCANNING...</div><div class="no-signal-sub">✈︎ AWAITING AIRCRAFT DATA ✈︎</div></div>';
+    return;
+  }
+  const rows = allAircraft.slice(0, 60).map((ac, i) => {
+    const cs       = (ac.flight || '').trim();
+    const icaoCode = getAirlineCode(cs);
+    const airline  = (AIRLINES[icaoCode] || icaoCode || cs).slice(0, 14);
+    const alt      = ac.alt_baro === 'ground' ? 'GND'
+                   : ac.alt_baro != null ? String(Math.round(ac.alt_baro / 100) * 100)
+                   : '---';
+    const spd    = ac.gs != null ? String(Math.round(ac.gs)) : '---';
+    const vr     = ac.baro_rate || 0;
+    const vrCls  = vr > 100 ? 'v-green' : vr < -100 ? 'v-red' : '';
+    const vrSym  = vr > 100 ? '▲' : vr < -100 ? '▼' : '—';
+    const dist   = ac._distKm != null ? ac._distKm.toFixed(0) : '---';
+    const cached = routeCache[cs];
+    const origin = cached?.origin?.iata_code || cached?.origin?.iata || '---';
+    const dest   = cached?.destination?.iata_code || cached?.destination?.iata || '---';
+    return `<tr>
+      <td class="acl-cs">${escHtml(cs)}</td>
+      <td class="acl-al">${escHtml(airline)}</td>
+      <td class="acl-route">${escHtml(origin)}<span class="acl-arrow">▶</span>${escHtml(dest)}</td>
+      <td class="acl-num">${escHtml(alt)}</td>
+      <td class="acl-num">${escHtml(spd)}</td>
+      <td class="acl-vr ${vrCls}">${vrSym}</td>
+      <td class="acl-num">${escHtml(dist)}</td>
+    </tr>`;
+  }).join('');
+  container.innerHTML =
+    '<div class="ac-list-view"><table class="ac-table">' +
+    '<thead><tr>' +
+    '<th>FLIGHT</th><th>AIRLINE</th><th>ROUTE</th>' +
+    '<th class="acl-num">ALT</th><th class="acl-num">SPD</th><th>V/R</th><th class="acl-num">DIST</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '</table></div>';
 }
 
 /* ── RENDER — dispatches to full or focus layout ── */
@@ -543,7 +588,7 @@ function renderFocus({ ac, airlineName, rawCallsign, typeCode, typeName,
 
 /* ── CYCLE ── */
 function startCycle() {
-  if (CLOSEST_ONLY) return;
+  if (CLOSEST_ONLY || LIST_MODE) return;
   /* Resume from currentIndex so unpin/re-pin doesn't jump back to aircraft #0 */
   showIndex(currentIndex);
   cycleTimer = setInterval(() => {

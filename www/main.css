@@ -165,3 +165,67 @@ html.portrait .data-grid {
   .telem-row    { display: none; }
   .board        { grid-template-rows: 1fr; }
 }
+
+/* ── List view ────────────────────────────────────────────────────────────── */
+.ac-list-view {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fg-dim) transparent;
+}
+.ac-list-view::-webkit-scrollbar       { width: 4px; }
+.ac-list-view::-webkit-scrollbar-thumb { background: var(--fg-dim); border-radius: 2px; }
+
+.ac-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.ac-table thead th {
+  font-size: 7px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--fg-dim);
+  padding: 4px 5px 3px;
+  border-bottom: 1px solid var(--sep);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  white-space: nowrap;
+}
+.ac-table tbody tr {
+  border-bottom: 1px solid var(--sep);
+  cursor: default;
+  transition: background 0.1s;
+}
+.ac-table tbody tr:hover { background: rgba(128,90,20,0.10); }
+.ac-table td {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  padding: 4px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acl-cs    { color: var(--accent); font-weight: 700; width: 68px; }
+.acl-al    { color: var(--fg-mid); font-size: 8px; }
+.acl-route { color: var(--fg-mid); font-size: 8px; }
+.acl-arrow { color: var(--fg-dim); margin: 0 2px; font-size: 7px; }
+.acl-num   { text-align: right; color: var(--fg-dim); font-size: 8px; width: 44px; }
+.acl-vr    { text-align: center; width: 22px; font-size: 10px; }ac-header    { gap: 8px; padding-bottom: 6px; }
+  .data-grid    { grid-template-columns: 1fr 1fr 1fr; gap: 0 clamp(8px, 1.5vw, 24px); }
+  .data-row     { padding: 2px 0; }
+  .telem-row    { padding-top: 5px; }
+  .telem-lbl    { display: none; }
+}
+
+/* Ultra-short — hide footer strip */
+@media (max-height: 220px) {
+  .footer       { display: none; }
+  .telem-row    { display: none; }
+  .board        { grid-template-rows: 1fr; }
+}
