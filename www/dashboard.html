@@ -686,7 +686,25 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       </div>
 
       <div class="config-row">
-        <span class="config-lbl">Radar Radius</span>
+        <span class="config-lbl">Radar Range</span>
+        <div class="config-opts" id="cfg-range">
+          <button class="cfg-opt" data-val="100">100 km</button>
+          <button class="cfg-opt" data-val="150">150 km</button>
+          <button class="cfg-opt" data-val="200">200 km</button>
+          <button class="cfg-opt" data-val="250">250 km</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <span class="config-lbl">Radar View</span>
+        <div class="config-opts" id="cfg-radarview">
+          <button class="cfg-opt" data-val="tile">Tile</button>
+          <button class="cfg-opt" data-val="list">List</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <span class="config-lbl">Filter Radius</span>
         <div class="config-opts" id="cfg-radius">
           <button class="cfg-opt" data-val="50">50 km</button>
           <button class="cfg-opt" data-val="100">100 km</button>
@@ -709,6 +727,14 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
         <div class="config-opts" id="cfg-sweep">
           <button class="cfg-opt" data-val="on">On</button>
           <button class="cfg-opt" data-val="off">Off</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <span class="config-lbl">Units</span>
+        <div class="config-opts" id="cfg-units">
+          <button class="cfg-opt" data-val="nm">NM / FT</button>
+          <button class="cfg-opt" data-val="metric">Metric</button>
         </div>
       </div>
 
@@ -845,7 +871,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
   const PANEL_VARIANTS = {
     flight:   ['normal', 'focus'],
-    radar:    ['normal', 'square', 'list'],
+    radar:    ['normal', 'square'],
     vitals:   ['normal'],
     spectrum: ['normal'],
     weather:  ['normal'],
@@ -861,7 +887,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
      ══════════════════════════════════════════════════════════ */
 
   const CONFIG_KEY     = 'cyberdeck-config-v1';
-  const DEFAULT_CONFIG = { refresh: 10, radius: 150, closest: false, sweep: 'on' };
+  const DEFAULT_CONFIG = { refresh: 10, radius: 150, closest: false, sweep: 'on', radarRange: 250, radarView: 'tile', units: 'nm' };
 
   let panelConfig = { ...DEFAULT_CONFIG };
   try {
@@ -878,11 +904,6 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
      ══════════════════════════════════════════════════════════ */
 
   function buildSrc(panelId, variant) {
-    /* Radar in list mode loads the flight page in list view */
-    const page = (panelId === 'radar' && variant === 'list')
-      ? 'main.html'
-      : PANEL_PAGES[panelId];
-
     const params = new URLSearchParams({ theme, embedded: '1' });
 
     /* Global config params */
@@ -890,18 +911,16 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       params.set('refresh', panelConfig.refresh);
 
     if (panelId === 'radar') {
-      if (variant === 'list') {
-        params.set('list', '');
-        if (panelConfig.radius !== DEFAULT_CONFIG.radius)
-          params.set('radius', panelConfig.radius);
-        if (panelConfig.closest) params.set('closest', '');
-      } else {
-        params.set('sweep', panelConfig.sweep);
-        if (panelConfig.radius !== DEFAULT_CONFIG.radius)
-          params.set('radius', panelConfig.radius);
-        if (panelConfig.closest) params.set('closest', '');
-        if (variant === 'square') params.set('square', '');
-      }
+      params.set('sweep', panelConfig.sweep);
+      params.set('range', panelConfig.radarRange);
+      if (panelConfig.radarView !== DEFAULT_CONFIG.radarView)
+        params.set('view', panelConfig.radarView);
+      if (panelConfig.units !== DEFAULT_CONFIG.units)
+        params.set('units', 'metric');
+      if (panelConfig.radius !== DEFAULT_CONFIG.radius)
+        params.set('radius', panelConfig.radius);
+      if (panelConfig.closest) params.set('closest', '');
+      if (variant === 'square') params.set('square', '');
     }
 
     if (panelId === 'flight') {
@@ -913,7 +932,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
     /* Remove empty-value keys (e.g. ?square= → ?square) */
     const qs = params.toString().replace(/=(?=&|$)/g, '');
-    return page + '?' + qs;
+    return PANEL_PAGES[panelId] + '?' + qs;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1218,22 +1237,34 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   function renderConfigUI() {
     document.querySelectorAll('#cfg-refresh .cfg-opt').forEach(b =>
       b.classList.toggle('active', +b.dataset.val === panelConfig.refresh));
+    document.querySelectorAll('#cfg-range .cfg-opt').forEach(b =>
+      b.classList.toggle('active', +b.dataset.val === panelConfig.radarRange));
+    document.querySelectorAll('#cfg-radarview .cfg-opt').forEach(b =>
+      b.classList.toggle('active', b.dataset.val === panelConfig.radarView));
     document.querySelectorAll('#cfg-radius .cfg-opt').forEach(b =>
       b.classList.toggle('active', +b.dataset.val === panelConfig.radius));
     document.querySelectorAll('#cfg-closest .cfg-opt').forEach(b =>
       b.classList.toggle('active', b.dataset.val === String(panelConfig.closest)));
     document.querySelectorAll('#cfg-sweep .cfg-opt').forEach(b =>
       b.classList.toggle('active', b.dataset.val === panelConfig.sweep));
+    document.querySelectorAll('#cfg-units .cfg-opt').forEach(b =>
+      b.classList.toggle('active', b.dataset.val === panelConfig.units));
   }
 
   document.querySelectorAll('#cfg-refresh .cfg-opt').forEach(b =>
     b.addEventListener('click', () => { panelConfig.refresh = +b.dataset.val; renderConfigUI(); }));
+  document.querySelectorAll('#cfg-range .cfg-opt').forEach(b =>
+    b.addEventListener('click', () => { panelConfig.radarRange = +b.dataset.val; renderConfigUI(); }));
+  document.querySelectorAll('#cfg-radarview .cfg-opt').forEach(b =>
+    b.addEventListener('click', () => { panelConfig.radarView = b.dataset.val; renderConfigUI(); }));
   document.querySelectorAll('#cfg-radius .cfg-opt').forEach(b =>
     b.addEventListener('click', () => { panelConfig.radius = +b.dataset.val; renderConfigUI(); }));
   document.querySelectorAll('#cfg-closest .cfg-opt').forEach(b =>
     b.addEventListener('click', () => { panelConfig.closest = b.dataset.val === 'true'; renderConfigUI(); }));
   document.querySelectorAll('#cfg-sweep .cfg-opt').forEach(b =>
     b.addEventListener('click', () => { panelConfig.sweep = b.dataset.val; renderConfigUI(); }));
+  document.querySelectorAll('#cfg-units .cfg-opt').forEach(b =>
+    b.addEventListener('click', () => { panelConfig.units = b.dataset.val; renderConfigUI(); }));
 
   document.getElementById('btn-config-apply').addEventListener('click', () => {
     saveConfig();

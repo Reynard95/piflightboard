@@ -742,7 +742,7 @@ function drawFrame() {
    AIRCRAFT CARD GRID — tile and list views
    ══════════════════════════════════════════════════════════ */
 
-let viewMode = 'tile'; // 'tile' | 'list'
+let viewMode = (_fp.get('view') === 'list') ? 'list' : 'tile';
 
 function acFields(ac) {
   return {
@@ -821,6 +821,11 @@ function renderCards() {
 }
 
 /* ── View toggle (tile / list) ── */
+/* Sync button state to URL param on first load */
+document.querySelectorAll('#view-toggle .view-opt').forEach(b =>
+  b.classList.toggle('active', b.dataset.view === viewMode)
+);
+
 document.getElementById('view-toggle').addEventListener('click', e => {
   const btn = e.target.closest('.view-opt');
   if (!btn) return;
