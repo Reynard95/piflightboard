@@ -37,10 +37,10 @@ echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
 # Copy to a staging dir then atomically replace the live root so a browser
 # request during deploy never sees a half-updated file set.
 echo "[deploy] Copying web files (atomic)..."
-STAGE_DIR=$(mktemp -d "${WEB_DIR}.stage.XXXXXX")
+STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
 cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
 # Swap: move the old root aside, promote staging, remove old.
-OLD_DIR=$(mktemp -d "${WEB_DIR}.old.XXXXXX")
+OLD_DIR=$(mktemp -d "/tmp/flightboard-old.XXXXXX")
 mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
 mv "$STAGE_DIR" "$WEB_DIR"
 rm -rf "$OLD_DIR"
