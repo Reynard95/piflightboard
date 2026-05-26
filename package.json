@@ -1,0 +1,13 @@
+{
+  "name": "piflightboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:static": "node tests/check.js",
+    "test:e2e":    "playwright test",
+    "test":        "npm run test:static && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}
