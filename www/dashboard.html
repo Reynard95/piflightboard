@@ -47,7 +47,7 @@ html, body {
 .hdr-logo {
   font-family: 'VT323', monospace;
   font-size: 17px;
-  color: #302e28;
+  color: #7a7060;
   letter-spacing: 0.35em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -98,7 +98,7 @@ html, body {
 
 .hdr-status {
   font-size: 9px;
-  color: #252520;
+  color: #7a7060;
   letter-spacing: 0.28em;
   white-space: nowrap;
   overflow: hidden;
@@ -108,7 +108,7 @@ html, body {
 .hdr-time {
   font-family: 'VT323', monospace;
   font-size: 19px;
-  color: #2e2c26;
+  color: #a09070;
   letter-spacing: 0.15em;
   white-space: nowrap;
   flex-shrink: 0;
@@ -127,9 +127,9 @@ html, body {
   font-size: 8px;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: #2a2820;
+  color: #a09070;
   background: linear-gradient(180deg, #1e1e1a 0%, #141412 100%);
-  border: 1px solid #282820;
+  border: 1px solid #3a3428;
   border-radius: 3px;
   padding: 2px 6px;
   cursor: pointer;
@@ -138,8 +138,8 @@ html, body {
   user-select: none;
 }
 .hdr-btn:hover {
-  color: #5a5848;
-  border-color: #3a3828;
+  color: #c8b080;
+  border-color: #5a4e38;
 }
 .hdr-btn.active {
   color: #CC7020;
@@ -209,9 +209,9 @@ html, body {
   right: 7px;
   z-index: 10;
   background: rgba(12,10,5,0.85);
-  border: 1px solid #28200c;
+  border: 1px solid #3a3018;
   border-radius: 3px;
-  color: #3a2e10;
+  color: #907840;
   font-family: 'Share Tech Mono', monospace;
   font-size: 7px;
   letter-spacing: 0.22em;
@@ -301,7 +301,7 @@ iframe {
 
 .panel-id {
   font-size: 8px;
-  color: #222220;
+  color: #6a6258;
   text-align: center;
   letter-spacing: 0.40em;
   text-transform: uppercase;
@@ -414,7 +414,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 .preset-modal-close {
   background: none;
   border: none;
-  color: #463614;
+  color: #907848;
   cursor: pointer;
   font-size: 12px;
   font-family: 'Share Tech Mono', monospace;
@@ -487,7 +487,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   flex: 1;
   font-family: 'Share Tech Mono', monospace;
   font-size: 10px;
-  color: #6a5830;
+  color: #a08858;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   min-width: 0;
@@ -496,7 +496,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
 .preset-row-tag {
   font-size: 7px;
-  color: #2e2410;
+  color: #7a6840;
   letter-spacing: 0.18em;
   border: 1px solid #201a0c;
   border-radius: 2px;
@@ -508,7 +508,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 .preset-row-del {
   background: none;
   border: none;
-  color: #2e200c;
+  color: #7a6040;
   cursor: pointer;
   font-size: 8px;
   letter-spacing: 0.12em;
@@ -606,7 +606,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   font-family: 'Share Tech Mono', monospace;
   font-size: 9px;
   letter-spacing: 0.28em;
-  color: #6a5830;
+  color: #b09060;
   text-transform: uppercase;
   width: 110px;
   flex-shrink: 0;
@@ -623,9 +623,9 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   font-size: 8px;
   letter-spacing: 0.20em;
   text-transform: uppercase;
-  color: #3a2e12;
+  color: #a09070;
   background: linear-gradient(180deg, #1e1e1a 0%, #141412 100%);
-  border: 1px solid #28200c;
+  border: 1px solid #3a3018;
   border-radius: 3px;
   padding: 3px 8px;
   cursor: pointer;
@@ -845,7 +845,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
   const PANEL_VARIANTS = {
     flight:   ['normal', 'focus'],
-    radar:    ['normal', 'square'],
+    radar:    ['normal', 'square', 'list'],
     vitals:   ['normal'],
     spectrum: ['normal'],
     weather:  ['normal'],
@@ -878,6 +878,11 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
      ══════════════════════════════════════════════════════════ */
 
   function buildSrc(panelId, variant) {
+    /* Radar in list mode loads the flight page in list view */
+    const page = (panelId === 'radar' && variant === 'list')
+      ? 'main.html'
+      : PANEL_PAGES[panelId];
+
     const params = new URLSearchParams({ theme, embedded: '1' });
 
     /* Global config params */
@@ -885,11 +890,18 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       params.set('refresh', panelConfig.refresh);
 
     if (panelId === 'radar') {
-      if (panelConfig.sweep !== 'off') params.set('sweep', 'on');
-      if (panelConfig.radius !== DEFAULT_CONFIG.radius)
-        params.set('radius', panelConfig.radius);
-      if (panelConfig.closest) params.set('closest', '');
-      if (variant === 'square') params.set('square', '');
+      if (variant === 'list') {
+        params.set('list', '');
+        if (panelConfig.radius !== DEFAULT_CONFIG.radius)
+          params.set('radius', panelConfig.radius);
+        if (panelConfig.closest) params.set('closest', '');
+      } else {
+        params.set('sweep', panelConfig.sweep);
+        if (panelConfig.radius !== DEFAULT_CONFIG.radius)
+          params.set('radius', panelConfig.radius);
+        if (panelConfig.closest) params.set('closest', '');
+        if (variant === 'square') params.set('square', '');
+      }
     }
 
     if (panelId === 'flight') {
@@ -901,7 +913,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
     /* Remove empty-value keys (e.g. ?square= → ?square) */
     const qs = params.toString().replace(/=(?=&|$)/g, '');
-    return PANEL_PAGES[panelId] + '?' + qs;
+    return page + '?' + qs;
   }
 
   /* ══════════════════════════════════════════════════════════
