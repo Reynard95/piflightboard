@@ -1,6 +1,6 @@
 name: Deploy to Flighttracker Pi
 
-on:
+"on":
   push:
     branches: [ main ]
   workflow_dispatch:  # allow manual trigger from GitHub UI
