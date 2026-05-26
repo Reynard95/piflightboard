@@ -39,6 +39,7 @@ echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
 echo "[deploy] Copying web files (atomic)..."
 STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
 cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
+chmod -R a+rX "$STAGE_DIR"
 # Swap: move the old root aside, promote staging, remove old.
 OLD_DIR=$(mktemp -d "/tmp/flightboard-old.XXXXXX")
 mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
