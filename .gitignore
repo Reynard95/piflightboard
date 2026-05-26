@@ -1,3 +1,10 @@
 # Generated on the Pi by install.sh — not part of the repo
 .installed-version
 reinstall.log
+
+# Node dependencies — never commit these
+node_modules/
+
+# Playwright test output
+playwright-report/
+test-results/
