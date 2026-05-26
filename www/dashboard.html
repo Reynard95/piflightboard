@@ -1214,6 +1214,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
       b.classList.toggle('active', b.dataset.val === panelConfig.sweep));
   }
 
+  document.querySelectorAll('#cfg-refresh .cfg-opt').forEach(b =>
     b.addEventListener('click', () => { panelConfig.refresh = +b.dataset.val; renderConfigUI(); }));
   document.querySelectorAll('#cfg-radius .cfg-opt').forEach(b =>
     b.addEventListener('click', () => { panelConfig.radius = +b.dataset.val; renderConfigUI(); }));
