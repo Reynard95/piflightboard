@@ -177,8 +177,8 @@ Matches `?theme=airbus` from the web app (steel blue on dark navy):
 | `/data/aircraft.json` | GET | Live ADS-B feed (readsb, updated ~1 s) |
 | `/api/vitals` | GET | Pi system stats — no auth required |
 | `/api/spectrum` | GET | RF spectrum sweep (real or simulated) |
-| `https://api.adsbdb.com/v0/callsign/{cs}` | GET | Route lookup (origin/destination/airline) |
-| `https://api.open-meteo.com/v1/forecast` | GET | Weather (no API key) |
+| `http://{PI_IP}:8088/` | POST | Route lookup via Pi proxy (avoids TLS heap spike) |
+| `http://api.open-meteo.com/v1/forecast` | GET | Weather — plain HTTP (open-meteo supports both) |
 
 ### Aircraft data fields used from aircraft.json
 
@@ -224,7 +224,8 @@ Sample rate: 16 kHz, 16-bit stereo, MCLK = 4.096 MHz (256 × 16000)
 **Display blank / line flash only**
 - Confirm "USB CDC on Boot: Enabled" in board settings (otherwise Serial.print() doesn't appear and the board may stall).
 - Confirm the TCA9554 expander init runs before `gfx->begin()` — the display won't power on without it.
-- Do not call `display->begin()` and `gfx->begin()` separately if using `Arduino_Canvas` — it double-inits and breaks the controller.
+- When using `Arduino_Canvas`, call `display->begin()` explicitly *before* creating the canvas. `Arduino_Canvas::begin()` checks `_output->width()` before calling `_output->begin()` — CO5300 stores its dimensions from the constructor so the check is always non-zero, meaning the canvas will silently skip display init. Call `display->begin()` first, then create and begin the canvas.
+- "Line flash, then black" on repeat is the ESP32 OOM-crashing and rebooting. `WiFiClientSecure` TLS handshakes spike the heap by ~256 KB, which overflows the ~200 KB available. Both `fetchRoute()` and `fetchWeather()` now use plain HTTP to avoid this.
 
 **Serial output not visible**
 - ESP32-S3 uses native USB. Select the correct COM port *after* the board enumerates (it appears as "USB JTAG/serial debug unit").
@@ -242,7 +243,7 @@ Sample rate: 16 kHz, 16-bit stereo, MCLK = 4.096 MHz (256 × 16000)
 
 **Weather shows "FETCHING WX..."**
 - Open-Meteo's newer API uses `current=` parameters, not `current_weather=true`. The sketch already uses the correct format.
-- Check WiFi is connected and the ESP32 can reach `api.open-meteo.com` (HTTPS, port 443).
+- Check WiFi is connected and the ESP32 can reach `api.open-meteo.com` (plain HTTP, port 80).
 
 **Time is wrong by one hour**
 - Netherlands: `TZ_OFFSET_SEC = 7200` in summer (CEST, UTC+2), `3600` in winter (CET, UTC+1).

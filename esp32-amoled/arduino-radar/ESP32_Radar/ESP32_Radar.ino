@@ -25,14 +25,8 @@
 #include <math.h>
 
 // ── CONFIGURATION ─────────────────────────────────────────────────────────────
-const char* WIFI_SSID     = "Erasmus Huis";
-const char* WIFI_PASSWORD = "Erasmus@Gouda";
-const char* PI_IP         = "192.168.2.42";
-const int   PI_PORT       = 80;
-
-const float RECEIVER_LAT  = 52.00818f;
-const float RECEIVER_LON  = 4.71261f;
-const long  TZ_OFFSET_SEC = 7200;   // CEST = UTC+2; winter = 3600
+// Copy secrets.h.example → secrets.h and fill in your values. Never commit secrets.h.
+#include "secrets.h"
 
 // ── DISPLAY PINS ──────────────────────────────────────────────────────────────
 #define LCD_CS   12
@@ -53,6 +47,8 @@ const long  TZ_OFFSET_SEC = 7200;   // CEST = UTC+2; winter = 3600
 #define SB_Y  (H - SB_H)   // 430
 #define SAFE_W    (W - MX * 2)
 #define CONTENT_H (SB_Y - MY)
+#define CORNER_R  80   // display physical corner radius — tune to match hardware
+#define BAR_INSET 48   // safe content margin inside header/status bars (keeps text clear of masked corners)
 
 // ── DESIGN SYSTEM v1.0 — Aviation Modern Theme ───────────────────────────────
 #define C_BG         0x0000   // #000000 — AMOLED black
@@ -72,8 +68,9 @@ const long  TZ_OFFSET_SEC = 7200;   // CEST = UTC+2; winter = 3600
 #define C_CYAN       C_BLUE_INFO
 
 // ── PINS ──────────────────────────────────────────────────────────────────────
-#define BOOT_PIN  0
-#define TOUCH_INT 21
+#define BOOT_PIN    0
+#define TOUCH_INT   21
+#define FT3168_ADDR 0x38
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
 enum View {
@@ -117,9 +114,9 @@ struct AcEntry {
 AcEntry acList[MAX_AC];
 static AcEntry fetchBuf[MAX_AC];
 int     acCount       = 0;
-char    selectedCs[10]= "";
-int     selectedAcIdx = 0;
+int     selectedAcIdx = 0;   // set by list-view touch; used in detail view only
 unsigned long lastAcFetchMs = 0;
+unsigned long lastTouchMs   = 0;
 
 // ── ROUTE CACHE ───────────────────────────────────────────────────────────────
 char routeForCs[10]      = "";
@@ -179,9 +176,11 @@ int settingSelected   = 0;
 const int SETTINGS_COUNT = 3;
 
 // ── DISPLAY OBJECTS ───────────────────────────────────────────────────────────
-Arduino_DataBus *bus = nullptr;
-Arduino_CO5300 *gfx  = nullptr;
-static uint8_t  expanderState = 0x00;
+Arduino_DataBus *bus      = nullptr;
+Arduino_CO5300  *display  = nullptr;
+Arduino_GFX     *gfx      = nullptr;   // Arduino_Canvas when PSRAM available, else display directly
+bool             hasCanvas = false;
+static uint8_t   expanderState = 0x00;
 
 // ── BUTTON STATE ──────────────────────────────────────────────────────────────
 bool          btnWasLow   = false;
@@ -227,8 +226,41 @@ void expanderInit() {
   delay(20);
   expanderSetBit(0, true);    // RST high
   delay(20);
-  bus = new Arduino_ESP32QSPI(LCD_CS, LCD_SCK, LCD_D0, LCD_D1, LCD_D2, LCD_D3);
-  gfx = new Arduino_CO5300(bus, GFX_NOT_DEFINED, 0, W, H);
+  bus     = new Arduino_ESP32QSPI(LCD_CS, LCD_SCK, LCD_D0, LCD_D1, LCD_D2, LCD_D3);
+  display = new Arduino_CO5300(bus, GFX_NOT_DEFINED, 0, W, H);
+  display->begin(80000000);   // init CO5300 hardware once
+
+  // Arduino_Canvas::begin() calls _output->begin() unconditionally unless the speed
+  // argument is GFX_SKIP_OUTPUT_BEGIN (-2). Pass that to avoid a second
+  // spi_bus_initialize() call on the already-live SPI bus → ESP_ERR_INVALID_STATE → abort().
+  Arduino_Canvas *canvas = new Arduino_Canvas(W, H, display);
+  if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) {
+    gfx       = canvas;
+    hasCanvas = true;
+  } else {
+    delete canvas;
+    gfx       = display;   // fallback: direct drawing, flicker but functional
+    hasCanvas = false;
+    Serial.println("WARN: PSRAM canvas failed — check Tools > PSRAM > QSPI PSRAM");
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════ TOUCH ══
+
+bool readTouch(int16_t &tx, int16_t &ty) {
+  Wire.beginTransmission(FT3168_ADDR);
+  Wire.write(0x02);                        // TD_STATUS register
+  if (Wire.endTransmission(false) != 0) return false;
+  Wire.requestFrom(FT3168_ADDR, 5);
+  if (Wire.available() < 5) return false;
+  uint8_t num = Wire.read();
+  if (num == 0 || num > 5) return false;
+  uint8_t xh = Wire.read(), xl = Wire.read();
+  uint8_t yh = Wire.read(), yl = Wire.read();
+  if (((xh >> 6) & 0x03) == 1) return false;  // lift-up only — skip
+  tx = ((int16_t)(xh & 0x0F) << 8) | xl;
+  ty = ((int16_t)(yh & 0x0F) << 8) | yl;
+  return (tx >= 0 && tx < W && ty >= 0 && ty < H);
 }
 
 // ═════════════════════════════════════════════════════════════════ UTILITIES ═══
@@ -270,8 +302,8 @@ void fmtSpd(char* buf, int len, int kts) {
   else                   snprintf(buf, len, "%d KM/H", (int)(kts * 1.852f));
 }
 void fmtAlt(char* buf, int len, int ft) {
-  // Both modes show FL — altitude in feet is universal in aviation
-  snprintf(buf, len, "FL %d", ft / 100);
+  if (settingUnits == 1) snprintf(buf, len, "FL%d", ft / 100);
+  else                   snprintf(buf, len, "%d", (int)(ft * 0.3048f));
 }
 
 void applyBrightness() {
@@ -333,20 +365,37 @@ void drawPanel(int x, int y, int w, int h) {
   gfx->drawRoundRect(x, y, w, h, 4, C_BORDER);
 }
 
-// Data cell: panel + blue left-border accent + label + value + unit
+// Data cell: label top-left | value right-aligned | unit in right column
 void drawDataCell(int x, int y, int w, int h,
                   const char* label, const char* value, const char* unit,
                   uint16_t valCol = C_FG) {
   drawPanel(x, y, w, h);
-  gfx->fillRect(x + 1, y + 4, 3, h - 8, C_BLUE);        // left accent
+  gfx->fillRect(x + 1, y + 4, 3, h - 8, C_BLUE);   // left accent
+
+  // Label — top of card
   gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-  gfx->setCursor(x + 8, y + 6);  gfx->print(label);       // LABEL
-  gfx->setTextSize(3); gfx->setTextColor(valCol, C_PANEL);
-  gfx->setCursor(x + 8, y + 18); gfx->print(value);       // VALUE
-  if (unit && unit[0]) {
+  gfx->setCursor(x + 8, y + 6); gfx->print(label);
+
+  bool hasUnit = unit && unit[0];
+  const int unitW = 48;                              // right-column width
+  const int divX  = x + w - unitW;
+
+  // Vertical divider + unit centred in right column
+  if (hasUnit) {
+    gfx->drawFastVLine(divX, y + 4, h - 8, C_BORDER);
     gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-    gfx->setCursor(x + 8, y + 44); gfx->print(unit);      // unit
+    int utw = strlen(unit) * 6;
+    gfx->setCursor(divX + (unitW - utw) / 2, y + 26);  // vertically centred with value
+    gfx->print(unit);
   }
+
+  // Value — right-aligned against the divider (or card edge if no unit)
+  int rightEdge = hasUnit ? divX - 4 : x + w - 4;
+  int vtw       = strlen(value) * 6 * 3;            // size-3 pixel width
+  int valX      = rightEdge - vtw;
+  if (valX < x + 8) valX = x + 8;                   // clamp
+  gfx->setTextSize(3); gfx->setTextColor(valCol, C_PANEL);
+  gfx->setCursor(valX, y + 18); gfx->print(value);
 }
 
 // Top-down aircraft silhouette drawn with GFX primitives
@@ -392,50 +441,54 @@ void drawHeadingArrow(int cx, int cy, int sz, int trackDeg) {
 // ════════════════════════════════════════════════════════════════ STATUS BAR ═══
 
 void drawStatusBar() {
-  gfx->fillRect(0, SB_Y, W, SB_H, C_PANEL);
+  gfx->fillRoundRect(0, SB_Y - CORNER_R, W, SB_H + CORNER_R, CORNER_R, C_PANEL);
+  gfx->fillRect(0, SB_Y - CORNER_R, W, CORNER_R, C_BG);
   hline(SB_Y, C_BORDER);
   gfx->setTextSize(1);
   int y = SB_Y + 6;
+  // All x positions stay within BAR_INSET from each edge so they clear the
+  // display's physically rounded corners (which mask pixels below x=BAR_INSET).
+  const int lx = BAR_INSET;
+  const int rx = W - BAR_INSET;
+  const int sp = (rx - lx) / 4;  // even spacing across safe width
 
-  // View abbreviation
   gfx->setTextColor(C_BLUE_INFO, C_PANEL);
-  gfx->setCursor(MX, y);
+  gfx->setCursor(lx, y);
   gfx->print(VIEW_ABBR[(int)currentView]);
 
-  // Aircraft count
   char acbuf[8]; snprintf(acbuf, sizeof(acbuf), "%d AC", acCount);
   gfx->setTextColor(C_GREEN, C_PANEL);
-  gfx->setCursor(72, y);
+  gfx->setCursor(lx + sp, y);
   gfx->print(acbuf);
 
-  // ADS-B msg/s
   char msgbuf[8]; snprintf(msgbuf, sizeof(msgbuf), "%d/s", piAdsbMsgS);
   gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-  gfx->setCursor(138, y);
+  gfx->setCursor(lx + sp * 2, y);
   gfx->print(msgbuf);
 
-  // WiFi RSSI (colour by signal strength)
   int rssi = WiFi.RSSI();
   uint16_t rssiCol = rssi > -70 ? C_GREEN : rssi > -85 ? C_AMBER : C_RED;
   char wifibuf[10]; snprintf(wifibuf, sizeof(wifibuf), "%ddBm", rssi);
   gfx->setTextColor(rssiCol, C_PANEL);
-  gfx->setCursor(200, y);
+  gfx->setCursor(lx + sp * 3, y);
   gfx->print(wifibuf);
 
-  // UTC time (right-aligned)
   struct tm t;
   if (getLocalTime(&t, 0)) {
     char timebuf[8]; snprintf(timebuf, sizeof(timebuf), "%02d:%02dZ", t.tm_hour, t.tm_min);
     gfx->setTextColor(C_FG, C_PANEL);
-    gfx->setCursor(W - MX - (int)strlen(timebuf) * 6, y);
+    gfx->setCursor(rx - (int)strlen(timebuf) * 6, y);
     gfx->print(timebuf);
   }
 }
 
 void drawChrome(const char* title) {
   gfx->fillScreen(C_BG);
-  // Header panel
-  gfx->fillRect(0, 0, W, MY, C_PANEL);
+  // Rounded top corners follow the display's physical corner curve.
+  // Extend down by CORNER_R, then clear the rounded-bottom area back to BG
+  // so the bottom of the header remains a straight line at MY.
+  gfx->fillRoundRect(0, 0, W, MY + CORNER_R, CORNER_R, C_PANEL);
+  gfx->fillRect(0, MY, W, CORNER_R, C_BG);
   hline(MY, C_BORDER);
   // Title centred in header
   gfx->setTextSize(1); gfx->setTextColor(C_FG, C_PANEL);
@@ -453,24 +506,24 @@ void renderDashboard() {
   gfx->fillScreen(C_BG);
   drawStatusBar();
 
-  // ── Header panel ──────────────────────────────────────────────────────────
-  gfx->fillRect(0, 0, W, MY, C_PANEL);
+  // ── Header panel — rounded top corners follow display curve ──────────────
+  gfx->fillRoundRect(0, 0, W, MY + CORNER_R, CORNER_R, C_PANEL);
+  gfx->fillRect(0, MY, W, CORNER_R, C_BG);
   hline(MY, C_BORDER);
   gfx->fillRect(0, 0, 3, MY, C_BLUE);   // left accent
   gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-  gfx->setCursor(MX + 4, (MY - 8) / 2);
-  gfx->print(acCount == 0 ? "NO AIRCRAFT" :
-             selectedAcIdx == 0 ? "CLOSEST AIRCRAFT" : "SELECTED AIRCRAFT");
+  gfx->setCursor(BAR_INSET, (MY - 8) / 2);
+  gfx->print(acCount == 0 ? "NO AIRCRAFT" : "CLOSEST AIRCRAFT");
   struct tm tmNow;
   if (getLocalTime(&tmNow, 0)) {
     char tbuf[12]; snprintf(tbuf, sizeof(tbuf), "%02d:%02d UTC", tmNow.tm_hour, tmNow.tm_min);
     gfx->setTextColor(C_FG, C_PANEL);
-    gfx->setCursor(W - MX - (int)strlen(tbuf) * 6, (MY - 8) / 2);
+    gfx->setCursor(W - BAR_INSET - (int)strlen(tbuf) * 6, (MY - 8) / 2);
     gfx->print(tbuf);
   }
 
   if (acCount == 0) { printCtr("NO AIRCRAFT", MY + CONTENT_H / 2 - 8, 2, C_BORDER); return; }
-  AcEntry& a = acList[selectedAcIdx];
+  AcEntry& a = acList[0];  // always closest
 
   // ── Left column: radar circle + aircraft silhouette ────────────────────────
   const int cx = MX + 76, cy = MY + 84, cr = 68;
@@ -501,13 +554,24 @@ void renderDashboard() {
   gfx->setCursor(rx, ry); gfx->print(cs);
 
   // Aircraft type — small gray
+  int typeY = ry + csSz * 8 + 4;
   if (a.type[0]) {
     gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
-    gfx->setCursor(rx, ry + csSz * 8 + 8); gfx->print(a.type);
+    gfx->setCursor(rx, typeY); gfx->print(a.type);
+  }
+
+  // Airline name — secondary text, below type
+  if (routeValid && routeAirline[0]) {
+    gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
+    // Truncate to right-column width
+    char al[28]; strncpy(al, routeAirline, 27); al[27] = '\0';
+    int maxAl = (W - rx - MX) / 6;
+    if ((int)strlen(al) > maxAl) al[maxAl] = '\0';
+    gfx->setCursor(rx, typeY + 10); gfx->print(al);
   }
 
   // Route — city names in info blue
-  int routeY = ry + csSz * 8 + 22;
+  int routeY = ry + csSz * 8 + 26;
   if (routeValid && strcmp(routeForCs, a.callsign) == 0 && routeOrigin[0]) {
     gfx->setTextSize(1); gfx->setTextColor(C_BLUE_INFO, C_BG);
     gfx->setCursor(rx, routeY);
@@ -531,13 +595,6 @@ void renderDashboard() {
     gfx->setCursor(rx + 4, badgeY + 3); gfx->print(icaoBuf);
   }
 
-  // Selected-aircraft indicator
-  if (selectedAcIdx > 0) {
-    gfx->setTextSize(1); gfx->setTextColor(C_BORDER, C_BG);
-    gfx->setCursor(rx, routeY + 62);
-    gfx->printf("#%d / %d", selectedAcIdx + 1, acCount);
-  }
-
   // ── Data grid: 3 rows × 2 columns ─────────────────────────────────────────
   const int cw = (W - 2 * MX - 4) / 2;   // cell width  = 174
   const int ch = 62;                        // cell height
@@ -546,11 +603,12 @@ void renderDashboard() {
 
   // Row 1: Altitude | Ground Speed
   {
-    char altVal[10], spdVal[10], spdUnit[8];
-    fmtThousands(altVal, sizeof(altVal), a.alt_ft);
+    char altVal[10], altUnit[4], spdVal[10], spdUnit[8];
+    if (settingUnits == 1) { fmtThousands(altVal, sizeof(altVal), a.alt_ft); strcpy(altUnit, "ft"); }
+    else                   { snprintf(altVal, sizeof(altVal), "%d", (int)(a.alt_ft * 0.3048f)); strcpy(altUnit, "m"); }
     if (settingUnits == 1) { snprintf(spdVal, 10, "%d",  a.spd_kts);                strcpy(spdUnit, "KT");   }
     else                   { snprintf(spdVal, 10, "%d",  (int)(a.spd_kts * 1.852f)); strcpy(spdUnit, "km/h"); }
-    drawDataCell(gx0, gy,      cw, ch, "ALTITUDE",     altVal, "ft",    C_FG);
+    drawDataCell(gx0, gy,      cw, ch, "ALTITUDE",     altVal, altUnit, C_FG);
     drawDataCell(gx1, gy,      cw, ch, "GROUND SPEED", spdVal, spdUnit, C_FG);
   }
 
@@ -666,45 +724,48 @@ void renderRadar() {
 
 // ════════════════════════════════════════════════════════════════ SCREEN 3: LIST
 
+// First visible row Y — must match touch calculation in loop()
+#define LIST_ROW_Y0  (MY + 26)
+#define LIST_ROW_H   28
+
 void renderList() {
   drawChrome(VIEW_TITLE[V_LIST]);
   int y = MY + 6;
   gfx->setTextSize(1); gfx->setTextColor(C_CYAN, C_BG);
-  gfx->setCursor(MX, y); gfx->print("NEARBY");
+  gfx->setCursor(MX, y); gfx->print("NEARBY  \xBB TAP TO SELECT");
   y += 14;
-  hline(y, C_DIM); y += 6;
+  hline(y, C_DIM); y += 6;   // y is now LIST_ROW_Y0
 
   if (acCount == 0) { printCtr("NO AIRCRAFT", y + 40, 1, C_DIM); return; }
 
-  // Scroll window to keep selected centred
-  int listStart = selectedAcIdx - 3;
-  if (listStart < 0) listStart = 0;
-  int listEnd = listStart + 7;
-  if (listEnd > acCount) { listEnd = acCount; listStart = max(0, listEnd - 7); }
+  int maxRows = (SB_Y - y) / LIST_ROW_H;
+  int listEnd = min(acCount, maxRows);
 
-  for (int i = listStart; i < listEnd; i++) {
+  for (int i = 0; i < listEnd; i++) {
     AcEntry& a = acList[i];
     bool sel = (i == selectedAcIdx);
+
+    if (sel) gfx->fillRect(0, y, W, LIST_ROW_H - 2, C_SEP);
+
+    uint16_t bg  = sel ? C_SEP : C_BG;
     uint16_t col = sel ? C_CYAN : C_GRAY;
-    gfx->setTextSize(2);
-    gfx->setTextColor(col, C_BG);
-    gfx->setCursor(MX, y);
+
+    gfx->setTextSize(2); gfx->setTextColor(col, bg);
+    gfx->setCursor(MX + 2, y + 5);
     gfx->print(sel ? ">" : " ");
-    gfx->setCursor(MX + 14, y);
+    gfx->setCursor(MX + 16, y + 5);
     gfx->printf("%-8s", a.callsign[0] ? a.callsign : "------");
 
-    // Distance right-aligned (unit-aware)
     char distStr[12]; fmtDist(distStr, sizeof(distStr), a.dist_nm);
-    gfx->setCursor(W - MX - strlen(distStr)*12, y);
+    gfx->setCursor(W - MX - (int)strlen(distStr) * 12, y + 5);
     gfx->print(distStr);
-    y += 24;
+    y += LIST_ROW_H;
   }
 
-  // Scroll indicator
-  if (acCount > 7) {
+  if (acCount > maxRows) {
     gfx->setTextSize(1); gfx->setTextColor(C_DIM, C_BG);
-    gfx->setCursor(MX, y + 2);
-    gfx->printf("%d OF %d  LONG PRESS = SELECT", selectedAcIdx+1, acCount);
+    char more[24]; snprintf(more, sizeof(more), "+%d MORE NOT SHOWN", acCount - maxRows);
+    gfx->setCursor(MX, y + 4); gfx->print(more);
   }
 }
 
@@ -1055,6 +1116,8 @@ void renderCurrentView() {
     case V_SETTINGS:  renderSettings();    break;
     default: break;
   }
+  gfx->flush();  // canvas: push complete PSRAM frame to display; direct: no-op
+
   // Update FPS counter (counts render calls per second)
   fpsCount++;
   unsigned long now = millis();
@@ -1097,11 +1160,6 @@ void onLongPress() {
         settingTheme = (settingTheme + 1) % 1;  // only one theme for now
         break;
     }
-  } else if (acCount > 0) {
-    selectedAcIdx = (selectedAcIdx + 1) % acCount;
-    strncpy(selectedCs, acList[selectedAcIdx].callsign, 9);
-    routeValid = false;
-    if (selectedCs[0]) fetchRoute(selectedCs);
   }
   renderCurrentView();
 }
@@ -1156,42 +1214,52 @@ void updateStats(AcEntry* list, int n) {
 
 void fetchRoute(const char* cs) {
   if (!cs || !cs[0]) return;
-  WiFiClientSecure cli; cli.setInsecure(); cli.setTimeout(10);
-  HTTPClient https;
-  char url[80]; snprintf(url, sizeof(url), "https://api.adsbdb.com/v0/callsign/%s", cs);
-  if (!https.begin(cli, url)) return;
-  if (https.GET() != HTTP_CODE_OK) { https.end(); return; }
-  DynamicJsonDocument doc(4096);
-  if (deserializeJson(doc, https.getStream())) { https.end(); return; }
-  https.end();
-  JsonObject r = doc["response"]["flightroute"];
-  if (r.isNull()) return;
-  strncpy(routeOrigin,     r["origin"]["iata_code"]         | "?", 4);
-  strncpy(routeDest,       r["destination"]["iata_code"]    | "?", 4);
-  strncpy(routeOriginCity, r["origin"]["municipality"]      | "",  27);
-  strncpy(routeDestCity,   r["destination"]["municipality"] | "",  27);
-  strncpy(routeAirline,    r["airline"]["name"]             | "",  51);
+  // GET http://PI_IP:8088/?callsign=KLM641
+  // Proxy returns normalised flat JSON — no guessing at upstream API structure.
+  // Test from Pi: curl "http://localhost:8088/?callsign=KLM641"
+  HTTPClient http;
+  char url[72]; snprintf(url, sizeof(url), "http://%s:8088/?callsign=%s", PI_IP, cs);
+  http.begin(url);
+  int code = http.GET();
+  if (code != HTTP_CODE_OK) {
+    Serial.printf("fetchRoute: HTTP %d for %s\n", code, cs);
+    http.end(); return;
+  }
+  DynamicJsonDocument doc(512);
+  if (deserializeJson(doc, http.getStream())) {
+    Serial.println("fetchRoute: JSON parse failed");
+    http.end(); return;
+  }
+  http.end();
+  if (!doc["ok"]) { Serial.println("fetchRoute: ok=false"); return; }
+  strncpy(routeOrigin,     doc["origin"]       | "?", 4);
+  strncpy(routeDest,       doc["destination"]  | "?", 4);
+  strncpy(routeOriginCity, doc["origin_city"]  | "",  27);
+  strncpy(routeDestCity,   doc["dest_city"]    | "",  27);
+  strncpy(routeAirline,    doc["airline"]      | "",  51);
   strncpy(routeForCs, cs, 9);
   routeValid = true;
+  Serial.printf("fetchRoute OK: %s %s->%s (%s)\n", cs, routeOrigin, routeDest, routeAirline);
 }
 
 void fetchWeather() {
   // Only fetch if vitals didn't supply weather recently
   if (wxFresh && millis() - lastWxMs < 300000) return;
-  WiFiClientSecure cli; cli.setInsecure(); cli.setTimeout(10);
-  HTTPClient https;
+  // Plain HTTP — open-meteo serves both http and https; avoid WiFiClientSecure
+  // whose TLS handshake can spike heap by ~256 KB and OOM-crash the ESP32.
+  HTTPClient http;
   char url[200];
   snprintf(url, sizeof(url),
-    "https://api.open-meteo.com/v1/forecast"
+    "http://api.open-meteo.com/v1/forecast"
     "?latitude=%.5f&longitude=%.5f"
     "&current=temperature_2m,wind_speed_10m,wind_direction_10m,weather_code"
     "&wind_speed_unit=kmh",
     RECEIVER_LAT, RECEIVER_LON);
-  if (!https.begin(cli, url)) return;
-  if (https.GET() != HTTP_CODE_OK) { https.end(); return; }
+  http.begin(url);
+  if (http.GET() != HTTP_CODE_OK) { http.end(); return; }
   DynamicJsonDocument doc(2048);
-  if (deserializeJson(doc, https.getStream())) { https.end(); return; }
-  https.end();
+  if (deserializeJson(doc, http.getStream())) { http.end(); return; }
+  http.end();
   JsonObject cw = doc["current"];
   if (cw.isNull()) return;
   wxTemp    = cw["temperature_2m"]     | wxTemp;
@@ -1251,56 +1319,58 @@ void fetchAircraft() {
   HTTPClient http;
   char url[128]; snprintf(url, sizeof(url), "http://%s:%d/data/aircraft.json", PI_IP, PI_PORT);
   http.begin(url); http.setTimeout(8000);
+  char pendingRouteCs[10] = "";   // set if route needs refresh after this fetch
   if (http.GET() == HTTP_CODE_OK) {
-    DynamicJsonDocument doc(48 * 1024);
-    if (!deserializeJson(doc, http.getStream())) {
-      int nc = 0;
-      for (JsonObject ac : doc["aircraft"].as<JsonArray>()) {
-        if (!ac.containsKey("lat") || !ac.containsKey("lon")) continue;
-        if (nc >= MAX_AC) break;
-        AcEntry& e = fetchBuf[nc];
-        const char* fl = ac["flight"] | "";
-        strncpy(e.callsign, fl, 9); e.callsign[9] = '\0';
-        for (int i = strlen(e.callsign)-1; i >= 0 && e.callsign[i] == ' '; i--) e.callsign[i] = '\0';
-        strncpy(e.reg,    ac["r"]      | "", 9); e.reg[9]    = '\0';
-        strncpy(e.type,   ac["t"]      | "", 7); e.type[7]   = '\0';
-        strncpy(e.squawk, ac["squawk"] | "", 5); e.squawk[5] = '\0';
-        strncpy(e.icao,   ac["hex"]    | "", 7); e.icao[7]   = '\0';
-        e.lat      = ac["lat"] | 0.0f;
-        e.lon      = ac["lon"] | 0.0f;
-        e.dist_nm  = ac.containsKey("r_dst")
-                     ? (float)ac["r_dst"]
-                     : haversineNM(RECEIVER_LAT, RECEIVER_LON, e.lat, e.lon);
-        e.alt_ft   = ac["alt_baro"].is<int>() ? (int)ac["alt_baro"] : 0;
-        e.spd_kts  = (int)(ac["gs"].as<float>());
-        e.track_deg= (int)(ac["track"].as<float>());
-        e.vrate    = ac["baro_rate"].is<int>() ? (int)ac["baro_rate"] : 0;
-        nc++;
-      }
-      memcpy(acList, fetchBuf, nc * sizeof(AcEntry));
-      acCount = nc;
-      sortByDist();
+    // Scope the JSON doc so it is freed before fetchRoute() allocates its TLS buffer.
+    // Peak heap without scoping: 48 KB doc + 4 KB route doc + ~50 KB TLS = ~102 KB.
+    {
+      DynamicJsonDocument doc(32 * 1024);
+      if (!deserializeJson(doc, http.getStream())) {
+        int nc = 0;
+        for (JsonObject ac : doc["aircraft"].as<JsonArray>()) {
+          if (!ac.containsKey("lat") || !ac.containsKey("lon")) continue;
+          if (nc >= MAX_AC) break;
+          AcEntry& e = fetchBuf[nc];
+          const char* fl = ac["flight"] | "";
+          strncpy(e.callsign, fl, 9); e.callsign[9] = '\0';
+          for (int i = strlen(e.callsign)-1; i >= 0 && e.callsign[i] == ' '; i--) e.callsign[i] = '\0';
+          strncpy(e.reg,    ac["r"]      | "", 9); e.reg[9]    = '\0';
+          strncpy(e.type,   ac["t"]      | "", 7); e.type[7]   = '\0';
+          strncpy(e.squawk, ac["squawk"] | "", 5); e.squawk[5] = '\0';
+          strncpy(e.icao,   ac["hex"]    | "", 7); e.icao[7]   = '\0';
+          e.lat      = ac["lat"] | 0.0f;
+          e.lon      = ac["lon"] | 0.0f;
+          e.dist_nm  = ac.containsKey("r_dst")
+                       ? (float)ac["r_dst"]
+                       : haversineNM(RECEIVER_LAT, RECEIVER_LON, e.lat, e.lon);
+          e.alt_ft   = ac["alt_baro"].is<int>() ? (int)ac["alt_baro"] : 0;
+          e.spd_kts  = (int)(ac["gs"].as<float>());
+          e.track_deg= (int)(ac["track"].as<float>());
+          e.vrate    = ac["baro_rate"].is<int>() ? (int)ac["baro_rate"] : 0;
+          nc++;
+        }
+        memcpy(acList, fetchBuf, nc * sizeof(AcEntry));
+        acCount = nc;
+        sortByDist();
 
-      // Restore selected aircraft position after re-sort
-      if (selectedCs[0] == '\0' && acCount > 0)
-        strncpy(selectedCs, acList[0].callsign, 9);
-      selectedAcIdx = 0;
-      for (int i = 0; i < acCount; i++) {
-        if (strcmp(acList[i].callsign, selectedCs) == 0) { selectedAcIdx = i; break; }
-      }
+        // Clamp selectedAcIdx (may be out of range after re-sort)
+        if (selectedAcIdx >= acCount) selectedAcIdx = 0;
 
-      // Update route cache for selected aircraft
-      if (acCount > 0 && strcmp(acList[selectedAcIdx].callsign, routeForCs) != 0) {
-        routeValid = false;
-        fetchRoute(acList[selectedAcIdx].callsign);
-      }
+        // Route always for closest aircraft (dashboard)
+        if (acCount > 0 && strcmp(acList[0].callsign, routeForCs) != 0) {
+          routeValid = false;
+          strncpy(pendingRouteCs, acList[0].callsign, 9);
+        }
 
-      updateStats(fetchBuf, nc);
-      lastAcFetchMs = millis();
-      piOnline = true;
-    }
+        updateStats(fetchBuf, nc);
+        lastAcFetchMs = millis();
+        piOnline = true;
+      }
+    } // doc freed here — TLS buffer for fetchRoute now has room
   }
-  http.end();
+  http.end();  // http freed here too
+
+  if (pendingRouteCs[0]) fetchRoute(pendingRouteCs);
 }
 
 // ═══════════════════════════════════════════════════════════════════════ WIFI ═══
@@ -1324,38 +1394,48 @@ void setup() {
   pinMode(BOOT_PIN,  INPUT_PULLUP);
   pinMode(TOUCH_INT, INPUT_PULLUP);
 
-  expanderInit();
-  gfx->begin(80000000);
+  expanderInit();   // inits CO5300 + allocates canvas if PSRAM available
   gfx->fillScreen(C_BG);
 
-  // Boot splash
-  hline(MY, C_BLUE);
-  gfx->setTextSize(2); gfx->setTextColor(C_FG, C_BG);
-  gfx->setCursor(MX, 8); gfx->print("FLIGHTBOARD");
-  gfx->setTextSize(1); gfx->setTextColor(C_GRAY, C_BG);
-  gfx->setCursor(MX, 30); gfx->print("CONNECTING TO WIFI...");
+  // Boot splash — each flush() sends the completed canvas frame to the display
+  gfx->fillRoundRect(0, 0, W, MY + CORNER_R, CORNER_R, C_PANEL);
+  gfx->fillRect(0, MY, W, CORNER_R, C_BG);
+  gfx->fillRect(0, 0, 3, MY, C_BLUE);
+  hline(MY, C_BORDER);
+  gfx->setTextSize(2); gfx->setTextColor(C_FG, C_PANEL);
+  gfx->setCursor(MX + 4, 7); gfx->print("FLIGHTBOARD");
+  gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
+  gfx->setCursor(MX, MY + 16); gfx->print("CONNECTING TO WIFI...");
+  gfx->flush();
 
   if (!connectWifi()) {
     gfx->fillScreen(C_BG);
-    printCtr("WIFI FAIL", H/2 - 24, 2, C_RED);
+    printCtr("WIFI FAIL",           H/2 - 24, 2, C_RED);
     char ssidMsg[52]; snprintf(ssidMsg, sizeof(ssidMsg), "SSID: %s", WIFI_SSID);
-    printCtr(ssidMsg,              H/2 + 2,  1, C_AMBER);
-    printCtr("CHECK SSID/PASSWORD", H/2 + 16, 1, C_DIM);
+    printCtr(ssidMsg,               H/2 + 2,  1, C_AMBER);
+    printCtr("CHECK SSID/PASSWORD", H/2 + 16, 1, C_BORDER);
+    gfx->flush();
     while (true) delay(1000);
   }
 
   configTime(TZ_OFFSET_SEC, 0, "pool.ntp.org", "time.google.com");
 
-  gfx->setTextColor(C_GREEN, C_BG); gfx->setCursor(MX, 30); gfx->print("WIFI OK            ");
-  gfx->setTextColor(C_GRAY, C_BG);  gfx->setCursor(MX, 42); gfx->print("FETCHING AIRCRAFT...");
+  // Update status line for each boot step; flush pushes the frame to display
+  auto bootStep = [&](const char* msg, uint16_t col = C_TEXT_SEC) {
+    gfx->fillRect(MX, MY + 16, SAFE_W, 10, C_BG);
+    gfx->setTextSize(1); gfx->setTextColor(col, C_BG);
+    gfx->setCursor(MX, MY + 16); gfx->print(msg);
+    gfx->flush();
+  };
+
+  bootStep("WIFI OK", C_GREEN);
+  bootStep("FETCHING AIRCRAFT...");
   fetchAircraft();
 
-  gfx->fillRect(MX, 42, SAFE_W, 8, C_BG);
-  gfx->setTextColor(C_GRAY, C_BG);  gfx->setCursor(MX, 42); gfx->print("FETCHING WEATHER...");
+  bootStep("FETCHING WEATHER...");
   fetchWeather();
 
-  gfx->fillRect(MX, 42, SAFE_W, 8, C_BG);
-  gfx->setTextColor(C_GRAY, C_BG);  gfx->setCursor(MX, 42); gfx->print("FETCHING VITALS...");
+  bootStep("FETCHING VITALS...");
   fetchVitals();
 
   fpsWinStart = millis();
@@ -1417,6 +1497,22 @@ void loop() {
 
   btnWasLow = btnLow;
 
+  // ── List view touch: tap row → select aircraft → go to detail ────────
+  if (currentView == V_LIST && digitalRead(TOUCH_INT) == LOW
+      && (now - lastTouchMs) > 350) {
+    int16_t tx, ty;
+    if (readTouch(tx, ty) && ty >= LIST_ROW_Y0) {
+      int row = (ty - LIST_ROW_Y0) / LIST_ROW_H;
+      if (row >= 0 && row < acCount && row < (SB_Y - LIST_ROW_Y0) / LIST_ROW_H) {
+        selectedAcIdx = row;
+        currentView   = V_DETAIL;
+        renderCurrentView();
+        lastRenderMs = now;
+      }
+    }
+    lastTouchMs = now;
+  }
+
   // ── Periodic data fetches ─────────────────────────────────────────────
   if (now - lastFetchMs >= 5000) {
     lastFetchMs = now;
@@ -1430,7 +1526,7 @@ void loop() {
   // Clock screen updates every second
   if (currentView == V_CLOCK && now - lastRenderMs >= 1000) {
     lastRenderMs = now;
-    renderClockScreen();
+    renderCurrentView();  // use renderCurrentView so flush() is called
   }
 
   // Loop timing (for ESP32 screen)

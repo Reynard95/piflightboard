@@ -1,0 +1,5 @@
+{
+  "piUrl": "http://raspberrypi.local",
+  "port": 7473,
+  "initialParams": "?theme=military&range=250"
+}

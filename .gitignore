@@ -2,9 +2,23 @@
 .installed-version
 reinstall.log
 
-# Node dependencies — never commit these
+# Node dependencies and build output — never commit these
 node_modules/
+electron/dist/
 
 # Playwright test output
 playwright-report/
 test-results/
+
+# ── Local secrets and configuration ──────────────────────────────────────────
+# Copy the matching *.example file, fill in your values, never commit these.
+
+# Arduino ESP32 sketch credentials (copy secrets.h.example → secrets.h)
+esp32-amoled/arduino-radar/ESP32_Radar/secrets.h
+
+# MicroPython configs (copy config.example.py → config.py)
+pico/config.py
+esp32-amoled/config.py
+
+# Cyberdeck layout — contains receiver location and local display setup
+cyberdeck/layout.json
