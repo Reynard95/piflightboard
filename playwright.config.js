@@ -10,7 +10,7 @@ module.exports = defineConfig({
   // Spin up a static file server over www/ before tests run
   webServer: {
     command: 'node tests/serve.js',
-    url:     'http://localhost:3737',
+    url:     'http://localhost:3737/main.html',
     timeout:  10_000,
     reuseExistingServer: false,
   },
@@ -19,11 +19,12 @@ module.exports = defineConfig({
     baseURL:           'http://localhost:3737',
     headless:          true,
     viewport:          { width: 1920, height: 1080 },
+    deviceScaleFactor: 1,   // prevent host DPI scaling (e.g. 150%) from shrinking CSS viewport
     // Ignore network errors to external APIs (Pi data, weather, etc.)
     ignoreHTTPSErrors: true,
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 } },
   ],
 });
