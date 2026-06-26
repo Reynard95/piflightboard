@@ -52,16 +52,15 @@ sudo cp "$REPO_DIR/config/lighttpd-flightboard.conf" "$CONFIG_DIR/50-flightboard
 
 # ── lighttpd reload ────────────────────────────────────────
 echo "[deploy] Reloading lighttpd..."
-sudo lighttpd -tt -f /etc/lighttpd/lighttpd.conf && sudo systemctl reload lighttpd
+sudo lighttpd -tt -f /etc/lighttpd/lighttpd.conf
+sudo systemctl enable lighttpd
+sudo systemctl reload-or-restart lighttpd
 
-# ── readsb config (only if changed) ───────────────────────
-if ! diff -q "$REPO_DIR/config/readsb.conf" "$READSB_DEFAULT" > /dev/null 2>&1; then
-  echo "[deploy] Updating readsb config..."
-  sudo cp "$REPO_DIR/config/readsb.conf" "$READSB_DEFAULT"
-  sudo systemctl restart readsb
-else
-  echo "[deploy] readsb config unchanged, skipping restart."
-fi
+# ── readsb config ──────────────────────────────────────────
+# config/readsb.conf in the repo is a template with placeholder lat/lon.
+# The Pi's real coordinates are set once during install (via settings API or
+# manually) and must never be overwritten by deploy. Skip this entirely.
+echo "[deploy] Skipping readsb.conf — Pi keeps its own coordinates."
 
 # ── tmpfiles (permissions that survive reboot) ────────────
 sudo cp "$REPO_DIR/config/tmpfiles-readsb.conf" /etc/tmpfiles.d/readsb.conf
