@@ -582,12 +582,6 @@ void renderDashboard() {
   // A3 radar+aircraft image (replaces drawn rings + silhouette)
   drawA3SmCentered(cx, cy);
 
-  // FL badge below circle
-  char flBuf[10]; fmtAlt(flBuf, sizeof(flBuf), a.alt_ft);
-  gfx->setTextSize(1); gfx->setTextColor(C_GREEN, C_BG);
-  gfx->setCursor(cx - (int)strlen(flBuf) * 3, cy + cr + 5);
-  gfx->print(flBuf);
-
   // ── Right column: callsign, type, route, ICAO ─────────────────────────────
   const int rx = MX + 158, ry = MY + 12;
 
@@ -598,7 +592,7 @@ void renderDashboard() {
   gfx->setCursor(rx, ry); gfx->print(cs);
 
   // Aircraft type — "B738 - BOEING 737-800"
-  int typeY = ry + csSz * 8 + 4;
+  int typeY = ry + csSz * 8 + 1;
   if (a.type[0]) {
     char typeDisp[44];
     if (a.type_full[0])
@@ -619,17 +613,17 @@ void renderDashboard() {
     char al[28]; strncpy(al, routeAirline, 27); al[27] = '\0';
     int maxAl = (W - rx - MX) / 6;
     if ((int)strlen(al) > maxAl) al[maxAl] = '\0';
-    gfx->setCursor(rx, typeY + 10); gfx->print(al);
+    gfx->setCursor(rx, typeY + 9); gfx->print(al);
   }
 
   // Route — city names in info blue
-  int routeY = ry + csSz * 8 + 26;
+  int routeY = ry + csSz * 8 + 21;
   if (routeValid && strcmp(routeForCs, a.callsign) == 0 && routeOrigin[0]) {
     gfx->setTextSize(1); gfx->setTextColor(C_BLUE_INFO, C_BG);
     gfx->setCursor(rx, routeY);
     gfx->print(routeOriginCity[0] ? routeOriginCity : routeOrigin);
-    gfx->setCursor(rx + 4, routeY + 12); gfx->print(">");
-    gfx->setCursor(rx, routeY + 24);
+    gfx->setCursor(rx + 4, routeY + 10); gfx->print(">");
+    gfx->setCursor(rx, routeY + 20);
     gfx->print(routeDestCity[0] ? routeDestCity : routeDest);
   } else {
     gfx->setTextSize(1); gfx->setTextColor(C_BORDER, C_BG);
@@ -640,7 +634,7 @@ void renderDashboard() {
   if (a.icao[0]) {
     char icaoBuf[16]; snprintf(icaoBuf, sizeof(icaoBuf), "ICAO %s", a.icao);
     int bw = strlen(icaoBuf) * 6 + 8;
-    int badgeY = routeY + 44;
+    int badgeY = routeY + 36;
     gfx->fillRoundRect(rx, badgeY, bw, 14, 2, C_PANEL);
     gfx->drawRoundRect(rx, badgeY, bw, 14, 2, C_BORDER);
     gfx->setTextSize(1); gfx->setTextColor(C_BLUE_INFO, C_PANEL);
@@ -688,11 +682,13 @@ void renderDashboard() {
     drawDataCell(gx1, gy + 2 * (ch + 4), cw, ch, "BEARING", compass8(bearDeg), "", C_FG, true);
   }
 
-  // ── Route bar ─────────────────────────────────────────────────────────────
+  // ── Route bar — starts just below data grid, fills to status bar ──────────
   const int routeBarY = gy + 3 * (ch + 4) + 2;
-  if (routeBarY + 30 < SB_Y) {
-    drawPanel(MX, routeBarY, W - 2 * MX, 28);
+  const int routeBarH = SB_Y - routeBarY - 4;
+  {
+    drawPanel(MX, routeBarY, W - 2 * MX, routeBarH);
     gfx->setTextSize(1);
+    int textY = routeBarY + (routeBarH - 8) / 2;
     if (routeValid && routeOrigin[0]) {
       char rstr[56];
       if (routeOriginCity[0] && routeDestCity[0])
@@ -700,14 +696,13 @@ void renderDashboard() {
                  routeOriginCity, routeOrigin, routeDestCity, routeDest);
       else
         snprintf(rstr, sizeof(rstr), "%s  >  %s", routeOrigin, routeDest);
-      // Truncate to fit panel
       int maxCh = (W - 2 * MX - 16) / 6;
       rstr[maxCh] = '\0';
       gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-      gfx->setCursor(MX + 8, routeBarY + 10); gfx->print(rstr);
+      gfx->setCursor(MX + 8, textY); gfx->print(rstr);
     } else {
       gfx->setTextColor(C_BORDER, C_PANEL);
-      gfx->setCursor(MX + 8, routeBarY + 10); gfx->print("ROUTE DATA UNAVAILABLE");
+      gfx->setCursor(MX + 8, textY); gfx->print("ROUTE DATA UNAVAILABLE");
     }
   }
 }
@@ -1355,7 +1350,7 @@ void fetchAircraft() {
         for (int i = strlen(e.callsign)-1; i >= 0 && e.callsign[i] == ' '; i--) e.callsign[i] = '\0';
         strncpy(e.reg,       ac["r"]          | "", 9);  e.reg[9]         = '\0';
         strncpy(e.type,      ac["t"]          | "", 7);  e.type[7]        = '\0';
-        strncpy(e.type_full, ac["type_full"]  | "", 31); e.type_full[31]  = '\0';
+        strncpy(e.type_full, ac["desc"]        | "", 31); e.type_full[31]  = '\0';
         strncpy(e.squawk,    ac["squawk"]     | "", 5);  e.squawk[5]      = '\0';
         strncpy(e.icao,      ac["hex"]        | "", 7);  e.icao[7]        = '\0';
         strncpy(e.airline,   ac["airline"]    | "", 51); e.airline[51]    = '\0';

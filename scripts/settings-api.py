@@ -1188,45 +1188,6 @@ ROUTE_CACHE_TTL = 3600   # 1 hour per callsign
 
 READSB_AIRCRAFT_JSON = "/run/readsb/aircraft.json"
 
-_AC_TYPES: dict = {
-    "A306": "AIRBUS A300-600",   "A30B": "AIRBUS A300B",       "A310": "AIRBUS A310",
-    "A318": "AIRBUS A318",       "A319": "AIRBUS A319",         "A320": "AIRBUS A320",
-    "A321": "AIRBUS A321",       "A332": "AIRBUS A330-200",     "A333": "AIRBUS A330-300",
-    "A338": "AIRBUS A330-800",   "A339": "AIRBUS A330-900",     "A342": "AIRBUS A340-200",
-    "A343": "AIRBUS A340-300",   "A345": "AIRBUS A340-500",     "A346": "AIRBUS A340-600",
-    "A359": "AIRBUS A350-900",   "A35K": "AIRBUS A350-1000",    "A388": "AIRBUS A380-800",
-    "A20N": "AIRBUS A320NEO",    "A21N": "AIRBUS A321NEO",      "A19N": "AIRBUS A319NEO",
-    "A32S": "AIRBUS A320 SHARKLET", "A33N": "AIRBUS A330NEO",
-    "B712": "BOEING 717",        "B737": "BOEING 737-700",      "B738": "BOEING 737-800",
-    "B739": "BOEING 737-900",    "B37M": "BOEING 737 MAX 7",    "B38M": "BOEING 737 MAX 8",
-    "B39M": "BOEING 737 MAX 9",  "B3XM": "BOEING 737 MAX 10",   "B744": "BOEING 747-400",
-    "B748": "BOEING 747-8",      "B752": "BOEING 757-200",      "B753": "BOEING 757-300",
-    "B762": "BOEING 767-200",    "B763": "BOEING 767-300",      "B764": "BOEING 767-400",
-    "B772": "BOEING 777-200",    "B77L": "BOEING 777-200LR",    "B77W": "BOEING 777-300ER",
-    "B778": "BOEING 777X-8",     "B779": "BOEING 777X-9",       "B788": "BOEING 787-8",
-    "B789": "BOEING 787-9",      "B78X": "BOEING 787-10",
-    "E135": "EMBRAER ERJ-135",   "E145": "EMBRAER ERJ-145",     "E170": "EMBRAER E170",
-    "E175": "EMBRAER E175",      "E190": "EMBRAER E190",         "E195": "EMBRAER E195",
-    "E75L": "EMBRAER E175-E2",   "E290": "EMBRAER E190-E2",     "E295": "EMBRAER E195-E2",
-    "AT43": "ATR 42-300",        "AT45": "ATR 42-500",           "AT72": "ATR 72",
-    "AT75": "ATR 72-500",        "AT76": "ATR 72-600",
-    "DH8A": "DASH 8-100",        "DH8D": "DASH 8-400",           "DH8Q": "DASH 8-Q400",
-    "CRJ2": "CRJ-200",           "CRJ7": "CRJ-700",              "CRJ9": "CRJ-900",
-    "CRJX": "CRJ-1000",          "F50":  "FOKKER 50",            "F70":  "FOKKER 70",
-    "F100": "FOKKER 100",        "MD11": "MD-11",                "MD82": "MD-82",
-    "MD83": "MD-83",             "DC10": "DOUGLAS DC-10",
-    "IL76": "ILYUSHIN IL-76",    "SU95": "SUKHOI SUPERJET",      "SB20": "SAAB 2000",
-    "C130": "C-130 HERCULES",    "C17":  "BOEING C-17",
-    "PC12": "PILATUS PC-12",     "C208": "CESSNA CARAVAN",       "C172": "CESSNA 172",
-    "PA28": "PIPER CHEROKEE",    "BE20": "KING AIR 200",
-    "GL5T": "GLOBAL 5000",       "GLEX": "GLOBAL EXPRESS",       "CL60": "CHALLENGER 600",
-    "C56X": "CITATION EXCEL",    "C680": "CITATION SOVEREIGN",   "C750": "CITATION X",
-    "F2TH": "FALCON 2000",       "F900": "FALCON 900",           "GLF4": "GULFSTREAM IV",
-    "GLF5": "GULFSTREAM V",      "GL7T": "GULFSTREAM G700",
-    "SR22": "CIRRUS SR22",       "E50P": "PHENOM 100",           "E55P": "PHENOM 300",
-}
-
-
 def _fetch_route_bg(callsign: str) -> None:
     """Fetch route from local route-proxy and store result in cache. Runs in background thread."""
     try:
@@ -1269,8 +1230,8 @@ def api_aircraft():
 
     now = time.time()
     for ac in data.get("aircraft", []):
-        # Type full name
-        ac["type_full"] = _AC_TYPES.get(ac.get("t", "").upper(), "")
+        # Full description comes directly from readsb's aircraft database
+        ac["type_full"] = ac.get("desc", "")
 
         cs = ac.get("flight", "").strip()
         if not cs:
