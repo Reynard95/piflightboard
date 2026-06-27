@@ -119,10 +119,10 @@ html.portrait .data-grid {
    MOBILE (≤640px) — full layout fixes
    ═══════════════════════════════════════════════════════════ */
 
-@media (max-width: 640px) {
+@media (max-width: 1024px) {
   /* Allow the page to scroll vertically instead of clipping to viewport */
-  html, body { height: auto; overflow-y: auto; }
-  .board { height: auto; min-height: 100vh; padding: 10px 14px 16px; }
+  html, body { height: auto !important; overflow-y: auto !important; }
+  .board { height: auto; min-height: 100svh; padding: 10px 14px 16px; }
   .main  { overflow: visible; height: auto; }
   .fade-in { flex: none; }
 
