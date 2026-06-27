@@ -73,8 +73,9 @@ rm -f /etc/default/readsb
 rm -f /etc/modprobe.d/rtlsdr.conf
 rm -f /etc/udev/rules.d/rtl-sdr.rules
 rm -f /etc/tmpfiles.d/readsb.conf
-rm -f /etc/sudoers.d/flighttracker-deploy
-rm -f /etc/sudoers.d/flighttracker-settings-api
+# Sudoers files are intentionally kept — removing them breaks GitHub Actions
+# deploys because the Pi has no other passwordless-sudo grant for deploy commands.
+# Re-running install.sh will overwrite them with fresh content anyway.
 udevadm control --reload-rules
 
 # ── 7. Remove readsb user ─────────────────────────────────

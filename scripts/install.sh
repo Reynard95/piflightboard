@@ -146,34 +146,39 @@ EOF
 udevadm control --reload-rules
 udevadm trigger
 
-# ── 7. Build readsb ────────────────────────────────────────
+# ── 7-8. Build and setup readsb (soft-fail) ───────────────
+# Wrapped in a subshell so a build failure does not abort the rest of the
+# install. lighttpd, settings-api, and route-proxy will still be set up
+# even if the readsb build fails. Re-run install.sh to retry the build.
 echo "[7/11] Building readsb from source..."
-cd /tmp
-rm -rf readsb
-git clone --depth 1 https://github.com/wiedehopf/readsb.git
-cd readsb
-make AIRCRAFT_HASH_BITS=12 RTLSDR=yes
-cp readsb /usr/local/bin/readsb
-cp viewadsb /usr/local/bin/viewadsb
+(
+  set -e
+  cd /tmp
+  rm -rf readsb
+  git clone --depth 1 https://github.com/wiedehopf/readsb.git
+  cd readsb
+  make AIRCRAFT_HASH_BITS=12 RTLSDR=yes
+  cp readsb /usr/local/bin/readsb
+  cp viewadsb /usr/local/bin/viewadsb
 
-# ── 8. readsb user, directories, aircraft CSV, service ────
-echo "[8/11] Setting up readsb..."
-useradd -r -s /usr/sbin/nologin readsb 2>/dev/null || true
-usermod -a -G plugdev readsb
-mkdir -p /run/readsb
-chown readsb:readsb /run/readsb
-chmod 755 /run/readsb
-cp "$REPO_DIR/config/tmpfiles-readsb.conf" /etc/tmpfiles.d/readsb.conf
+  echo "[8/11] Setting up readsb..."
+  useradd -r -s /usr/sbin/nologin readsb 2>/dev/null || true
+  usermod -a -G plugdev readsb
+  mkdir -p /run/readsb
+  chown readsb:readsb /run/readsb
+  chmod 755 /run/readsb
+  cp "$REPO_DIR/config/tmpfiles-readsb.conf" /etc/tmpfiles.d/readsb.conf
 
-wget -O /usr/local/share/aircraft.csv.gz \
-  https://github.com/wiedehopf/tar1090-db/raw/csv/aircraft.csv.gz
+  wget -O /usr/local/share/aircraft.csv.gz \
+    https://github.com/wiedehopf/tar1090-db/raw/csv/aircraft.csv.gz
 
-cp /tmp/readsb/debian/readsb.service /etc/systemd/system/
-sed -i 's|/usr/bin/readsb|/usr/local/bin/readsb|g' /etc/systemd/system/readsb.service
-cp "$REPO_DIR/config/readsb.conf" /etc/default/readsb
-systemctl daemon-reload
-systemctl enable readsb
-systemctl start readsb
+  cp /tmp/readsb/debian/readsb.service /etc/systemd/system/
+  sed -i 's|/usr/bin/readsb|/usr/local/bin/readsb|g' /etc/systemd/system/readsb.service
+  cp "$REPO_DIR/config/readsb.conf" /etc/default/readsb
+  systemctl daemon-reload
+  systemctl enable readsb
+  systemctl start readsb
+) || echo "[WARNING] readsb build/setup failed — web UI and API will still work but ADS-B data will be unavailable. Re-run sudo bash scripts/install.sh to retry."
 
 # ── 9. Aircraft hex database ───────────────────────────────
 # Sparse-cloned from wiedehopf/tar1090-db — no tar1090 install needed.
@@ -259,8 +264,8 @@ chmod 660 "$REPO_DIR/config/settings.json" 2>/dev/null || true
 # /etc/default/readsb must be writable by nobody so settings-api can update lat/lon.
 # Group ownership set to nogroup (nobody's group) so settings-api can write without
 # needing world-write permission.
-chown nobody:nogroup /etc/default/readsb
-chmod 640 /etc/default/readsb
+[ -f /etc/default/readsb ] && chown nobody:nogroup /etc/default/readsb || true
+[ -f /etc/default/readsb ] && chmod 640 /etc/default/readsb || true
 
 cp "$REPO_DIR/VERSION" "$REPO_DIR/.installed-version"
 echo "[done] Installed version: $(cat "$REPO_DIR/VERSION")"

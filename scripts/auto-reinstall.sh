@@ -15,11 +15,7 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
   log "  To version:   $(cat "$REPO_DIR/VERSION")"
   log "========================================"
 
-  log "Step 1/2: Reset..."
-  bash "$REPO_DIR/scripts/reset.sh" --force
-  log "Reset complete."
-
-  log "Step 2/2: Install..."
+  log "Running install.sh (no reset — existing services survive a failed build)..."
   bash "$REPO_DIR/scripts/install.sh"
   log "Install complete."
 
