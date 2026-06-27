@@ -13,16 +13,16 @@ SYSTEMD_DIR="/etc/systemd/system"
 echo "[deploy] Starting deployment..."
 
 # ── Web files ──────────────────────────────────────────────
-# Always copy web files first — regardless of version check below.
-echo "[deploy] Copying web files (atomic)..."
+# Always update web files first — regardless of version check below.
+# Uses a helper script (runs as root via sudo) so /var/www is writable
+# even when reset.sh deleted /var/www/flightboard and pi can't create it.
+echo "[deploy] Updating web files..."
 STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
 cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
 chmod -R a+rX "$STAGE_DIR"
-# Swap: move the old root aside, promote staging, remove old.
-OLD_DIR=$(mktemp -d "/tmp/flightboard-old.XXXXXX")
-mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
-mv "$STAGE_DIR" "$WEB_DIR"
-rm -rf "$OLD_DIR"
+chmod +x "$REPO_DIR/scripts/webroot-update.sh"
+sudo "$REPO_DIR/scripts/webroot-update.sh" "$STAGE_DIR"
+rm -rf "$STAGE_DIR"
 
 # ── Service files ──────────────────────────────────────────
 # Always install service files before the version check.
@@ -43,16 +43,11 @@ INSTALLED_VERSION=$(cat "$REPO_DIR/.installed-version" 2>/dev/null || echo "none
 
 if [ "$REPO_VERSION" != "$INSTALLED_VERSION" ]; then
   echo "[deploy] Version mismatch — installed: $INSTALLED_VERSION, repo: $REPO_VERSION"
-  echo "[deploy] Triggering auto-reinstall via systemd..."
-  echo "[deploy] Progress: sudo journalctl -u flightboard-reinstall -f"
-  echo "[deploy]           or: tail -f $REPO_DIR/reinstall.log"
+  echo "[deploy] Triggering background reinstall (deploy continues)..."
   sudo systemctl daemon-reload
-  sudo systemctl start flightboard-reinstall
-  echo "[deploy] Reinstall service started. Web files already updated above."
-  exit 0
+  sudo systemctl start flightboard-reinstall || true
+  echo "[deploy] Reinstall started. Monitor: sudo journalctl -u flightboard-reinstall -f"
 fi
-
-echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
 
 # ── lighttpd config ────────────────────────────────────────
 echo "[deploy] Installing lighttpd config..."

@@ -39,7 +39,12 @@ done
 
 # ── 2. System update ───────────────────────────────────────
 echo "[2/11] Updating system..."
-apt update && apt upgrade -y
+apt-get update
+# Fix any broken packages before upgrading — e.g. dump1090-mutability:armhf
+# (an armhf package on an arm64 Pi) left by previous feeder installs.
+# apt-get -f install removes unsatisfiable packages instead of blocking.
+apt-get -f install -y
+apt-get upgrade -y
 
 # ── 3. Dependencies ────────────────────────────────────────
 echo "[3/11] Installing dependencies..."
@@ -106,7 +111,8 @@ $DEPLOY_USER ALL=(ALL) NOPASSWD: \
   /usr/bin/systemctl restart readsb, \
   /usr/bin/cp /opt/flighttracker/config/tmpfiles-readsb.conf /etc/tmpfiles.d/readsb.conf, \
   /usr/bin/cp /opt/flighttracker/config/route-proxy.service /etc/systemd/system/route-proxy.service, \
-  /usr/bin/cp /opt/flighttracker/config/settings-api.service /etc/systemd/system/settings-api.service
+  /usr/bin/cp /opt/flighttracker/config/settings-api.service /etc/systemd/system/settings-api.service, \
+  /opt/flighttracker/scripts/webroot-update.sh *
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-deploy
 
