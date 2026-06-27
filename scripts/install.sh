@@ -111,8 +111,7 @@ $DEPLOY_USER ALL=(ALL) NOPASSWD: \
   /usr/bin/systemctl restart readsb, \
   /usr/bin/cp /opt/flighttracker/config/tmpfiles-readsb.conf /etc/tmpfiles.d/readsb.conf, \
   /usr/bin/cp /opt/flighttracker/config/route-proxy.service /etc/systemd/system/route-proxy.service, \
-  /usr/bin/cp /opt/flighttracker/config/settings-api.service /etc/systemd/system/settings-api.service, \
-  /opt/flighttracker/scripts/webroot-update.sh *
+  /usr/bin/cp /opt/flighttracker/config/settings-api.service /etc/systemd/system/settings-api.service
 EOF
 chmod 440 /etc/sudoers.d/flighttracker-deploy
 
@@ -209,7 +208,7 @@ rm -rf /tmp/tar1090-db
 # ── 10. Web root and lighttpd ──────────────────────────────
 echo "[10/11] Configuring web root and lighttpd..."
 mkdir -p "$WEB_DIR"
-cp "$REPO_DIR"/www/* "$WEB_DIR/"
+cp -r "$REPO_DIR"/www/. "$WEB_DIR/"
 # Owned by the deploy user so deploy.sh can update web files without sudo.
 # Lighttpd only needs read access, which the default umask provides.
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$WEB_DIR"

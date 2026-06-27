@@ -14,15 +14,18 @@ echo "[deploy] Starting deployment..."
 
 # ── Web files ──────────────────────────────────────────────
 # Always update web files first — regardless of version check below.
-# Uses a helper script (runs as root via sudo) so /var/www is writable
-# even when reset.sh deleted /var/www/flightboard and pi can't create it.
+# /var/www/flightboard must be owned by the deploy user (pi).
+# install.sh creates and chowns it. If the directory is missing, create it once:
+#   sudo mkdir -p /var/www/flightboard && sudo chown pi:pi /var/www/flightboard
 echo "[deploy] Updating web files..."
-STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
-cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
-chmod -R a+rX "$STAGE_DIR"
-chmod +x "$REPO_DIR/scripts/webroot-update.sh"
-sudo "$REPO_DIR/scripts/webroot-update.sh" "$STAGE_DIR"
-rm -rf "$STAGE_DIR"
+if [ ! -d "$WEB_DIR" ]; then
+  echo "[deploy] FATAL: $WEB_DIR does not exist."
+  echo "[deploy] Fix: sudo mkdir -p $WEB_DIR && sudo chown \$(id -un):\$(id -gn) $WEB_DIR"
+  exit 1
+fi
+find "$WEB_DIR" -mindepth 1 -delete 2>/dev/null || true
+cp -r "$REPO_DIR"/www/. "$WEB_DIR/"
+chmod -R a+rX "$WEB_DIR"
 
 # ── Service files ──────────────────────────────────────────
 # Always install service files before the version check.
