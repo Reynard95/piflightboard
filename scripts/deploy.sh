@@ -58,7 +58,6 @@ sudo cp "$REPO_DIR/config/lighttpd-flightboard.conf" "$CONFIG_DIR/50-flightboard
 
 # ── lighttpd restart ───────────────────────────────────────
 echo "[deploy] Restarting lighttpd..."
-sudo lighttpd -tt -f /etc/lighttpd/lighttpd.conf
 sudo systemctl enable lighttpd
 sudo systemctl restart lighttpd
 

@@ -99,7 +99,6 @@ cat > /etc/sudoers.d/flighttracker-deploy << EOF
 Defaults:$DEPLOY_USER !requiretty
 $DEPLOY_USER ALL=(ALL) NOPASSWD: \
   /usr/bin/cp /opt/flighttracker/config/lighttpd-flightboard.conf /etc/lighttpd/conf-enabled/50-flightboard.conf, \
-  /usr/sbin/lighttpd -tt -f /etc/lighttpd/lighttpd.conf, \
   /usr/bin/systemctl enable lighttpd, \
   /usr/bin/systemctl reload lighttpd, \
   /usr/bin/systemctl restart lighttpd, \
