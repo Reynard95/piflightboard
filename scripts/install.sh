@@ -40,9 +40,11 @@ done
 # ── 2. System update ───────────────────────────────────────
 echo "[2/11] Updating system..."
 apt-get update
-# Fix any broken packages before upgrading — e.g. dump1090-mutability:armhf
-# (an armhf package on an arm64 Pi) left by previous feeder installs.
-# apt-get -f install removes unsatisfiable packages instead of blocking.
+# Force-remove dump1090-mutability:armhf if present — fr24feed installs this
+# armhf package on arm64 Pis where its deps can never be satisfied, blocking
+# every subsequent apt upgrade. dpkg -f install alone won't remove it.
+dpkg --remove --force-remove-reinstreq dump1090-mutability:armhf 2>/dev/null || true
+dpkg --remove --force-remove-reinstreq dump1090-mutability 2>/dev/null || true
 apt-get -f install -y
 apt-get upgrade -y
 
