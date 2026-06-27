@@ -27,6 +27,8 @@
 // ── CONFIGURATION ─────────────────────────────────────────────────────────────
 // Copy secrets.h.example → secrets.h and fill in your values. Never commit secrets.h.
 #include "secrets.h"
+#include "A3_img.h"
+#include "A3_img_sm.h"
 
 // ── DISPLAY PINS ──────────────────────────────────────────────────────────────
 #define LCD_CS   12
@@ -42,8 +44,8 @@
 #define W    368
 #define H    448
 #define MX    8     // horizontal margin (design system: 8 px all sides)
-#define MY    22    // top chrome / header height
-#define SB_H  20    // status bar height
+#define MY    32    // top chrome / header height
+#define SB_H  30    // status bar height
 #define SB_Y  (H - SB_H)   // 430
 #define SAFE_W    (W - MX * 2)
 #define CONTENT_H (SB_Y - MY)
@@ -102,8 +104,14 @@ struct AcEntry {
   char  callsign[10];
   char  reg[10];
   char  type[8];
+  char  type_full[32];
   char  icao[8];
   char  squawk[6];
+  char  airline[52];
+  char  origin[5];
+  char  destination[5];
+  char  origin_city[28];
+  char  dest_city[28];
   float dist_nm;
   float lat, lon;
   int   alt_ft;
@@ -327,6 +335,22 @@ void hline(int y, uint16_t col = C_DIM) {
   gfx->drawFastHLine(0, y, W, col);
 }
 
+// WiFi signal bars: 4 vertical bars of increasing height, bottom-aligned.
+// x,y = top-left of the 18x13 px bounding box.
+void drawWifiBars(int x, int y) {
+  int rssi   = WiFi.RSSI();
+  int levels = rssi > -55 ? 4 : rssi > -65 ? 3 : rssi > -75 ? 2 : 1;
+  const int barW = 3, gap = 2, totalH = 13;
+  const int barH[] = {4, 7, 10, 13};
+  for (int i = 0; i < 4; i++) {
+    int bx = x + i * (barW + gap);
+    int bh = barH[i];
+    int by = y + totalH - bh;
+    uint16_t col = (i < levels) ? C_GREEN : C_BORDER;
+    gfx->fillRect(bx, by, barW, bh, col);
+  }
+}
+
 void printCtr(const char* s, int y, uint8_t sz, uint16_t col = C_FG) {
   gfx->setTextSize(sz);
   gfx->setTextColor(col, C_BG);
@@ -365,10 +389,10 @@ void drawPanel(int x, int y, int w, int h) {
   gfx->drawRoundRect(x, y, w, h, 4, C_BORDER);
 }
 
-// Data cell: label top-left | value right-aligned | unit in right column
+// Data cell: label top-left | value right-aligned (or centred) | unit in right column
 void drawDataCell(int x, int y, int w, int h,
                   const char* label, const char* value, const char* unit,
-                  uint16_t valCol = C_FG) {
+                  uint16_t valCol = C_FG, bool centerVal = false) {
   drawPanel(x, y, w, h);
   gfx->fillRect(x + 1, y + 4, 3, h - 8, C_BLUE);   // left accent
 
@@ -377,7 +401,7 @@ void drawDataCell(int x, int y, int w, int h,
   gfx->setCursor(x + 8, y + 6); gfx->print(label);
 
   bool hasUnit = unit && unit[0];
-  const int unitW = 48;                              // right-column width
+  const int unitW = 48;
   const int divX  = x + w - unitW;
 
   // Vertical divider + unit centred in right column
@@ -385,15 +409,21 @@ void drawDataCell(int x, int y, int w, int h,
     gfx->drawFastVLine(divX, y + 4, h - 8, C_BORDER);
     gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
     int utw = strlen(unit) * 6;
-    gfx->setCursor(divX + (unitW - utw) / 2, y + 26);  // vertically centred with value
+    gfx->setCursor(divX + (unitW - utw) / 2, y + 26);
     gfx->print(unit);
   }
 
-  // Value — right-aligned against the divider (or card edge if no unit)
-  int rightEdge = hasUnit ? divX - 4 : x + w - 4;
-  int vtw       = strlen(value) * 6 * 3;            // size-3 pixel width
-  int valX      = rightEdge - vtw;
-  if (valX < x + 8) valX = x + 8;                   // clamp
+  // Value — centred or right-aligned
+  int vtw = strlen(value) * 6 * 3;   // size-3 pixel width
+  int valX;
+  if (centerVal) {
+    int areaW = hasUnit ? (divX - x) : w;
+    valX = x + (areaW - vtw) / 2;
+  } else {
+    int rightEdge = hasUnit ? divX - 4 : x + w - 4;
+    valX = rightEdge - vtw;
+    if (valX < x + 8) valX = x + 8;
+  }
   gfx->setTextSize(3); gfx->setTextColor(valCol, C_PANEL);
   gfx->setCursor(valX, y + 18); gfx->print(value);
 }
@@ -421,6 +451,45 @@ void drawAircraftSilhouette(int cx, int cy, int scale, uint16_t col) {
                     cx + fw, cy + scale * 9 / 10, col);
 }
 
+// Draw A3.png image centred at (cx, cy); black pixels (0x0000) are skipped
+// so the existing background shows through transparent areas.
+void drawA3Centered(int cx, int cy) {
+  int x0 = cx - A3_IMG_W / 2;
+  int y0 = cy - A3_IMG_H / 2;
+  gfx->startWrite();
+  for (int row = 0; row < A3_IMG_H; row++) {
+    int py = y0 + row;
+    if (py < 0 || py >= H) continue;
+    for (int col = 0; col < A3_IMG_W; col++) {
+      uint16_t px = pgm_read_word(&A3_IMG[row * A3_IMG_W + col]);
+      if (px == 0x0000) continue;  // transparent
+      int px_ = x0 + col;
+      if (px_ < 0 || px_ >= W) continue;
+      gfx->writePixel(px_, py, px);
+    }
+  }
+  gfx->endWrite();
+}
+
+// Draw 136x136 A3 image centred at (cx, cy); black pixels skipped (transparent)
+void drawA3SmCentered(int cx, int cy) {
+  int x0 = cx - A3_SM_W / 2;
+  int y0 = cy - A3_SM_H / 2;
+  gfx->startWrite();
+  for (int row = 0; row < A3_SM_H; row++) {
+    int py = y0 + row;
+    if (py < 0 || py >= H) continue;
+    for (int col = 0; col < A3_SM_W; col++) {
+      uint16_t px = pgm_read_word(&A3_IMG_SM[row * A3_SM_W + col]);
+      if (px == 0x0000) continue;
+      int ppx = x0 + col;
+      if (ppx < 0 || ppx >= W) continue;
+      gfx->writePixel(ppx, py, px);
+    }
+  }
+  gfx->endWrite();
+}
+
 // Draw a rotated heading arrow at (cx, cy) pointing in trackDeg direction
 void drawHeadingArrow(int cx, int cy, int sz, int trackDeg) {
   float rad = degToRad((float)trackDeg);
@@ -445,41 +514,25 @@ void drawStatusBar() {
   gfx->fillRect(0, SB_Y - CORNER_R, W, CORNER_R, C_BG);
   hline(SB_Y, C_BORDER);
   gfx->setTextSize(1);
-  int y = SB_Y + 6;
-  // All x positions stay within BAR_INSET from each edge so they clear the
-  // display's physically rounded corners (which mask pixels below x=BAR_INSET).
+  int y = SB_Y + (SB_H - 8) / 2;
   const int lx = BAR_INSET;
   const int rx = W - BAR_INSET;
-  const int sp = (rx - lx) / 4;  // even spacing across safe width
-
-  gfx->setTextColor(C_BLUE_INFO, C_PANEL);
-  gfx->setCursor(lx, y);
-  gfx->print(VIEW_ABBR[(int)currentView]);
 
   char acbuf[8]; snprintf(acbuf, sizeof(acbuf), "%d AC", acCount);
   gfx->setTextColor(C_GREEN, C_PANEL);
-  gfx->setCursor(lx + sp, y);
+  gfx->setCursor(lx, y);
   gfx->print(acbuf);
-
-  char msgbuf[8]; snprintf(msgbuf, sizeof(msgbuf), "%d/s", piAdsbMsgS);
-  gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-  gfx->setCursor(lx + sp * 2, y);
-  gfx->print(msgbuf);
-
-  int rssi = WiFi.RSSI();
-  uint16_t rssiCol = rssi > -70 ? C_GREEN : rssi > -85 ? C_AMBER : C_RED;
-  char wifibuf[10]; snprintf(wifibuf, sizeof(wifibuf), "%ddBm", rssi);
-  gfx->setTextColor(rssiCol, C_PANEL);
-  gfx->setCursor(lx + sp * 3, y);
-  gfx->print(wifibuf);
 
   struct tm t;
   if (getLocalTime(&t, 0)) {
-    char timebuf[8]; snprintf(timebuf, sizeof(timebuf), "%02d:%02dZ", t.tm_hour, t.tm_min);
+    char timebuf[6]; snprintf(timebuf, sizeof(timebuf), "%02d:%02d", t.tm_hour, t.tm_min);
     gfx->setTextColor(C_FG, C_PANEL);
     gfx->setCursor(rx - (int)strlen(timebuf) * 6, y);
     gfx->print(timebuf);
   }
+
+  // WiFi signal bars centred in status bar
+  drawWifiBars(W / 2 - 9, SB_Y + (SB_H - 13) / 2);
 }
 
 void drawChrome(const char* title) {
@@ -491,9 +544,9 @@ void drawChrome(const char* title) {
   gfx->fillRect(0, MY, W, CORNER_R, C_BG);
   hline(MY, C_BORDER);
   // Title centred in header
-  gfx->setTextSize(1); gfx->setTextColor(C_FG, C_PANEL);
-  int tw = strlen(title) * 6;
-  gfx->setCursor((W - tw) / 2, (MY - 8) / 2);
+  gfx->setTextSize(2); gfx->setTextColor(C_FG, C_PANEL);
+  int tw = strlen(title) * 12;
+  gfx->setCursor((W - tw) / 2, (MY - 16) / 2);
   gfx->print(title);
   // Blue left accent on header
   gfx->fillRect(0, 0, 3, MY, C_BLUE);
@@ -511,32 +564,23 @@ void renderDashboard() {
   gfx->fillRect(0, MY, W, CORNER_R, C_BG);
   hline(MY, C_BORDER);
   gfx->fillRect(0, 0, 3, MY, C_BLUE);   // left accent
-  gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-  gfx->setCursor(BAR_INSET, (MY - 8) / 2);
-  gfx->print(acCount == 0 ? "NO AIRCRAFT" : "CLOSEST AIRCRAFT");
-  struct tm tmNow;
-  if (getLocalTime(&tmNow, 0)) {
-    char tbuf[12]; snprintf(tbuf, sizeof(tbuf), "%02d:%02d UTC", tmNow.tm_hour, tmNow.tm_min);
-    gfx->setTextColor(C_FG, C_PANEL);
-    gfx->setCursor(W - BAR_INSET - (int)strlen(tbuf) * 6, (MY - 8) / 2);
-    gfx->print(tbuf);
-  }
+  gfx->setTextSize(2); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
+  { const char* hdr = acCount == 0 ? "NO AC" : "CLOSEST";
+    gfx->setCursor((W - (int)strlen(hdr) * 12) / 2, (MY - 16) / 2);
+    gfx->print(hdr); }
 
-  if (acCount == 0) { printCtr("NO AIRCRAFT", MY + CONTENT_H / 2 - 8, 2, C_BORDER); return; }
+  if (acCount == 0) {
+    drawA3Centered(W / 2, (MY + SB_Y) / 2);
+    printCtr("NO AIRCRAFT", SB_Y - 36, 1, C_BORDER);
+    return;
+  }
   AcEntry& a = acList[0];  // always closest
 
   // ── Left column: radar circle + aircraft silhouette ────────────────────────
   const int cx = MX + 76, cy = MY + 84, cr = 68;
 
-  // Radar rings
-  gfx->drawCircle(cx, cy, cr,        C_BORDER);
-  gfx->drawCircle(cx, cy, cr * 2/3,  C_PANEL);
-  gfx->drawCircle(cx, cy, cr / 3,    C_PANEL);
-  gfx->drawFastHLine(cx - cr, cy, cr * 2, C_PANEL);
-  gfx->drawFastVLine(cx, cy - cr,    cr * 2, C_PANEL);
-
-  // Aircraft silhouette (dim so it reads as a watermark inside the circle)
-  drawAircraftSilhouette(cx, cy, 28, C_TEXT_SEC);
+  // A3 radar+aircraft image (replaces drawn rings + silhouette)
+  drawA3SmCentered(cx, cy);
 
   // FL badge below circle
   char flBuf[10]; fmtAlt(flBuf, sizeof(flBuf), a.alt_ft);
@@ -545,7 +589,7 @@ void renderDashboard() {
   gfx->print(flBuf);
 
   // ── Right column: callsign, type, route, ICAO ─────────────────────────────
-  const int rx = MX + 158, ry = MY + 6;
+  const int rx = MX + 158, ry = MY + 12;
 
   // Callsign — large (size 4 for short names, size 3 for longer)
   const char* cs = a.callsign[0] ? a.callsign : "------";
@@ -553,11 +597,19 @@ void renderDashboard() {
   gfx->setTextSize(csSz); gfx->setTextColor(C_FG, C_BG);
   gfx->setCursor(rx, ry); gfx->print(cs);
 
-  // Aircraft type — small gray
+  // Aircraft type — "B738 - BOEING 737-800"
   int typeY = ry + csSz * 8 + 4;
   if (a.type[0]) {
+    char typeDisp[44];
+    if (a.type_full[0])
+      snprintf(typeDisp, sizeof(typeDisp), "%s - %s", a.type, a.type_full);
+    else
+      strncpy(typeDisp, a.type, sizeof(typeDisp) - 1);
+    // Truncate to right-column width
+    int maxCh = (W - rx - MX) / 6;
+    if ((int)strlen(typeDisp) > maxCh) typeDisp[maxCh] = '\0';
     gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
-    gfx->setCursor(rx, typeY); gfx->print(a.type);
+    gfx->setCursor(rx, typeY); gfx->print(typeDisp);
   }
 
   // Airline name — secondary text, below type
@@ -597,9 +649,9 @@ void renderDashboard() {
 
   // ── Data grid: 3 rows × 2 columns ─────────────────────────────────────────
   const int cw = (W - 2 * MX - 4) / 2;   // cell width  = 174
-  const int ch = 62;                        // cell height
+  const int ch = 58;                        // cell height
   const int gx0 = MX, gx1 = MX + cw + 4;
-  const int gy  = MY + 166;
+  const int gy  = MY + 158;
 
   // Row 1: Altitude | Ground Speed
   {
@@ -622,7 +674,7 @@ void renderDashboard() {
     drawDataCell(gx1, gy + ch + 4,      cw, ch, "HEADING",  hdgVal,  "\xB0",   C_FG);
   }
 
-  // Row 3: Vertical Speed | Bearing
+  // Row 3: Vertical Speed | Bearing (value centred in its cell)
   {
     char vsVal[10];
     if      (a.vrate >  50) snprintf(vsVal, sizeof(vsVal), "+%d", a.vrate);
@@ -632,8 +684,8 @@ void renderDashboard() {
     float dLon = (a.lon - RECEIVER_LON) * cosf(degToRad(RECEIVER_LAT));
     int bearDeg = (int)(atan2f(dLon, dLat) * 180.0f / PI + 360) % 360;
     uint16_t vsCol = a.vrate > 50 ? C_GREEN : a.vrate < -50 ? C_RED : C_TEXT_SEC;
-    drawDataCell(gx0, gy + 2 * (ch + 4), cw, ch, "VERT SPEED", vsVal,           "ft/min", vsCol);
-    drawDataCell(gx1, gy + 2 * (ch + 4), cw, ch, "BEARING",    compass8(bearDeg), "",     C_FG);
+    drawDataCell(gx0, gy + 2 * (ch + 4), cw, ch, "VERT SPEED", vsVal, "ft/min", vsCol);
+    drawDataCell(gx1, gy + 2 * (ch + 4), cw, ch, "BEARING", compass8(bearDeg), "", C_FG, true);
   }
 
   // ── Route bar ─────────────────────────────────────────────────────────────
@@ -1212,35 +1264,6 @@ void updateStats(AcEntry* list, int n) {
   }
 }
 
-void fetchRoute(const char* cs) {
-  if (!cs || !cs[0]) return;
-  // GET http://PI_IP:8088/?callsign=KLM641
-  // Proxy returns normalised flat JSON — no guessing at upstream API structure.
-  // Test from Pi: curl "http://localhost:8088/?callsign=KLM641"
-  HTTPClient http;
-  char url[72]; snprintf(url, sizeof(url), "http://%s:8088/?callsign=%s", PI_IP, cs);
-  http.begin(url);
-  int code = http.GET();
-  if (code != HTTP_CODE_OK) {
-    Serial.printf("fetchRoute: HTTP %d for %s\n", code, cs);
-    http.end(); return;
-  }
-  DynamicJsonDocument doc(512);
-  if (deserializeJson(doc, http.getStream())) {
-    Serial.println("fetchRoute: JSON parse failed");
-    http.end(); return;
-  }
-  http.end();
-  if (!doc["ok"]) { Serial.println("fetchRoute: ok=false"); return; }
-  strncpy(routeOrigin,     doc["origin"]       | "?", 4);
-  strncpy(routeDest,       doc["destination"]  | "?", 4);
-  strncpy(routeOriginCity, doc["origin_city"]  | "",  27);
-  strncpy(routeDestCity,   doc["dest_city"]    | "",  27);
-  strncpy(routeAirline,    doc["airline"]      | "",  51);
-  strncpy(routeForCs, cs, 9);
-  routeValid = true;
-  Serial.printf("fetchRoute OK: %s %s->%s (%s)\n", cs, routeOrigin, routeDest, routeAirline);
-}
 
 void fetchWeather() {
   // Only fetch if vitals didn't supply weather recently
@@ -1317,60 +1340,64 @@ void fetchVitals() {
 
 void fetchAircraft() {
   HTTPClient http;
-  char url[128]; snprintf(url, sizeof(url), "http://%s:%d/data/aircraft.json", PI_IP, PI_PORT);
+  char url[128]; snprintf(url, sizeof(url), "http://%s:%d/api/aircraft", PI_IP, PI_PORT);
   http.begin(url); http.setTimeout(8000);
-  char pendingRouteCs[10] = "";   // set if route needs refresh after this fetch
   if (http.GET() == HTTP_CODE_OK) {
-    // Scope the JSON doc so it is freed before fetchRoute() allocates its TLS buffer.
-    // Peak heap without scoping: 48 KB doc + 4 KB route doc + ~50 KB TLS = ~102 KB.
-    {
-      DynamicJsonDocument doc(32 * 1024);
-      if (!deserializeJson(doc, http.getStream())) {
-        int nc = 0;
-        for (JsonObject ac : doc["aircraft"].as<JsonArray>()) {
-          if (!ac.containsKey("lat") || !ac.containsKey("lon")) continue;
-          if (nc >= MAX_AC) break;
-          AcEntry& e = fetchBuf[nc];
-          const char* fl = ac["flight"] | "";
-          strncpy(e.callsign, fl, 9); e.callsign[9] = '\0';
-          for (int i = strlen(e.callsign)-1; i >= 0 && e.callsign[i] == ' '; i--) e.callsign[i] = '\0';
-          strncpy(e.reg,    ac["r"]      | "", 9); e.reg[9]    = '\0';
-          strncpy(e.type,   ac["t"]      | "", 7); e.type[7]   = '\0';
-          strncpy(e.squawk, ac["squawk"] | "", 5); e.squawk[5] = '\0';
-          strncpy(e.icao,   ac["hex"]    | "", 7); e.icao[7]   = '\0';
-          e.lat      = ac["lat"] | 0.0f;
-          e.lon      = ac["lon"] | 0.0f;
-          e.dist_nm  = ac.containsKey("r_dst")
-                       ? (float)ac["r_dst"]
-                       : haversineNM(RECEIVER_LAT, RECEIVER_LON, e.lat, e.lon);
-          e.alt_ft   = ac["alt_baro"].is<int>() ? (int)ac["alt_baro"] : 0;
-          e.spd_kts  = (int)(ac["gs"].as<float>());
-          e.track_deg= (int)(ac["track"].as<float>());
-          e.vrate    = ac["baro_rate"].is<int>() ? (int)ac["baro_rate"] : 0;
-          nc++;
-        }
-        memcpy(acList, fetchBuf, nc * sizeof(AcEntry));
-        acCount = nc;
-        sortByDist();
-
-        // Clamp selectedAcIdx (may be out of range after re-sort)
-        if (selectedAcIdx >= acCount) selectedAcIdx = 0;
-
-        // Route always for closest aircraft (dashboard)
-        if (acCount > 0 && strcmp(acList[0].callsign, routeForCs) != 0) {
-          routeValid = false;
-          strncpy(pendingRouteCs, acList[0].callsign, 9);
-        }
-
-        updateStats(fetchBuf, nc);
-        lastAcFetchMs = millis();
-        piOnline = true;
+    DynamicJsonDocument doc(48 * 1024);
+    if (!deserializeJson(doc, http.getStream())) {
+      int nc = 0;
+      for (JsonObject ac : doc["aircraft"].as<JsonArray>()) {
+        if (!ac.containsKey("lat") || !ac.containsKey("lon")) continue;
+        if (nc >= MAX_AC) break;
+        AcEntry& e = fetchBuf[nc];
+        const char* fl = ac["flight"] | "";
+        strncpy(e.callsign, fl, 9); e.callsign[9] = '\0';
+        for (int i = strlen(e.callsign)-1; i >= 0 && e.callsign[i] == ' '; i--) e.callsign[i] = '\0';
+        strncpy(e.reg,       ac["r"]          | "", 9);  e.reg[9]         = '\0';
+        strncpy(e.type,      ac["t"]          | "", 7);  e.type[7]        = '\0';
+        strncpy(e.type_full, ac["type_full"]  | "", 31); e.type_full[31]  = '\0';
+        strncpy(e.squawk,    ac["squawk"]     | "", 5);  e.squawk[5]      = '\0';
+        strncpy(e.icao,      ac["hex"]        | "", 7);  e.icao[7]        = '\0';
+        strncpy(e.airline,   ac["airline"]    | "", 51); e.airline[51]    = '\0';
+        strncpy(e.origin,    ac["origin"]     | "", 4);  e.origin[4]      = '\0';
+        strncpy(e.destination, ac["destination"] | "", 4); e.destination[4] = '\0';
+        strncpy(e.origin_city, ac["origin_city"] | "", 27); e.origin_city[27] = '\0';
+        strncpy(e.dest_city,   ac["dest_city"]   | "", 27); e.dest_city[27]   = '\0';
+        e.lat      = ac["lat"] | 0.0f;
+        e.lon      = ac["lon"] | 0.0f;
+        e.dist_nm  = ac.containsKey("r_dst")
+                     ? (float)ac["r_dst"]
+                     : haversineNM(RECEIVER_LAT, RECEIVER_LON, e.lat, e.lon);
+        e.alt_ft   = ac["alt_baro"].is<int>() ? (int)ac["alt_baro"] : 0;
+        e.spd_kts  = (int)(ac["gs"].as<float>());
+        e.track_deg= (int)(ac["track"].as<float>());
+        e.vrate    = ac["baro_rate"].is<int>() ? (int)ac["baro_rate"] : 0;
+        nc++;
       }
-    } // doc freed here — TLS buffer for fetchRoute now has room
-  }
-  http.end();  // http freed here too
+      memcpy(acList, fetchBuf, nc * sizeof(AcEntry));
+      acCount = nc;
+      sortByDist();
 
-  if (pendingRouteCs[0]) fetchRoute(pendingRouteCs);
+      if (selectedAcIdx >= acCount) selectedAcIdx = 0;
+
+      // Route data comes directly from enriched /api/aircraft response
+      if (acCount > 0) {
+        AcEntry& top = acList[0];
+        strncpy(routeForCs,      top.callsign,    9);  routeForCs[9]      = '\0';
+        strncpy(routeOrigin,     top.origin,      4);  routeOrigin[4]     = '\0';
+        strncpy(routeDest,       top.destination, 4);  routeDest[4]       = '\0';
+        strncpy(routeOriginCity, top.origin_city, 27); routeOriginCity[27]= '\0';
+        strncpy(routeDestCity,   top.dest_city,   27); routeDestCity[27]  = '\0';
+        strncpy(routeAirline,    top.airline,     51); routeAirline[51]   = '\0';
+        routeValid = routeOrigin[0] != '\0';
+      }
+
+      updateStats(fetchBuf, nc);
+      lastAcFetchMs = millis();
+      piOnline = true;
+    }
+  }
+  http.end();
 }
 
 // ═══════════════════════════════════════════════════════════════════════ WIFI ═══
@@ -1403,7 +1430,9 @@ void setup() {
   gfx->fillRect(0, 0, 3, MY, C_BLUE);
   hline(MY, C_BORDER);
   gfx->setTextSize(2); gfx->setTextColor(C_FG, C_PANEL);
-  gfx->setCursor(MX + 4, 7); gfx->print("FLIGHTBOARD");
+  gfx->setCursor((W - (int)strlen("FLIGHTBOARD") * 12) / 2, (MY - 16) / 2);
+  gfx->print("FLIGHTBOARD");
+  drawA3Centered(W / 2, H / 2 - 10);
   gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
   gfx->setCursor(MX, MY + 16); gfx->print("CONNECTING TO WIFI...");
   gfx->flush();
