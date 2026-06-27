@@ -12,6 +12,20 @@ SYSTEMD_DIR="/etc/systemd/system"
 
 echo "[deploy] Starting deployment..."
 
+# ── Web files ──────────────────────────────────────────────
+# Always copy web files first — regardless of version check below.
+# This ensures the latest HTML/CSS/JS is live immediately on every push,
+# even when a version bump triggers a slow background reinstall.
+echo "[deploy] Copying web files (atomic)..."
+STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
+cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
+chmod -R a+rX "$STAGE_DIR"
+# Swap: move the old root aside, promote staging, remove old.
+OLD_DIR=$(mktemp -d "/tmp/flightboard-old.XXXXXX")
+mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
+mv "$STAGE_DIR" "$WEB_DIR"
+rm -rf "$OLD_DIR"
+
 # ── Version check ──────────────────────────────────────────
 # If the stack version has changed (or no install stamp exists),
 # trigger a full reset + reinstall via the systemd oneshot service.
@@ -23,28 +37,13 @@ if [ "$REPO_VERSION" != "$INSTALLED_VERSION" ]; then
   echo "[deploy] Triggering auto-reinstall via systemd..."
   echo "[deploy] Progress: sudo journalctl -u flightboard-reinstall -f"
   echo "[deploy]           or: tail -f $REPO_DIR/reinstall.log"
-  # The flightboard-reinstall.service was installed by install.sh.
-  # We only need systemctl to start it — no sudo cp required.
   sudo systemctl daemon-reload
   sudo systemctl start flightboard-reinstall
-  echo "[deploy] Reinstall service started. Exiting deploy — nothing else to do."
+  echo "[deploy] Reinstall service started. Web files already updated above."
   exit 0
 fi
 
 echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
-
-# ── Web files ──────────────────────────────────────────────
-# Copy to a staging dir then atomically replace the live root so a browser
-# request during deploy never sees a half-updated file set.
-echo "[deploy] Copying web files (atomic)..."
-STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
-cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
-chmod -R a+rX "$STAGE_DIR"
-# Swap: move the old root aside, promote staging, remove old.
-OLD_DIR=$(mktemp -d "/tmp/flightboard-old.XXXXXX")
-mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
-mv "$STAGE_DIR" "$WEB_DIR"
-rm -rf "$OLD_DIR"
 
 # ── lighttpd config ────────────────────────────────────────
 echo "[deploy] Installing lighttpd config..."
