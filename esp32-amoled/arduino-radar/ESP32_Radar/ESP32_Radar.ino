@@ -591,55 +591,52 @@ void renderDashboard() {
   gfx->setTextSize(csSz); gfx->setTextColor(C_FG, C_BG);
   gfx->setCursor(rx, ry); gfx->print(cs);
 
-  // Aircraft type — "B738 - BOEING 737-800"
-  int typeY = ry + csSz * 8 + 1;
+  // Layout: right column ry → gy = 146px (size-4 callsign).
+  // callsign(32) +10+ type(8) +8+ airline(16) +16+ origin(16) +8+ >(8) +8+ dest(16) = 146
+  int typeY  = ry + csSz * 8 + 10;   // 10px after callsign cell
+  int routeY = typeY + 48;            // type(8) + 8gap + airline(16) + 16gap = 48
+
+  // Aircraft type — "B738 - BOEING 737-800" (size 1, fits full long string)
   if (a.type[0]) {
     char typeDisp[44];
     if (a.type_full[0])
       snprintf(typeDisp, sizeof(typeDisp), "%s - %s", a.type, a.type_full);
     else
       strncpy(typeDisp, a.type, sizeof(typeDisp) - 1);
-    // Truncate to right-column width
     int maxCh = (W - rx - MX) / 6;
     if ((int)strlen(typeDisp) > maxCh) typeDisp[maxCh] = '\0';
     gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
     gfx->setCursor(rx, typeY); gfx->print(typeDisp);
   }
 
-  // Airline name — secondary text, below type
+  // Airline name — size 2, 8px below type
   if (routeValid && routeAirline[0]) {
-    gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
-    // Truncate to right-column width
     char al[28]; strncpy(al, routeAirline, 27); al[27] = '\0';
-    int maxAl = (W - rx - MX) / 6;
+    int maxAl = (W - rx - MX) / 12;   // size-2 chars are 12px wide
     if ((int)strlen(al) > maxAl) al[maxAl] = '\0';
-    gfx->setCursor(rx, typeY + 9); gfx->print(al);
+    gfx->setTextSize(2); gfx->setTextColor(C_TEXT_SEC, C_BG);
+    gfx->setCursor(rx, typeY + 16); gfx->print(al);
   }
 
-  // Route — city names in info blue
-  int routeY = ry + csSz * 8 + 21;
+  // Route — size 2 city names, small > separator
   if (routeValid && strcmp(routeForCs, a.callsign) == 0 && routeOrigin[0]) {
-    gfx->setTextSize(1); gfx->setTextColor(C_BLUE_INFO, C_BG);
-    gfx->setCursor(rx, routeY);
-    gfx->print(routeOriginCity[0] ? routeOriginCity : routeOrigin);
-    gfx->setCursor(rx + 4, routeY + 10); gfx->print(">");
-    gfx->setCursor(rx, routeY + 20);
-    gfx->print(routeDestCity[0] ? routeDestCity : routeDest);
+    int maxCity = (W - rx - MX) / 12;
+    char orig[28], dst[28];
+    strncpy(orig, routeOriginCity[0] ? routeOriginCity : routeOrigin, 27); orig[27] = '\0';
+    strncpy(dst,  routeDestCity[0]   ? routeDestCity   : routeDest,   27); dst[27]  = '\0';
+    if ((int)strlen(orig) > maxCity) orig[maxCity] = '\0';
+    if ((int)strlen(dst)  > maxCity) dst[maxCity]  = '\0';
+    gfx->setTextSize(2); gfx->setTextColor(C_BLUE_INFO, C_BG);
+    gfx->setCursor(rx, routeY); gfx->print(orig);
+    gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
+    gfx->setCursor(rx + 4, routeY + 24); gfx->print(">");
+    gfx->setTextSize(2); gfx->setTextColor(C_BLUE_INFO, C_BG);
+    gfx->setCursor(rx, routeY + 32); gfx->print(dst);
   } else {
     gfx->setTextSize(1); gfx->setTextColor(C_BORDER, C_BG);
     gfx->setCursor(rx, routeY); gfx->print("ROUTE N/A");
   }
 
-  // ICAO badge
-  if (a.icao[0]) {
-    char icaoBuf[16]; snprintf(icaoBuf, sizeof(icaoBuf), "ICAO %s", a.icao);
-    int bw = strlen(icaoBuf) * 6 + 8;
-    int badgeY = routeY + 36;
-    gfx->fillRoundRect(rx, badgeY, bw, 14, 2, C_PANEL);
-    gfx->drawRoundRect(rx, badgeY, bw, 14, 2, C_BORDER);
-    gfx->setTextSize(1); gfx->setTextColor(C_BLUE_INFO, C_PANEL);
-    gfx->setCursor(rx + 4, badgeY + 3); gfx->print(icaoBuf);
-  }
 
   // ── Data grid: 3 rows × 2 columns ─────────────────────────────────────────
   const int cw = (W - 2 * MX - 4) / 2;   // cell width  = 174

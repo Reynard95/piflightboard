@@ -20,6 +20,7 @@ import secrets
 import subprocess
 import threading
 import time
+import urllib.parse
 import urllib.request
 from collections import defaultdict
 from functools import wraps
@@ -1188,26 +1189,54 @@ ROUTE_CACHE_TTL = 3600   # 1 hour per callsign
 
 READSB_AIRCRAFT_JSON = "/run/readsb/aircraft.json"
 
-def _fetch_route_bg(callsign: str) -> None:
-    """Fetch route from local route-proxy and store result in cache. Runs in background thread."""
+def _fetch_route_adsbdb(callsign: str) -> dict | None:
+    """Try adsbdb.com first — better airline data. Returns normalised dict or None."""
     try:
-        url = f"http://127.0.0.1:8088/?callsign={callsign}"
+        url = f"https://api.adsbdb.com/v0/callsign/{urllib.parse.quote(callsign)}"
+        req = urllib.request.Request(url, headers={"User-Agent": "flightboard/1.0"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read())
+        r = (data.get("response") or {}).get("flightroute")
+        if not r:
+            return None
+        origin  = r.get("origin")      or {}
+        dest    = r.get("destination") or {}
+        airline = r.get("airline")     or {}
+        return {
+            "airline":     airline.get("name")                                  or "",
+            "origin":      origin.get("iata_code") or origin.get("iata")        or "",
+            "destination": dest.get("iata_code")   or dest.get("iata")          or "",
+            "origin_city": origin.get("municipality") or origin.get("name")     or "",
+            "dest_city":   dest.get("municipality")   or dest.get("name")       or "",
+        }
+    except Exception:
+        return None
+
+
+def _fetch_route_proxy(callsign: str) -> dict | None:
+    """Fallback: local route-proxy → adsb.lol. Returns normalised dict or None."""
+    try:
+        url = f"http://127.0.0.1:8088/?callsign={urllib.parse.quote(callsign)}"
         req = urllib.request.Request(url, headers={"User-Agent": "flightboard/1.0"})
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read())
-        ok = data.get("ok")
-        entry = {
-            "airline":     data.get("airline", "")      if ok else "",
-            "origin":      data.get("origin", "")       if ok else "",
-            "destination": data.get("destination", "")  if ok else "",
-            "origin_city": data.get("origin_city", "")  if ok else "",
-            "dest_city":   data.get("dest_city", "")    if ok else "",
-            "ts": time.time(),
+        if not data.get("ok"):
+            return None
+        return {
+            "airline":     data.get("airline",     ""),
+            "origin":      data.get("origin",      ""),
+            "destination": data.get("destination", ""),
+            "origin_city": data.get("origin_city", ""),
+            "dest_city":   data.get("dest_city",   ""),
         }
     except Exception:
-        entry = {"airline": "", "origin": "", "destination": "",
-                 "origin_city": "", "dest_city": "", "ts": time.time()}
+        return None
 
+
+def _fetch_route_bg(callsign: str) -> None:
+    """Fetch route for callsign, trying adsbdb.com first then adsb.lol proxy."""
+    result = _fetch_route_adsbdb(callsign) or _fetch_route_proxy(callsign)
+    entry = {**(result or _ROUTE_EMPTY), "ts": time.time()}
     with _route_cache_lock:
         _route_cache[callsign] = entry
 
@@ -1271,7 +1300,6 @@ def api_geocode():
     if not address:
         return jsonify({"ok": False, "error": "address is required"}), 400
     try:
-        import urllib.parse
         encoded = urllib.parse.quote(address)
         url = f"https://nominatim.openstreetmap.org/search?q={encoded}&format=json&limit=1"
         req = urllib.request.Request(url, headers={"User-Agent": "flightboard/1.0"})
