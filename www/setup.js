@@ -249,6 +249,28 @@ function showWizard() {
   checkFeederInstallStatus();
 }
 
+async function geocodeAddress(addressId, hintId, latId, lonId) {
+  const address = $(addressId).value.trim();
+  if (!address) {
+    $(hintId).textContent = 'Enter an address to search.';
+    return;
+  }
+  $(hintId).textContent = 'Searching...';
+  try {
+    const res = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+    const data = await res.json();
+    if (data.ok) {
+      $(latId).value = data.lat.toFixed(5);
+      $(lonId).value = data.lon.toFixed(5);
+      $(hintId).textContent = data.display_name;
+    } else {
+      $(hintId).textContent = `Not found: ${data.error || 'unknown error'}`;
+    }
+  } catch (_) {
+    $(hintId).textContent = 'Search failed — check network connection.';
+  }
+}
+
 async function autoDetectLocationIP(hintId, latId, lonId) {
   const hint = $(hintId);
   if (hint) hint.textContent = 'Auto-detecting location from IP...';
@@ -321,6 +343,12 @@ $('use-location-btn').addEventListener('click', () => {
 
 $('ip-location-btn').addEventListener('click', () =>
   autoDetectLocationIP('geo-hint', 'lat-input', 'lon-input'));
+
+$('geocode-btn').addEventListener('click', () =>
+  geocodeAddress('address-input', 'geo-hint', 'lat-input', 'lon-input'));
+$('address-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') geocodeAddress('address-input', 'geo-hint', 'lat-input', 'lon-input');
+});
 
 $('save-location-btn').addEventListener('click', async () => {
   const lat = parseFloat($('lat-input').value);
@@ -543,12 +571,18 @@ $('s-use-location-btn').addEventListener('click', () => {
       $('s-geo-hint').textContent =
         `Located: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
     },
-    (err) => { $('s-geo-hint').textContent = `Error: ${err.message}`; }
+    (err) => { $('s-geo-hint').textContent = `Location error: ${err.message}`; }
   );
 });
 
 $('s-ip-location-btn').addEventListener('click', () =>
   autoDetectLocationIP('s-geo-hint', 's-lat-input', 's-lon-input'));
+
+$('s-geocode-btn').addEventListener('click', () =>
+  geocodeAddress('s-address-input', 's-geo-hint', 's-lat-input', 's-lon-input'));
+$('s-address-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') geocodeAddress('s-address-input', 's-geo-hint', 's-lat-input', 's-lon-input');
+});
 
 $('s-save-location-btn').addEventListener('click', async () => {
   const lat = parseFloat($('s-lat-input').value);

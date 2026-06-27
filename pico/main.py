@@ -4,6 +4,7 @@ import gc
 import math
 import time
 import network
+import qr as _qr
 
 time.sleep(3)   # interrupt window — lets mpremote cp run before the main loop starts
 import urequests
@@ -266,11 +267,35 @@ def _fetch():
     print('fetch ok:', len(_aircraft), 'aircraft')
 
 
+def _draw_qr_splash(url):
+    """Show a QR code for url centred on the 128×128 display for 5 seconds."""
+    try:
+        matrix = _qr.generate(url)
+    except Exception as e:
+        print(f"[QR] {e}")
+        return
+    WHITE = c16(0xFFFF)
+    qr_size = len(matrix)
+    scale = max(1, 108 // qr_size)   # leave ~10px margin each side
+    qr_px  = qr_size * scale
+    x0 = (128 - qr_px) // 2
+    y0 = (128 - qr_px) // 2
+    _fb.fill(WHITE)
+    for r, row in enumerate(matrix):
+        for c, dark in enumerate(row):
+            if dark:
+                _fb.fill_rect(x0 + c * scale, y0 + r * scale, scale, scale, BLACK)
+    lcd.show(_buf)
+    time.sleep(5)
+
+
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 _draw_splash('CONNECTING...')
 _connect_wifi()
-if not _wifi_ok:
+if _wifi_ok:
+    _draw_qr_splash(f"http://{config.PI_IP}/setup.html")
+else:
     _draw_splash('NO WIFI')
 
 while True:

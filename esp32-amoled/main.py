@@ -13,6 +13,7 @@ import urequests as requests
 from machine import Pin, SPI, I2C
 import st7789
 import config
+import qr as _qr
 
 # Global state
 class RadarState:
@@ -255,6 +256,35 @@ def render_frame(tft):
     draw_status_bar(tft)
     state.frame_count += 1
 
+# ==================== QR Code ====================
+
+def draw_qr(tft, url, title="Setup"):
+    """Render a QR code for `url` centred on the display with a label above it."""
+    try:
+        matrix = _qr.generate(url)
+    except Exception as e:
+        print(f"[QR] Failed: {e}")
+        return
+
+    size = len(matrix)
+    # Scale so QR fills roughly half the shorter display dimension
+    max_px = min(config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT) - 40
+    scale = max(1, max_px // size)
+    qr_px = size * scale
+
+    x0 = (config.DISPLAY_WIDTH  - qr_px) // 2
+    y0 = (config.DISPLAY_HEIGHT - qr_px) // 2 + 20  # leave room for label
+
+    tft.fill(config.COLOR_TEXT)  # white background for whole screen
+    # Draw title label in dark color
+    tft.text(title, (config.DISPLAY_WIDTH - len(title) * 8) // 2, y0 - 18, config.COLOR_BG)
+
+    for r, row in enumerate(matrix):
+        for c, dark in enumerate(row):
+            color = config.COLOR_BG if dark else config.COLOR_TEXT
+            tft.fill_rect(x0 + c * scale, y0 + r * scale, scale, scale, color)
+
+
 # ==================== Main Loop ====================
 
 def main():
@@ -273,6 +303,13 @@ def main():
         print("[Init] No location configured — fetching from Pi...")
         if not fetch_location_from_pi():
             tft.text("No location!", 10, 10, 0xF800)
+
+    # Show setup page QR code for 5 seconds so users can scan it
+    setup_url = f"http://{config.PI_IP}/setup.html"
+    print(f"[Init] Showing setup QR: {setup_url}")
+    draw_qr(tft, setup_url, "FlightBoard Setup")
+    time.sleep(5)
+    tft.fill(config.COLOR_BG)
 
     print("[Init] Starting radar loop...")
     state.last_fetch = time.time()

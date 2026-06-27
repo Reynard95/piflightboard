@@ -18,6 +18,7 @@ import random
 import re
 import secrets
 import subprocess
+import threading
 import time
 import urllib.request
 from collections import defaultdict
@@ -1177,8 +1178,104 @@ def api_weather():
 
 
 # ---------------------------------------------------------------------------
+# Aircraft data enrichment (airline / route info)
+# ---------------------------------------------------------------------------
+
+# callsign → {"airline", "origin", "destination", "ts"}
+_route_cache: dict = {}
+_route_cache_lock = threading.Lock()
+ROUTE_CACHE_TTL = 3600   # 1 hour per callsign
+
+READSB_AIRCRAFT_JSON = "/run/readsb/aircraft.json"
+
+
+def _fetch_route_bg(callsign: str) -> None:
+    """Fetch route from local route-proxy and store result in cache. Runs in background thread."""
+    try:
+        url = f"http://127.0.0.1:8088/?callsign={callsign}"
+        req = urllib.request.Request(url, headers={"User-Agent": "flightboard/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+        entry = {
+            "airline":     data.get("airline", "")     if data.get("ok") else "",
+            "origin":      data.get("origin", "")      if data.get("ok") else "",
+            "destination": data.get("destination", "") if data.get("ok") else "",
+            "ts": time.time(),
+        }
+    except Exception:
+        entry = {"airline": "", "origin": "", "destination": "", "ts": time.time()}
+
+    with _route_cache_lock:
+        _route_cache[callsign] = entry
+
+
+@app.route("/api/aircraft", methods=["GET"])
+def api_aircraft():
+    """Serve readsb aircraft.json enriched with cached airline/route info.
+    On first fetch for a callsign the airline field is empty; a background
+    thread fetches it so subsequent calls have the data.
+    """
+    try:
+        with open(READSB_AIRCRAFT_JSON) as fh:
+            data = json.load(fh)
+    except OSError:
+        return jsonify({"error": "aircraft data unavailable"}), 503
+
+    now = time.time()
+    for ac in data.get("aircraft", []):
+        cs = ac.get("flight", "").strip()
+        if not cs:
+            continue
+        with _route_cache_lock:
+            entry = _route_cache.get(cs)
+
+        if entry and now - entry["ts"] < ROUTE_CACHE_TTL:
+            ac["airline"]     = entry["airline"]
+            ac["origin"]      = entry["origin"]
+            ac["destination"] = entry["destination"]
+        else:
+            ac["airline"] = ac["origin"] = ac["destination"] = ""
+            # Placeholder prevents a second thread from being spawned before the first finishes
+            if not entry:
+                with _route_cache_lock:
+                    _route_cache[cs] = {"airline": "", "origin": "", "destination": "", "ts": now}
+                threading.Thread(target=_fetch_route_bg, args=(cs,), daemon=True).start()
+
+    return jsonify(data)
+
+
+# ---------------------------------------------------------------------------
 # Geolocation / location
 # ---------------------------------------------------------------------------
+
+@app.route("/api/geocode", methods=["GET"])
+def api_geocode():
+    """Geocode a free-text address to lat/lon using OpenStreetMap Nominatim.
+    Query param: ?address=Gouda+Netherlands
+    No auth required.
+    """
+    address = request.args.get("address", "").strip()
+    if not address:
+        return jsonify({"ok": False, "error": "address is required"}), 400
+    try:
+        import urllib.parse
+        encoded = urllib.parse.quote(address)
+        url = f"https://nominatim.openstreetmap.org/search?q={encoded}&format=json&limit=1"
+        req = urllib.request.Request(url, headers={"User-Agent": "flightboard/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            results = json.loads(resp.read())
+        if not results:
+            return jsonify({"ok": False, "error": "Address not found"})
+        r = results[0]
+        return jsonify({
+            "ok":           True,
+            "lat":          float(r["lat"]),
+            "lon":          float(r["lon"]),
+            "display_name": r.get("display_name", address),
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 @app.route("/api/geolocate", methods=["GET"])
 def api_geolocate():

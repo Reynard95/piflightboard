@@ -89,6 +89,15 @@
         </div>
       </div>
 
+      <div class="field-row address-row">
+        <label>Search by address</label>
+        <div class="address-group">
+          <input type="text" id="address-input" class="field-input"
+                 placeholder="e.g. Gouda, Netherlands" autocomplete="off">
+          <button class="btn btn-secondary btn-sm" id="geocode-btn">Search</button>
+        </div>
+      </div>
+
       <p class="field-hint" id="geo-hint"></p>
 
       <div class="wizard-actions">
@@ -257,6 +266,15 @@
             <input type="number" id="s-lon-input" step="0.001" min="-180" max="180"
                    placeholder="-0.1278" class="field-input">
             <button class="btn-nudge" id="s-lon-plus">+</button>
+          </div>
+        </div>
+
+        <div class="field-row address-row">
+          <label>Search by address</label>
+          <div class="address-group">
+            <input type="text" id="s-address-input" class="field-input"
+                   placeholder="e.g. Gouda, Netherlands" autocomplete="off">
+            <button class="btn btn-secondary btn-sm" id="s-geocode-btn">Search</button>
           </div>
         </div>
 

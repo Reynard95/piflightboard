@@ -13,6 +13,43 @@ import socket
 import time
 import machine
 
+# Display is optional — if it fails (wrong board / missing driver) portal still works
+def _try_show_portal_qr():
+    try:
+        from machine import Pin, SPI
+        import st7789
+        import config
+        import qr as _qr
+        spi = SPI(1, baudrate=config.SPI_FREQ, polarity=1, phase=1)
+        tft = st7789.ST7789(
+            spi, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT,
+            reset=Pin(5, Pin.OUT), cs=Pin(6, Pin.OUT),
+            dc=Pin(4, Pin.OUT), backlight=Pin(config.BACKLIGHT_PIN, Pin.OUT),
+        )
+        tft.init()
+        tft.rotation = config.DISPLAY_ROTATION
+
+        url = f"http://{AP_IP}"
+        matrix = _qr.generate(url)
+        size = len(matrix)
+        scale = max(1, (min(config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT) - 60) // size)
+        qr_px = size * scale
+        x0 = (config.DISPLAY_WIDTH  - qr_px) // 2
+        y0 = (config.DISPLAY_HEIGHT - qr_px) // 2 + 24
+
+        tft.fill(0xFFFF)  # white
+        label = "FlightBoard-Setup"
+        tft.text(label, (config.DISPLAY_WIDTH - len(label) * 8) // 2, y0 - 22, 0x0000)
+        sub = f"Wi-Fi: {AP_SSID}"
+        tft.text(sub, (config.DISPLAY_WIDTH - len(sub) * 8) // 2, y0 - 12, 0x4208)
+
+        for r, row in enumerate(matrix):
+            for c, dark in enumerate(row):
+                color = 0x0000 if dark else 0xFFFF
+                tft.fill_rect(x0 + c * scale, y0 + r * scale, scale, scale, color)
+    except Exception as e:
+        print(f"[Portal] Display init skipped: {e}")
+
 AP_SSID    = "FlightBoard-Setup"
 AP_IP      = "192.168.4.1"
 LISTEN_PORT = 80
@@ -241,6 +278,7 @@ def start():
         time.sleep(0.1)
 
     print(f"[Portal] AP '{AP_SSID}' started. Connect and open http://{AP_IP}")
+    _try_show_portal_qr()
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
