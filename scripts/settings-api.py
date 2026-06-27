@@ -1177,6 +1177,42 @@ def api_weather():
 
 
 # ---------------------------------------------------------------------------
+# Geolocation / location
+# ---------------------------------------------------------------------------
+
+@app.route("/api/geolocate", methods=["GET"])
+def api_geolocate():
+    """Auto-detect the Pi's location from its public IP using ip-api.com.
+    No auth required — result is not sensitive and used for pre-filling the setup form.
+    """
+    try:
+        url = "http://ip-api.com/json/?fields=status,lat,lon,city,regionName,country"
+        req = urllib.request.Request(url, headers={"User-Agent": "flightboard/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+        if data.get("status") == "success":
+            return jsonify({
+                "ok":      True,
+                "lat":     data["lat"],
+                "lon":     data["lon"],
+                "city":    data.get("city", ""),
+                "region":  data.get("regionName", ""),
+                "country": data.get("country", ""),
+            })
+        return jsonify({"ok": False, "error": "IP geolocation returned failure status"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/location", methods=["GET"])
+def api_location():
+    """Return the stored receiver lat/lon. No auth required — used by ESP32 display modules."""
+    settings = load_settings()
+    loc = settings.get("location", {"lat": 0.0, "lon": 0.0})
+    return jsonify({"lat": loc.get("lat", 0.0), "lon": loc.get("lon", 0.0)})
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 

@@ -237,13 +237,35 @@ function showWizard() {
   hide('settings-panel');
   show('wizard');
 
-  // Pre-fill location inputs if we have saved coords
   const loc = appSettings.location || {};
   if (loc.lat) $('lat-input').value = loc.lat;
   if (loc.lon) $('lon-input').value = loc.lon;
 
+  // Auto-detect via IP if no location is saved yet
+  const isUnset = !loc.lat || (parseFloat(loc.lat) === 0 && parseFloat(loc.lon) === 0);
+  if (isUnset) autoDetectLocationIP('geo-hint', 'lat-input', 'lon-input');
+
   goToWizardStep(1);
   checkFeederInstallStatus();
+}
+
+async function autoDetectLocationIP(hintId, latId, lonId) {
+  const hint = $(hintId);
+  if (hint) hint.textContent = 'Auto-detecting location from IP...';
+  try {
+    const res = await fetch('/api/geolocate');
+    const data = await res.json();
+    if (data.ok) {
+      $(latId).value = data.lat.toFixed(5);
+      $(lonId).value = data.lon.toFixed(5);
+      const place = [data.city, data.region, data.country].filter(Boolean).join(', ');
+      if (hint) hint.textContent = `Estimated: ${place || 'unknown location'} — confirm or adjust`;
+    } else {
+      if (hint) hint.textContent = 'Could not auto-detect — enter coordinates manually.';
+    }
+  } catch (_) {
+    if (hint) hint.textContent = 'Auto-detect unavailable — enter coordinates manually.';
+  }
 }
 
 function goToWizardStep(n) {
@@ -296,6 +318,9 @@ $('use-location-btn').addEventListener('click', () => {
     }
   );
 });
+
+$('ip-location-btn').addEventListener('click', () =>
+  autoDetectLocationIP('geo-hint', 'lat-input', 'lon-input'));
 
 $('save-location-btn').addEventListener('click', async () => {
   const lat = parseFloat($('lat-input').value);
@@ -373,7 +398,7 @@ function updateInstallBadge(badgeId, installed) {
   }
 }
 
-// Wizard FR24 — install only, signup via FR24's built-in web UI on port 8754
+// Wizard FR24 — install only, signup via SSH
 $('fr24-install-btn-wiz').addEventListener('click', async () => {
   const termWrap   = $('fr24-terminal-wiz');
   const termOut    = $('fr24-terminal-out-wiz');
@@ -385,9 +410,6 @@ $('fr24-install-btn-wiz').addEventListener('click', async () => {
 
   const success = await runSseInstall('/api/feeder/fr24/install', termOut, termStatus);
   if (success) {
-    // Show post-install panel with link to FR24's built-in signup web UI
-    const host = window.location.hostname;
-    $('fr24-webui-link').href = `http://${host}:8754`;
     $('fr24-post-install').classList.remove('hidden');
     wizardState.fr24Done = true;
     await checkFeederInstallStatus();
@@ -525,6 +547,9 @@ $('s-use-location-btn').addEventListener('click', () => {
   );
 });
 
+$('s-ip-location-btn').addEventListener('click', () =>
+  autoDetectLocationIP('s-geo-hint', 's-lat-input', 's-lon-input'));
+
 $('s-save-location-btn').addEventListener('click', async () => {
   const lat = parseFloat($('s-lat-input').value);
   const lon = parseFloat($('s-lon-input').value);
@@ -624,9 +649,7 @@ $('s-fa-already-btn').addEventListener('click', async () => {
   $('s-fa-post-install').classList.remove('hidden');
 });
 
-function showFr24PostInstall(linkId, panelId) {
-  const host = window.location.hostname;
-  $(linkId).href = `http://${host}:8754`;
+function showFr24PostInstall(_linkId, panelId) {
   $(panelId).classList.remove('hidden');
 }
 

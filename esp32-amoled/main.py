@@ -65,6 +65,30 @@ def connect_wifi():
     print(f"\n[WiFi] Connected! IP: {wlan.ifconfig()[0]}")
     return True
 
+def fetch_location_from_pi():
+    """Fetch receiver lat/lon from the Pi's /api/location endpoint.
+    Mutates config.RECEIVER_LAT/LON so the rest of the code picks it up.
+    Called once after WiFi connects when the config has 0,0 coordinates.
+    """
+    url = f"http://{config.PI_IP}:{config.PI_PORT}/api/location"
+    try:
+        resp = requests.get(url, timeout=config.FETCH_TIMEOUT)
+        if resp.status_code == 200:
+            data = resp.json()
+            lat = float(data.get("lat", 0.0))
+            lon = float(data.get("lon", 0.0))
+            resp.close()
+            if lat != 0.0 or lon != 0.0:
+                config.RECEIVER_LAT = lat
+                config.RECEIVER_LON = lon
+                print(f"[Location] Got from Pi: {lat:.5f}, {lon:.5f}")
+                return True
+        resp.close()
+    except Exception as e:
+        print(f"[Location] Fetch failed: {e}")
+    return False
+
+
 def fetch_aircraft():
     """Fetch aircraft data from Pi's readsb JSON endpoint"""
     url = f"http://{config.PI_IP}:{config.PI_PORT}{config.AIRCRAFT_ENDPOINT}"
@@ -244,6 +268,12 @@ def main():
         time.sleep(5)
         return
     
+    # Auto-fetch receiver location from Pi if not configured
+    if config.RECEIVER_LAT == 0.0 and config.RECEIVER_LON == 0.0:
+        print("[Init] No location configured — fetching from Pi...")
+        if not fetch_location_from_pi():
+            tft.text("No location!", 10, 10, 0xF800)
+
     print("[Init] Starting radar loop...")
     state.last_fetch = time.time()
     
