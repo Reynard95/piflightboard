@@ -35,6 +35,7 @@
 html, body {
   width: 100%;
   min-height: 100%;
+  overflow-y: auto;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-mono);

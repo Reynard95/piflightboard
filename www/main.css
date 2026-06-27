@@ -120,7 +120,11 @@ html.portrait .data-grid {
    ═══════════════════════════════════════════════════════════ */
 
 @media (max-width: 640px) {
-  .board { padding: 10px 14px 0; }
+  /* Allow the page to scroll vertically instead of clipping to viewport */
+  html, body { height: auto; overflow-y: auto; }
+  .board { height: auto; min-height: 100vh; padding: 10px 14px 16px; }
+  .main  { overflow: visible; height: auto; }
+  .fade-in { flex: none; }
 
   /* Shrink logo so the identity area has more room */
   .logo-box { width: 56px; height: 56px; margin-top: 0; align-self: center; }
@@ -216,16 +220,4 @@ html.portrait .data-grid {
 .acl-route { color: var(--fg-mid); font-size: 8px; }
 .acl-arrow { color: var(--fg-dim); margin: 0 2px; font-size: 7px; }
 .acl-num   { text-align: right; color: var(--fg-dim); font-size: 8px; width: 44px; }
-.acl-vr    { text-align: center; width: 22px; font-size: 10px; }ac-header    { gap: 8px; padding-bottom: 6px; }
-  .data-grid    { grid-template-columns: 1fr 1fr 1fr; gap: 0 clamp(8px, 1.5vw, 24px); }
-  .data-row     { padding: 2px 0; }
-  .telem-row    { padding-top: 5px; }
-  .telem-lbl    { display: none; }
-}
-
-/* Ultra-short — hide footer strip */
-@media (max-height: 220px) {
-  .footer       { display: none; }
-  .telem-row    { display: none; }
-  .board        { grid-template-rows: 1fr; }
-}
+.acl-vr    { text-align: center; width: 22px; font-size: 10px; }
