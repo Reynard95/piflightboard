@@ -392,7 +392,7 @@ async function showIndex(idx) {
     renderFull({ ac, airlineName, icaoCode, countryCode, typeCode, typeName,
                  flagHtml, logoUrl, logoFallback, origin, dest, route,
                  etaStr, routeDurStr, altBaro, speed, track, vsStr, vrClass,
-                 status, statusClass, dist, vr });
+                 status, statusClass, dist, vr, reg });
   }
 
   updateTicker();
@@ -402,7 +402,7 @@ async function showIndex(idx) {
 function renderFull({ ac, airlineName, icaoCode, countryCode, typeCode, typeName,
                       flagHtml, logoUrl, logoFallback, origin, dest, route,
                       etaStr, routeDurStr, altBaro, speed, track, vsStr, vrClass,
-                      status, statusClass, dist, vr }) {
+                      status, statusClass, dist, vr, reg }) {
   const rawCallsign = (ac.flight || '').trim();
 
   const mach     = ac.mach     != null ? ac.mach.toFixed(3)                       : '---';
