@@ -14,8 +14,6 @@ echo "[deploy] Starting deployment..."
 
 # ── Web files ──────────────────────────────────────────────
 # Always copy web files first — regardless of version check below.
-# This ensures the latest HTML/CSS/JS is live immediately on every push,
-# even when a version bump triggers a slow background reinstall.
 echo "[deploy] Copying web files (atomic)..."
 STAGE_DIR=$(mktemp -d "/tmp/flightboard-stage.XXXXXX")
 cp -r "$REPO_DIR"/www/. "$STAGE_DIR/"
@@ -25,6 +23,17 @@ OLD_DIR=$(mktemp -d "/tmp/flightboard-old.XXXXXX")
 mv "$WEB_DIR" "$OLD_DIR" 2>/dev/null || true
 mv "$STAGE_DIR" "$WEB_DIR"
 rm -rf "$OLD_DIR"
+
+# ── Service files ──────────────────────────────────────────
+# Always install service files before the version check.
+# If the version check triggers an early exit (full reinstall path),
+# services must still be registered so the system can come up cleanly.
+echo "[deploy] Installing service files..."
+sudo cp "$REPO_DIR/config/route-proxy.service"  "$SYSTEMD_DIR/route-proxy.service"
+sudo cp "$REPO_DIR/config/settings-api.service" "$SYSTEMD_DIR/settings-api.service"
+sudo systemctl daemon-reload
+sudo systemctl enable route-proxy
+sudo systemctl enable settings-api
 
 # ── Version check ──────────────────────────────────────────
 # If the stack version has changed (or no install stamp exists),
@@ -64,27 +73,10 @@ echo "[deploy] Skipping readsb.conf — Pi keeps its own coordinates."
 # ── tmpfiles (permissions that survive reboot) ────────────
 sudo cp "$REPO_DIR/config/tmpfiles-readsb.conf" /etc/tmpfiles.d/readsb.conf
 
-# ── route proxy ────────────────────────────────────────────
-# Service now runs directly from the repo (no copy to /usr/local/bin needed).
-# Only update the service file if it changed, then restart.
-if ! diff -q "$REPO_DIR/config/route-proxy.service" "$SYSTEMD_DIR/route-proxy.service" > /dev/null 2>&1; then
-  echo "[deploy] Updating route-proxy service file..."
-  sudo cp "$REPO_DIR/config/route-proxy.service" "$SYSTEMD_DIR/route-proxy.service"
-  sudo systemctl daemon-reload
-  sudo systemctl enable route-proxy
-fi
+# ── route proxy + settings API ─────────────────────────────
+# Service files were already installed unconditionally at the top.
 echo "[deploy] Restarting route-proxy..."
 sudo systemctl restart route-proxy
-
-# ── settings API ────────────────────────────────────────────
-# Service now runs directly from the repo (no copy to /usr/local/bin needed).
-# Only update the service file if it changed, then restart.
-if ! diff -q "$REPO_DIR/config/settings-api.service" "$SYSTEMD_DIR/settings-api.service" > /dev/null 2>&1; then
-  echo "[deploy] Updating settings-api service file..."
-  sudo cp "$REPO_DIR/config/settings-api.service" "$SYSTEMD_DIR/settings-api.service"
-  sudo systemctl daemon-reload
-  sudo systemctl enable settings-api
-fi
 echo "[deploy] Restarting settings-api..."
 sudo systemctl restart settings-api
 
