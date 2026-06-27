@@ -49,11 +49,11 @@ echo "[deploy] Version $REPO_VERSION matches — running normal deploy."
 echo "[deploy] Installing lighttpd config..."
 sudo cp "$REPO_DIR/config/lighttpd-flightboard.conf" "$CONFIG_DIR/50-flightboard.conf"
 
-# ── lighttpd reload ────────────────────────────────────────
-echo "[deploy] Reloading lighttpd..."
+# ── lighttpd restart ───────────────────────────────────────
+echo "[deploy] Restarting lighttpd..."
 sudo lighttpd -tt -f /etc/lighttpd/lighttpd.conf
 sudo systemctl enable lighttpd
-sudo systemctl reload-or-restart lighttpd
+sudo systemctl restart lighttpd
 
 # ── readsb config ──────────────────────────────────────────
 # config/readsb.conf in the repo is a template with placeholder lat/lon.
@@ -104,5 +104,15 @@ if [ -f /etc/fr24feed.ini ] && grep -q '^receiver=dvbt' /etc/fr24feed.ini; then
   sudo systemctl restart fr24feed
   echo "[deploy] fr24feed reconfigured and restarted."
 fi
+
+# ── Health check ───────────────────────────────────────────
+# Verify critical services are active after all restarts.
+# If a service is still down, try one more cold start.
+for svc in lighttpd route-proxy settings-api; do
+  if ! systemctl is-active --quiet "$svc"; then
+    echo "[deploy] WARNING: $svc not active — attempting recovery restart..."
+    sudo systemctl restart "$svc" || echo "[deploy] ERROR: $svc failed to start"
+  fi
+done
 
 echo "[deploy] Done! Deployment complete."
