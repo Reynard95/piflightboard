@@ -88,4 +88,21 @@ fi
 echo "[deploy] Restarting settings-api..."
 sudo systemctl restart settings-api
 
+# ── fr24feed: switch from direct DVB-T to Beast TCP via readsb ─────────────
+# If fr24feed.ini still has receiver=dvbt, readsb and fr24feed both try to
+# own the RTL-SDR dongle and fr24feed loses every time. Point it at readsb's
+# Beast output port instead. Only modifies the two relevant keys; FR24 key
+# and all other settings are preserved.
+if [ -f /etc/fr24feed.ini ] && grep -q '^receiver=dvbt' /etc/fr24feed.ini; then
+  echo "[deploy] Fixing fr24feed: switching receiver=dvbt → beast-tcp on port 30005..."
+  sudo sed -i 's/^receiver=.*/receiver=beast-tcp/' /etc/fr24feed.ini
+  if grep -q '^host=' /etc/fr24feed.ini; then
+    sudo sed -i 's/^host=.*/host=127.0.0.1:30005/' /etc/fr24feed.ini
+  else
+    printf '\nhost=127.0.0.1:30005\n' | sudo tee -a /etc/fr24feed.ini > /dev/null
+  fi
+  sudo systemctl restart fr24feed
+  echo "[deploy] fr24feed reconfigured and restarted."
+fi
+
 echo "[deploy] Done! Deployment complete."
