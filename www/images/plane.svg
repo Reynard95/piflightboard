@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <rect width="500" height="500" fill="#000"/>
+
+  <!-- Radar rings -->
+  <circle cx="250" cy="250" r="228" fill="none" stroke="#4488ee" stroke-width="2.5"/>
+  <circle cx="250" cy="250" r="133" fill="none" stroke="#4488ee" stroke-width="1.5" stroke-dasharray="9,6"/>
+
+  <!-- Crosshairs -->
+  <line x1="22" y1="250" x2="478" y2="250" stroke="#4488ee" stroke-width="1.5" stroke-dasharray="9,6"/>
+  <line x1="250" y1="22" x2="250" y2="478" stroke="#4488ee" stroke-width="1.5" stroke-dasharray="9,6"/>
+
+  <!-- Aircraft silhouette: filled black with white outlines -->
+  <g fill="#000" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+
+    <!-- Fuselage -->
+    <path d="M250,44
+             C256,58 263,78 267,112 C271,146 271,178 269,212
+             C267,244 264,274 261,304 C258,330 255,358 252,388
+             C251,406 250,421 250,430
+             C250,421 249,406 248,388
+             C245,358 242,330 239,304 C236,274 233,244 231,212
+             C229,178 229,146 233,112 C237,78 244,58 250,44 Z"/>
+
+    <!-- Left wing -->
+    <path d="M233,205
+             C215,216 189,229 159,246 C129,263 103,278 80,292
+             C82,301 86,311 92,317
+             C113,308 138,295 162,283 C188,270 210,259 230,249
+             C233,241 233,225 233,205 Z"/>
+
+    <!-- Right wing -->
+    <path d="M267,205
+             C285,216 311,229 341,246 C371,263 397,278 420,292
+             C418,301 414,311 408,317
+             C387,308 362,295 338,283 C312,270 290,259 270,249
+             C267,241 267,225 267,205 Z"/>
+
+    <!-- Left engine nacelle -->
+    <path d="M155,234 C151,238 149,254 151,272 C156,282 165,285 170,278
+             C173,260 172,240 168,234 C163,230 159,231 155,234 Z"/>
+
+    <!-- Right engine nacelle -->
+    <path d="M345,234 C349,238 351,254 349,272 C344,282 335,285 330,278
+             C327,260 328,240 332,234 C337,230 341,231 345,234 Z"/>
+
+    <!-- Left horizontal stabilizer -->
+    <path d="M246,403 C236,406 222,411 208,421
+             C211,427 217,430 221,429 C231,423 240,415 246,409 Z"/>
+
+    <!-- Right horizontal stabilizer -->
+    <path d="M254,403 C264,406 278,411 292,421
+             C289,427 283,430 279,429 C269,423 260,415 254,409 Z"/>
+
+    <!-- Vertical tail fin -->
+    <path d="M248,416 L248,432 L252,432 L252,416 Z"/>
+
+  </g>
+
+  <!-- Aircraft detail lines -->
+  <g fill="none" stroke="#fff" stroke-linecap="round">
+
+    <!-- Cockpit windows -->
+    <ellipse cx="250" cy="74" rx="3.5" ry="5.5" stroke-width="1.2"/>
+
+    <!-- Wing-body fairing lines -->
+    <path stroke-width="1.0" d="M243,206 C241,228 241,250 242,268"/>
+    <path stroke-width="1.0" d="M257,206 C259,228 259,250 258,268"/>
+
+    <!-- Left wing trailing edge flap/aileron lines -->
+    <path stroke-width="1.1" d="M230,249 C210,259 184,271 158,281"/>
+    <path stroke-width="1.0" d="M228,257 C207,267 181,278 155,288"/>
+    <path stroke-width="0.9" d="M225,265 C204,274 178,285 152,295"/>
+
+    <!-- Right wing trailing edge flap/aileron lines -->
+    <path stroke-width="1.1" d="M270,249 C290,259 316,271 342,281"/>
+    <path stroke-width="1.0" d="M272,257 C293,267 319,278 345,288"/>
+    <path stroke-width="0.9" d="M275,265 C296,274 322,285 348,295"/>
+
+    <!-- Engine intake/exhaust dividers -->
+    <path stroke-width="1.1" d="M152,241 Q162,239 170,241"/>
+    <path stroke-width="1.0" d="M150,270 Q161,273 172,270"/>
+    <path stroke-width="1.1" d="M330,241 Q340,239 348,241"/>
+    <path stroke-width="1.0" d="M328,270 Q339,273 350,270"/>
+
+    <!-- Wing root join line -->
+    <path stroke-width="1.0" d="M236,287 L264,287"/>
+
+  </g>
+</svg>

@@ -381,7 +381,7 @@ async function showIndex(idx) {
   const flagHtml     = flagUrl
     ? `<img src="${flagUrl}" alt="${countryCode}" class="flag-img" onerror="this.style.display='none'">`
     : '';
-  const logoFallback = `<div class="logo-fallback"><div>✈︎</div><div>${icaoCode || '?'}</div></div>`;
+  const logoFallback = `<img src="/images/plane.svg" class="plane-logo" alt="aircraft">`;
 
   if (FOCUS_MODE) {
     renderFocus({ ac, airlineName, rawCallsign: (ac.flight || '').trim(), typeCode, typeName,
@@ -439,7 +439,7 @@ function renderFull({ ac, airlineName, icaoCode, countryCode, typeCode, typeName
 
       <div class="ac-header">
         <div class="logo-box" id="logo-wrap">
-          ${logoUrl ? `<img id="alogo" src="${escHtml(logoUrl)}" alt="${escHtml(icaoCode || '')}">` : logoFallback}
+          ${logoUrl ? `<img id="alogo" src="${escHtml(logoUrl)}" alt="${escHtml(icaoCode || '')}" onerror="this.src='/images/plane.svg';this.onerror=null;">` : logoFallback}
         </div>
         <div class="ac-identity">
           <div class="ac-topinfo">
