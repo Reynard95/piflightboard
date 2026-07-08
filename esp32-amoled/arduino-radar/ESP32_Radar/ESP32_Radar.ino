@@ -29,6 +29,8 @@
 #include "secrets.h"
 #include "A3_img.h"
 #include "A3_img_sm.h"
+#include "flags.h"
+#include "logos.h"
 
 // ── DISPLAY PINS ──────────────────────────────────────────────────────────────
 #define LCD_CS   12
@@ -68,6 +70,27 @@
 #define C_DIM        C_BORDER
 #define C_SEP        C_PANEL
 #define C_CYAN       C_BLUE_INFO
+
+// ── REDESIGN v2 — Teal AMOLED palette ────────────────────────────────────────
+#define C2_PAN   0x08A4   // #0b1520 — dark panel / card fill
+#define C2_TAB   0x0042   // #050c14 — status/tab bar bg
+#define C2_TEAL  0x0734   // #00e5a0 — primary teal accent
+#define C2_TEAL2 0x0611   // #00c488 — secondary teal
+#define C2_TXT   0xDF7F   // #e0f0ff — primary text
+#define C2_TXT2  0xAE1B   // #b0c8e0 — secondary text
+#define C2_DIM   0x5BD3   // #5a7a99 — dim labels
+#define C2_VDIM  0x2A0C   // #2a4060 — very dim / inactive
+#define C2_ISEP  0x1926   // #1a2535 — separator line
+#define C2_BRD   0x01C6   // rgba(0,229,160,0.2) over black — teal border
+#define C2_RED   0xE9E8   // #ef4444 — alert / offline
+#define C2_AMB   0xF4E1   // #f59e0b — warning amber
+
+// ── REDESIGN v2 — Layout ──────────────────────────────────────────────────────
+#define R_SBH    28            // new status bar height (top)
+#define R_TBH    38            // new tab bar height (bottom)
+#define R_TBY    (H - R_TBH)  // tab bar y = 410
+#define R_CY     R_SBH         // content area y start = 28
+#define R_CH     (R_TBY - R_SBH)  // content height = 382
 
 // ── PINS ──────────────────────────────────────────────────────────────────────
 #define BOOT_PIN    0
@@ -389,6 +412,69 @@ void drawPanel(int x, int y, int w, int h) {
   gfx->drawRoundRect(x, y, w, h, 4, C_BORDER);
 }
 
+// Teal-theme telemetry bubble: label top, value (size 3) middle, unit bottom
+// Designed for h=60 bubbles; borderRadius matches Figma's 10px
+void drawBubble(int x, int y, int w, int h,
+                const char* label, const char* value, const char* unit,
+                bool accent = false) {
+  gfx->fillRoundRect(x, y, w, h, 10, C2_PAN);
+  gfx->drawRoundRect(x, y, w, h, 10, accent ? C2_BRD : C2_ISEP);
+  // Label — 6px top pad, size 1 (6×8px)
+  int lx = x + (w - (int)strlen(label) * 6) / 2;
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C2_PAN);
+  gfx->setCursor(lx, y + 6); gfx->print(label);
+  // Value — 6px below label (label bottom = y+14), size 3 (18×24px)
+  int vx = x + (w - (int)strlen(value) * 18) / 2;
+  if (vx < x + 2) vx = x + 2;
+  gfx->setTextSize(3); gfx->setTextColor(accent ? C2_TEAL : C2_TXT, C2_PAN);
+  gfx->setCursor(vx, y + 20); gfx->print(value);
+  // Unit — 4px below value (value bottom = y+44), size 1
+  if (unit && unit[0]) {
+    int ux = x + (w - (int)strlen(unit) * 6) / 2;
+    gfx->setTextSize(1); gfx->setTextColor(C2_VDIM, C2_PAN);
+    gfx->setCursor(ux, y + 48); gfx->print(unit);
+  }
+}
+
+// New teal status bar (28 px, top)
+void drawNewStatusBar() {
+  gfx->fillRect(0, 0, W, R_SBH, C2_TAB);
+  gfx->drawFastHLine(0, R_SBH - 1, W, C2_BRD);
+  int ty = (R_SBH - 8) / 2;
+  gfx->setTextSize(1); gfx->setTextColor(C2_TEAL, C2_TAB);
+  gfx->setCursor(MX, ty); gfx->print("FLIGHTBOARD");
+  struct tm t;
+  if (getLocalTime(&t, 0)) {
+    char tb[6]; snprintf(tb, sizeof(tb), "%02d:%02d", t.tm_hour, t.tm_min);
+    gfx->setTextColor(C2_TXT2, C2_TAB);
+    gfx->setCursor(W - MX - 22 - (int)strlen(tb) * 6 - 4, ty);
+    gfx->print(tb);
+  }
+  drawWifiBars(W - MX - 20, (R_SBH - 13) / 2);
+}
+
+// New teal tab bar (38 px, bottom); highlights the active tab
+void drawTabBar() {
+  gfx->fillRect(0, R_TBY, W, R_TBH, C2_TAB);
+  gfx->drawFastHLine(0, R_TBY, W, C2_BRD);
+  struct { View v; const char* lbl; } tabs[4] = {
+    {V_DASHBOARD, "BOARD"},
+    {V_LIST,      "LIVE"},
+    {V_RADAR,     "RADAR"},
+    {V_PI,        "ALERTS"}
+  };
+  const int tw = W / 4;  // 92 px per tab
+  for (int i = 0; i < 4; i++) {
+    bool active = (currentView == tabs[i].v);
+    int cx = i * tw + tw / 2;
+    uint16_t col = active ? C2_TEAL : C2_DIM;
+    if (active) gfx->fillRect(cx - 8, R_TBY + 3, 16, 2, C2_TEAL);
+    int lx = cx - (int)strlen(tabs[i].lbl) * 3;
+    gfx->setTextSize(1); gfx->setTextColor(col, C2_TAB);
+    gfx->setCursor(lx, R_TBY + 18); gfx->print(tabs[i].lbl);
+  }
+}
+
 // Data cell: label top-left | value right-aligned (or centred) | unit in right column
 void drawDataCell(int x, int y, int w, int h,
                   const char* label, const char* value, const char* unit,
@@ -553,153 +639,172 @@ void drawChrome(const char* title) {
   drawStatusBar();
 }
 
-// ═══════════════════════════════════════════════════════════ SCREEN 1: DASHBOARD
+// ═══════════════════════════════════════════════════════════ SCREEN 1: BOARD
 
 void renderDashboard() {
   gfx->fillScreen(C_BG);
-  drawStatusBar();
-
-  // ── Header panel — rounded top corners follow display curve ──────────────
-  gfx->fillRoundRect(0, 0, W, MY + CORNER_R, CORNER_R, C_PANEL);
-  gfx->fillRect(0, MY, W, CORNER_R, C_BG);
-  hline(MY, C_BORDER);
-  gfx->fillRect(0, 0, 3, MY, C_BLUE);   // left accent
-  gfx->setTextSize(2); gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-  { const char* hdr = acCount == 0 ? "NO AC" : "CLOSEST";
-    gfx->setCursor((W - (int)strlen(hdr) * 12) / 2, (MY - 16) / 2);
-    gfx->print(hdr); }
+  drawNewStatusBar();
+  drawTabBar();
 
   if (acCount == 0) {
-    drawA3Centered(W / 2, (MY + SB_Y) / 2);
-    printCtr("NO AIRCRAFT", SB_Y - 36, 1, C_BORDER);
+    drawA3Centered(W / 2, (R_CY + R_TBY) / 2);
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+    gfx->setCursor((W - 11 * 6) / 2, R_TBY - 40); gfx->print("NO AIRCRAFT");
     return;
   }
-  AcEntry& a = acList[0];  // always closest
+  AcEntry& a = acList[0];
 
-  // ── Left column: radar circle + aircraft silhouette ────────────────────────
-  const int cx = MX + 76, cy = MY + 84, cr = 68;
+  // ── Header: 3 bubbles  (logo | callsign / tail no.) ─────────────────────
+  const int CY0 = R_CY + 8;          // y = 36  (8px top padding)
+  const int CW  = W - 2 * MX;        // 352 px
+  const int CH  = A3_SM_H + 16;      // 152 px  (header zone height)
 
-  // A3 radar+aircraft image (replaces drawn rings + silhouette)
-  drawA3SmCentered(cx, cy);
-
-  // ── Right column: callsign, type, route, ICAO ─────────────────────────────
-  const int rx = MX + 158, ry = MY + 12;
-
-  // Callsign — large (size 4 for short names, size 3 for longer)
-  const char* cs = a.callsign[0] ? a.callsign : "------";
-  uint8_t csSz = strlen(cs) > 7 ? 3 : 4;
-  gfx->setTextSize(csSz); gfx->setTextColor(C_FG, C_BG);
-  gfx->setCursor(rx, ry); gfx->print(cs);
-
-  // Layout: right column ry → gy = 146px (size-4 callsign).
-  // callsign(32) +10+ type(8) +8+ airline(16) +16+ origin(16) +8+ >(8) +8+ dest(16) = 146
-  int typeY  = ry + csSz * 8 + 10;   // 10px after callsign cell
-  int routeY = typeY + 48;            // type(8) + 8gap + airline(16) + 16gap = 48
-
-  // Aircraft type — "B738 - BOEING 737-800" (size 1, fits full long string)
-  if (a.type[0]) {
-    char typeDisp[44];
-    if (a.type_full[0])
-      snprintf(typeDisp, sizeof(typeDisp), "%s - %s", a.type, a.type_full);
-    else
-      strncpy(typeDisp, a.type, sizeof(typeDisp) - 1);
-    int maxCh = (W - rx - MX) / 6;
-    if ((int)strlen(typeDisp) > maxCh) typeDisp[maxCh] = '\0';
-    gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
-    gfx->setCursor(rx, typeY); gfx->print(typeDisp);
-  }
-
-  // Airline name — size 2, 8px below type
-  if (routeValid && routeAirline[0]) {
-    char al[28]; strncpy(al, routeAirline, 27); al[27] = '\0';
-    int maxAl = (W - rx - MX) / 12;   // size-2 chars are 12px wide
-    if ((int)strlen(al) > maxAl) al[maxAl] = '\0';
-    gfx->setTextSize(2); gfx->setTextColor(C_TEXT_SEC, C_BG);
-    gfx->setCursor(rx, typeY + 16); gfx->print(al);
-  }
-
-  // Route — size 2 city names, small > separator
-  if (routeValid && strcmp(routeForCs, a.callsign) == 0 && routeOrigin[0]) {
-    int maxCity = (W - rx - MX) / 12;
-    char orig[28], dst[28];
-    strncpy(orig, routeOriginCity[0] ? routeOriginCity : routeOrigin, 27); orig[27] = '\0';
-    strncpy(dst,  routeDestCity[0]   ? routeDestCity   : routeDest,   27); dst[27]  = '\0';
-    if ((int)strlen(orig) > maxCity) orig[maxCity] = '\0';
-    if ((int)strlen(dst)  > maxCity) dst[maxCity]  = '\0';
-    gfx->setTextSize(2); gfx->setTextColor(C_BLUE_INFO, C_BG);
-    gfx->setCursor(rx, routeY); gfx->print(orig);
-    gfx->setTextSize(1); gfx->setTextColor(C_TEXT_SEC, C_BG);
-    gfx->setCursor(rx + 4, routeY + 24); gfx->print(">");
-    gfx->setTextSize(2); gfx->setTextColor(C_BLUE_INFO, C_BG);
-    gfx->setCursor(rx, routeY + 32); gfx->print(dst);
-  } else {
-    gfx->setTextSize(1); gfx->setTextColor(C_BORDER, C_BG);
-    gfx->setCursor(rx, routeY); gfx->print("ROUTE N/A");
-  }
-
-
-  // ── Data grid: 3 rows × 2 columns ─────────────────────────────────────────
-  const int cw = (W - 2 * MX - 4) / 2;   // cell width  = 174
-  const int ch = 58;                        // cell height
-  const int gx0 = MX, gx1 = MX + cw + 4;
-  const int gy  = MY + 158;
-
-  // Row 1: Altitude | Ground Speed
+  // Left column — logo bubble
+  const int LW  = A3_SM_W + 20;      // 156 px  (10px h-pad each side)
+  gfx->fillRoundRect(MX, CY0, LW, CH, 8, C2_PAN);
+  gfx->drawRoundRect(MX, CY0, LW, CH, 8, C2_ISEP);
   {
-    char altVal[10], altUnit[4], spdVal[10], spdUnit[8];
-    if (settingUnits == 1) { fmtThousands(altVal, sizeof(altVal), a.alt_ft); strcpy(altUnit, "ft"); }
-    else                   { snprintf(altVal, sizeof(altVal), "%d", (int)(a.alt_ft * 0.3048f)); strcpy(altUnit, "m"); }
-    if (settingUnits == 1) { snprintf(spdVal, 10, "%d",  a.spd_kts);                strcpy(spdUnit, "KT");   }
-    else                   { snprintf(spdVal, 10, "%d",  (int)(a.spd_kts * 1.852f)); strcpy(spdUnit, "km/h"); }
-    drawDataCell(gx0, gy,      cw, ch, "ALTITUDE",     altVal, altUnit, C_FG);
-    drawDataCell(gx1, gy,      cw, ch, "GROUND SPEED", spdVal, spdUnit, C_FG);
+    const uint16_t* ld = logoForCallsign(a.callsign);
+    if (ld) drawLogo(gfx, MX + LW / 2, CY0 + CH / 2, ld);
+    else    drawA3SmCentered(MX + LW / 2, CY0 + CH / 2);
   }
 
-  // Row 2: Distance | Heading
+  // Right column — 2 equal bubbles (73px each, 6px gap)
+  const int RX  = MX + LW + 6;       // x = 170
+  const int RW  = CW - LW - 6;       // 190 px
+  const int RH  = (CH - 6) / 2;      // 73 px
+  const int RY1 = CY0;               // y = 36
+  const int RY2 = RY1 + RH + 6;      // y = 115
+
+  // ── Callsign bubble  (teal accent border) ────────────────────────────────
+  // Layout: label(8) + 6gap + value(24) + 6gap + unit(8) = 52px, padded 10/11
+  gfx->fillRoundRect(RX, RY1, RW, RH, 8, C2_PAN);
+  gfx->drawRoundRect(RX, RY1, RW, RH, 8, C2_BRD);
   {
-    char distVal[10], distUnit[4], hdgVal[8];
-    if (settingUnits == 1) { snprintf(distVal, 10, "%.1f", a.dist_nm);              strcpy(distUnit, "NM"); }
-    else                   { snprintf(distVal, 10, "%.1f", a.dist_nm * 1.852f);     strcpy(distUnit, "km"); }
-    snprintf(hdgVal, sizeof(hdgVal), "%d", a.track_deg);
-    drawDataCell(gx0, gy + ch + 4,      cw, ch, "DISTANCE", distVal, distUnit, C_FG);
-    drawDataCell(gx1, gy + ch + 4,      cw, ch, "HEADING",  hdgVal,  "\xB0",   C_FG);
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C2_PAN);
+    gfx->setCursor(RX + (RW - 8 * 6) / 2, RY1 + 10); gfx->print("CALLSIGN");
+    const char* cs = a.callsign[0] ? a.callsign : "------";
+    int vx = RX + (RW - (int)strlen(cs) * 18) / 2;
+    if (vx < RX + 2) vx = RX + 2;
+    gfx->setTextSize(3); gfx->setTextColor(C2_TEAL, C2_PAN);
+    gfx->setCursor(vx, RY1 + 24); gfx->print(cs);
+    if (a.airline[0]) {
+      char al[30]; int mc = min(RW / 6, 29);
+      strncpy(al, a.airline, mc); al[mc] = '\0';
+      gfx->setTextSize(1); gfx->setTextColor(C2_VDIM, C2_PAN);
+      gfx->setCursor(RX + (RW - (int)strlen(al) * 6) / 2, RY1 + 54); gfx->print(al);
+    }
   }
 
-  // Row 3: Vertical Speed | Bearing (value centred in its cell)
+  // ── Tail number bubble ────────────────────────────────────────────────────
+  gfx->fillRoundRect(RX, RY2, RW, RH, 8, C2_PAN);
+  gfx->drawRoundRect(RX, RY2, RW, RH, 8, C2_ISEP);
   {
-    char vsVal[10];
-    if      (a.vrate >  50) snprintf(vsVal, sizeof(vsVal), "+%d", a.vrate);
-    else if (a.vrate < -50) snprintf(vsVal, sizeof(vsVal), "%d",  a.vrate);
-    else                    strcpy(vsVal, "0");
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C2_PAN);
+    gfx->setCursor(RX + (RW - 8 * 6) / 2, RY2 + 10); gfx->print("TAIL NO.");
+
+    const char* rg = a.reg[0] ? a.reg : "------";
+    const uint16_t* flagData = a.reg[0] ? flagForReg(a.reg) : nullptr;
+    // If flag present, value + 4px gap + flag must center together
+    int regW  = (int)strlen(rg) * 18;
+    int totalW = flagData ? regW + 4 + FLAG_W : regW;
+    int vx = RX + (RW - totalW) / 2;
+    if (vx < RX + 2) vx = RX + 2;
+
+    gfx->setTextSize(3); gfx->setTextColor(C2_TXT, C2_PAN);
+    gfx->setCursor(vx, RY2 + 24); gfx->print(rg);
+
+    if (flagData) {
+      int fy = RY2 + 24 + (24 - FLAG_H) / 2;  // vertically centered on size-3 glyphs
+      drawFlag(gfx, vx + regW + 4, fy, flagData);
+    }
+
+    if (a.type[0]) {
+      gfx->setTextSize(1); gfx->setTextColor(C2_VDIM, C2_PAN);
+      gfx->setCursor(RX + (RW - (int)strlen(a.type) * 6) / 2, RY2 + 54); gfx->print(a.type);
+    }
+  }
+
+  // ── Section label: LIVE TELEMETRY  (gap-2=8px below card) ────────────────
+  const int SLY = CY0 + CH + 8;   // y = 196
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+  gfx->setCursor(MX, SLY); gfx->print("LIVE TELEMETRY");
+  gfx->drawFastHLine(MX + 14 * 6 + 4, SLY + 4, W - MX - (MX + 14 * 6 + 4), C2_ISEP);
+
+  // ── Telemetry bubbles 2×3  (Figma: borderRadius 10, gap-1.5=6px between rows) ──
+  // bubble width = (352 - 2×6px inter-bubble gaps) / 3 ≈ 113px
+  const int BW  = (CW - 12) / 3;   // 113 px
+  const int BH  = 60;               // h=60 fits size-3 value (24px)
+  const int BGR = 6;                // gap between bubbles (same row)
+  const int BGC = 6;                // gap between bubble rows
+  const int BR1Y = SLY + 10 + 8;   // y = 214 (label 10px + gap 8)
+  const int BR2Y = BR1Y + BH + BGC; // y = 280
+
+  char vb[10];
+  snprintf(vb, sizeof(vb), "%d", a.alt_ft);
+  drawBubble(MX,              BR1Y, BW, BH, "ALTITUDE", vb, "FT", true);
+
+  if      (a.vrate >  50) snprintf(vb, sizeof(vb), "+%d", a.vrate);
+  else if (a.vrate < -50) snprintf(vb, sizeof(vb), "%d",  a.vrate);
+  else                    strcpy(vb, "0");
+  drawBubble(MX + BW + BGR,   BR1Y, BW, BH, "V-SPEED", vb, "FPM", false);
+
+  snprintf(vb, sizeof(vb), "%d", a.spd_kts);
+  drawBubble(MX + 2*(BW+BGR), BR1Y, BW, BH, "GND SPD", vb, "KTS", false);
+
+  snprintf(vb, sizeof(vb), "%03d\xB0", a.track_deg);
+  drawBubble(MX,              BR2Y, BW, BH, "HEADING", vb, "", false);
+
+  // Bearing from receiver to aircraft (0–359°)
+  {
     float dLat = a.lat - RECEIVER_LAT;
     float dLon = (a.lon - RECEIVER_LON) * cosf(degToRad(RECEIVER_LAT));
-    int bearDeg = (int)(atan2f(dLon, dLat) * 180.0f / PI + 360) % 360;
-    uint16_t vsCol = a.vrate > 50 ? C_GREEN : a.vrate < -50 ? C_RED : C_TEXT_SEC;
-    drawDataCell(gx0, gy + 2 * (ch + 4), cw, ch, "VERT SPEED", vsVal, "ft/min", vsCol);
-    drawDataCell(gx1, gy + 2 * (ch + 4), cw, ch, "BEARING", compass8(bearDeg), "", C_FG, true);
+    int   brng = (int)(atan2f(dLon, dLat) * 180.0f / PI + 360.0f) % 360;
+    snprintf(vb, sizeof(vb), "%03d\xB0", brng);
   }
+  drawBubble(MX + BW + BGR,   BR2Y, BW, BH, "BEARING", vb, "", false);
 
-  // ── Route bar — starts just below data grid, fills to status bar ──────────
-  const int routeBarY = gy + 3 * (ch + 4) + 2;
-  const int routeBarH = SB_Y - routeBarY - 4;
-  {
-    drawPanel(MX, routeBarY, W - 2 * MX, routeBarH);
-    gfx->setTextSize(1);
-    int textY = routeBarY + (routeBarH - 8) / 2;
-    if (routeValid && routeOrigin[0]) {
-      char rstr[56];
-      if (routeOriginCity[0] && routeDestCity[0])
-        snprintf(rstr, sizeof(rstr), "%s (%s)  >  %s (%s)",
-                 routeOriginCity, routeOrigin, routeDestCity, routeDest);
-      else
-        snprintf(rstr, sizeof(rstr), "%s  >  %s", routeOrigin, routeDest);
-      int maxCh = (W - 2 * MX - 16) / 6;
-      rstr[maxCh] = '\0';
-      gfx->setTextColor(C_TEXT_SEC, C_PANEL);
-      gfx->setCursor(MX + 8, textY); gfx->print(rstr);
-    } else {
-      gfx->setTextColor(C_BORDER, C_PANEL);
-      gfx->setCursor(MX + 8, textY); gfx->print("ROUTE DATA UNAVAILABLE");
+  snprintf(vb, sizeof(vb), "%.0f", a.dist_nm);
+  drawBubble(MX + 2*(BW+BGR), BR2Y, BW, BH, "DISTANCE", vb, "NM", false);
+
+  // ── Destination banner  (Figma: borderRadius 8, padding 10px 12px) ────────
+  // gap-2=8px below row 2; bottom padding 8px from tab bar
+  const int DBY = BR2Y + BH + 8;        // y = 348
+  const int DBH = R_TBY - DBY - 8;      // ~54 px  (8px bottom breathing room)
+  if (DBH >= 24) {
+    gfx->fillRoundRect(MX, DBY, CW, DBH, 8, C2_PAN);
+    gfx->drawRoundRect(MX, DBY, CW, DBH, 8, C2_BRD);
+    const int bw = CW - 24;
+
+    // "ROUTE" label
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C2_PAN);
+    gfx->setCursor(MX + 12 + (bw - 5 * 6) / 2, DBY + 4); gfx->print("ROUTE");
+
+    if (a.origin[0] && a.destination[0]) {
+      const int lx = MX + 12;                  // left content edge
+      const int rx = MX + 12 + bw;             // right content edge
+
+      // Airport codes: origin left, destination right (size 2 = 12×16px)
+      gfx->setTextSize(2); gfx->setTextColor(C2_TEAL, C2_PAN);
+      gfx->setCursor(lx, DBY + 16); gfx->print(a.origin);
+      int destW = (int)strlen(a.destination) * 12;
+      gfx->setCursor(rx - destW, DBY + 16); gfx->print(a.destination);
+
+      // Solid line between the codes
+      int originW = (int)strlen(a.origin) * 12;
+      int lineX1 = lx + originW + 6;
+      int lineX2 = rx - destW - 6;
+      int lineY  = DBY + 16 + 8;  // vertical mid of size-2 glyphs
+      if (lineX2 > lineX1)
+        gfx->drawFastHLine(lineX1, lineY, lineX2 - lineX1, C2_TEAL2);
+
+      // City names: origin city left, destination city right (size 1 = 6×8px)
+      if (a.origin_city[0] && a.dest_city[0]) {
+        gfx->setTextSize(1); gfx->setTextColor(C2_TXT2, C2_PAN);
+        gfx->setCursor(lx, DBY + 37); gfx->print(a.origin_city);
+        int dcW = (int)strlen(a.dest_city) * 6;
+        gfx->setCursor(rx - dcW, DBY + 37); gfx->print(a.dest_city);
+      }
     }
   }
 }
@@ -707,38 +812,43 @@ void renderDashboard() {
 // ════════════════════════════════════════════════════════════════ SCREEN 2: RADAR
 
 void renderRadar() {
-  drawChrome(VIEW_TITLE[V_RADAR]);
+  gfx->fillScreen(C_BG);
+  drawNewStatusBar();
+  drawTabBar();
 
   const int cx = W / 2;
-  const int cy = MY + 170;
-  const int rr = 138;
+  const int cy = R_CY + 192;  // 220 — slightly above center for footer room
+  const int rr = 145;
 
-  // Compute dynamic range
   float maxRange = 50.0f;
   for (int i = 0; i < acCount; i++)
     if (acList[i].dist_nm > maxRange) maxRange = acList[i].dist_nm;
   maxRange = ceilf(maxRange / 50.0f) * 50.0f;
 
-  // Range rings
+  // Range rings + NM labels
   for (int ring = 1; ring <= 3; ring++) {
     int pr = rr * ring / 3;
-    gfx->drawCircle(cx, cy, pr, C_SEP);
+    gfx->drawCircle(cx, cy, pr, C2_ISEP);
+    char rlbl[8]; snprintf(rlbl, sizeof(rlbl), "%.0f", maxRange * ring / 3);
+    gfx->setTextSize(1); gfx->setTextColor(C2_ISEP, C_BG);
+    gfx->setCursor(cx + pr + 2, cy - 4); gfx->print(rlbl);
   }
-  gfx->drawCircle(cx, cy, rr, C_DIM);
+  gfx->drawCircle(cx, cy, rr, C2_DIM);
 
   // Cardinal labels
-  gfx->setTextSize(1); gfx->setTextColor(C_DIM, C_BG);
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
   gfx->setCursor(cx - 3, cy - rr - 12); gfx->print("N");
   gfx->setCursor(cx - 3, cy + rr + 4);  gfx->print("S");
   gfx->setCursor(cx + rr + 4, cy - 4);  gfx->print("E");
   gfx->setCursor(cx - rr - 10, cy - 4); gfx->print("W");
 
   // Cross hairs
-  gfx->drawFastHLine(cx - rr, cy, rr * 2, C_SEP);
-  gfx->drawFastVLine(cx, cy - rr, rr * 2, C_SEP);
+  gfx->drawFastHLine(cx - rr, cy, rr * 2, C2_ISEP);
+  gfx->drawFastVLine(cx, cy - rr, rr * 2, C2_ISEP);
 
-  // Receiver dot
-  gfx->fillCircle(cx, cy, 4, C_AMBER);
+  // Receiver dot (teal)
+  gfx->fillCircle(cx, cy, 4, C2_TEAL);
+  gfx->drawCircle(cx, cy, 6, C2_TEAL2);
 
   // Aircraft dots
   for (int i = 0; i < acCount; i++) {
@@ -751,65 +861,121 @@ void renderRadar() {
     int sx = cx + (int)(sinf(bearing) * distFrac * rr);
     int sy = cy - (int)(cosf(bearing) * distFrac * rr);
     if (i == selectedAcIdx) {
-      gfx->fillCircle(sx, sy, 5, C_CYAN);
+      gfx->drawCircle(sx, sy, 6, C2_TEAL);
+      gfx->fillCircle(sx, sy, 3, C2_TEAL);
+      if (acList[i].callsign[0]) {
+        gfx->setTextSize(1); gfx->setTextColor(C2_TXT, C_BG);
+        gfx->setCursor(sx + 8, sy - 4); gfx->print(acList[i].callsign);
+      }
     } else {
-      gfx->fillCircle(sx, sy, 3, C_GREEN);
+      gfx->fillCircle(sx, sy, 3, C2_TEAL2);
     }
   }
 
-  // Range label and count
-  char rlbl[16]; snprintf(rlbl, sizeof(rlbl), "%.0f NM", maxRange);
-  gfx->setTextSize(1); gfx->setTextColor(C_DIM, C_BG);
-  gfx->setCursor(cx + rr - strlen(rlbl)*6, cy + rr + 4);
-  gfx->print(rlbl);
-  char cnt[16]; snprintf(cnt, sizeof(cnt), "%d AIRCRAFT", acCount);
-  printCtr(cnt, cy + rr + 18, 1, C_DIM);
+  // Footer
+  char cnt[32]; snprintf(cnt, sizeof(cnt), "%d AIRCRAFT  %.0f NM", acCount, maxRange);
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+  gfx->setCursor((W - (int)strlen(cnt) * 6) / 2, cy + rr + 14); gfx->print(cnt);
 }
 
-// ════════════════════════════════════════════════════════════════ SCREEN 3: LIST
+// ════════════════════════════════════════════════════════════════ SCREEN 3: LIVE
 
-// First visible row Y — must match touch calculation in loop()
-#define LIST_ROW_Y0  (MY + 26)
-#define LIST_ROW_H   28
+// List row geometry (must match touch calc in loop)
+#define LIST_ROW_Y0  (R_CY + 116)  // first list row y
+#define LIST_ROW_H   30
 
 void renderList() {
-  drawChrome(VIEW_TITLE[V_LIST]);
-  int y = MY + 6;
-  gfx->setTextSize(1); gfx->setTextColor(C_CYAN, C_BG);
-  gfx->setCursor(MX, y); gfx->print("NEARBY  \xBB TAP TO SELECT");
-  y += 14;
-  hline(y, C_DIM); y += 6;   // y is now LIST_ROW_Y0
+  gfx->fillScreen(C_BG);
+  drawNewStatusBar();
+  drawTabBar();
 
-  if (acCount == 0) { printCtr("NO AIRCRAFT", y + 40, 1, C_DIM); return; }
+  // ── Selected flight hero card ─────────────────────────────────────────────
+  const int CY0 = R_CY + 2, CW = W - 2 * MX, CH = 108;
+  if (acCount > 0) {
+    AcEntry& a = acList[selectedAcIdx < acCount ? selectedAcIdx : 0];
+    gfx->fillRoundRect(MX, CY0, CW, CH, 6, C2_PAN);
+    gfx->drawRoundRect(MX, CY0, CW, CH, 6, C2_BRD);
 
-  int maxRows = (SB_Y - y) / LIST_ROW_H;
+    // Callsign
+    const char* cs = a.callsign[0] ? a.callsign : "------";
+    uint8_t csSz = strlen(cs) > 7 ? 3 : 4;
+    gfx->setTextSize(csSz); gfx->setTextColor(C2_TEAL, C2_PAN);
+    gfx->setCursor(MX + 8, CY0 + 6); gfx->print(cs);
+
+    // Mini telemetry row
+    char altS[12], spdS[10], hdgS[10];
+    fmtThousands(altS, sizeof(altS), a.alt_ft);
+    snprintf(spdS, sizeof(spdS), "%d KT", a.spd_kts);
+    snprintf(hdgS, sizeof(hdgS), "%03d\xB0", a.track_deg);
+    int miniY = CY0 + csSz * 8 + 10;
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C2_PAN);
+    gfx->setCursor(MX + 8,  miniY); gfx->print("ALT");
+    gfx->setCursor(MX + 92, miniY); gfx->print("SPD");
+    gfx->setCursor(MX + 176, miniY); gfx->print("HDG");
+    gfx->setTextSize(2); gfx->setTextColor(C2_TXT, C2_PAN);
+    gfx->setCursor(MX + 8,  miniY + 10); gfx->print(altS);
+    gfx->setCursor(MX + 92, miniY + 10); gfx->print(spdS);
+    gfx->setCursor(MX + 176, miniY + 10); gfx->print(hdgS);
+
+    // Route
+    if (a.origin[0] && a.destination[0]) {
+      char rs[14]; snprintf(rs, sizeof(rs), "%s  >  %s", a.origin, a.destination);
+      gfx->setTextSize(1); gfx->setTextColor(C2_TXT2, C2_PAN);
+      gfx->setCursor(MX + 8, CY0 + CH - 14); gfx->print(rs);
+    }
+  } else {
+    gfx->fillRoundRect(MX, CY0, CW, CH, 6, C2_PAN);
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C2_PAN);
+    gfx->setCursor(MX + (CW - 11 * 6) / 2, CY0 + (CH - 8) / 2); gfx->print("NO AIRCRAFT");
+  }
+
+  // ── Section label ─────────────────────────────────────────────────────────
+  const int SLY = CY0 + CH + 4;  // y ≈ 114
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+  char sectionLbl[24]; snprintf(sectionLbl, sizeof(sectionLbl), "TRACKED  %d", acCount);
+  gfx->setCursor(MX, SLY); gfx->print(sectionLbl);
+  int slw = (int)strlen(sectionLbl) * 6;
+  gfx->drawFastHLine(MX + slw + 4, SLY + 4, W - MX - (MX + slw + 4), C2_ISEP);
+
+  // ── Flight list rows ──────────────────────────────────────────────────────
+  int y = LIST_ROW_Y0;  // = R_CY + 116
+  int maxRows = (R_TBY - y) / LIST_ROW_H;
   int listEnd = min(acCount, maxRows);
 
   for (int i = 0; i < listEnd; i++) {
     AcEntry& a = acList[i];
-    bool sel = (i == selectedAcIdx);
+    bool sel = (i == (selectedAcIdx < acCount ? selectedAcIdx : 0));
 
-    if (sel) gfx->fillRect(0, y, W, LIST_ROW_H - 2, C_SEP);
+    if (sel) gfx->fillRect(MX, y, CW, LIST_ROW_H - 2, C2_PAN);
 
-    uint16_t bg  = sel ? C_SEP : C_BG;
-    uint16_t col = sel ? C_CYAN : C_GRAY;
+    // Left accent bar
+    gfx->fillRect(MX, y + 4, 2, LIST_ROW_H - 10, sel ? C2_TEAL : C2_ISEP);
 
-    gfx->setTextSize(2); gfx->setTextColor(col, bg);
-    gfx->setCursor(MX + 2, y + 5);
-    gfx->print(sel ? ">" : " ");
-    gfx->setCursor(MX + 16, y + 5);
+    uint16_t csCol = sel ? C2_TEAL : C2_TXT;
+    uint16_t bg    = sel ? C2_PAN  : C_BG;
+    gfx->setTextSize(2); gfx->setTextColor(csCol, bg);
+    gfx->setCursor(MX + 8, y + 6);
     gfx->printf("%-8s", a.callsign[0] ? a.callsign : "------");
 
-    char distStr[12]; fmtDist(distStr, sizeof(distStr), a.dist_nm);
-    gfx->setCursor(W - MX - (int)strlen(distStr) * 12, y + 5);
-    gfx->print(distStr);
+    // Route codes if available
+    if (a.origin[0] && a.destination[0]) {
+      char rs[10]; snprintf(rs, sizeof(rs), "%s>%s", a.origin, a.destination);
+      gfx->setTextSize(1); gfx->setTextColor(C2_DIM, bg);
+      gfx->setCursor(MX + 8 + 8 * 12 + 4, y + 11); gfx->print(rs);
+    }
+
+    // Distance right-aligned
+    char distStr[10]; snprintf(distStr, sizeof(distStr), "%.0fNM", a.dist_nm);
+    gfx->setTextSize(1); gfx->setTextColor(C2_TXT2, bg);
+    gfx->setCursor(W - MX - (int)strlen(distStr) * 6 - 4, y + 11); gfx->print(distStr);
+
     y += LIST_ROW_H;
   }
 
   if (acCount > maxRows) {
-    gfx->setTextSize(1); gfx->setTextColor(C_DIM, C_BG);
-    char more[24]; snprintf(more, sizeof(more), "+%d MORE NOT SHOWN", acCount - maxRows);
-    gfx->setCursor(MX, y + 4); gfx->print(more);
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+    char more[24]; snprintf(more, sizeof(more), "+%d MORE", acCount - maxRows);
+    gfx->setCursor(MX + 8, y + 4); gfx->print(more);
   }
 }
 
@@ -870,62 +1036,78 @@ void renderDetail() {
   drawField(cx, y, "DISTANCE", dstStr, C_FG);
 }
 
-// ═════════════════════════════════════════════════════════ SCREEN 5: PI TELEMETRY
+// ═════════════════════════════════════════════════════════════ SCREEN 4: ALERTS
 
 void renderPi() {
-  drawChrome(VIEW_TITLE[V_PI]);
-  int y = MY + 6;
+  gfx->fillScreen(C_BG);
+  drawNewStatusBar();
+  drawTabBar();
 
-  if (!piOnline) {
-    printCtr("PI OFFLINE", y + 60, 2, C_RED);
-    printCtr("CHECK NETWORK", y + 90, 1, C_DIM);
-    return;
-  }
+  int y = R_CY + 4;
 
-  auto piRow = [&](const char* label, float pct, const char* valStr, uint16_t col) {
-    gfx->setTextSize(1);
-    gfx->setTextColor(C_DIM, C_BG); gfx->setCursor(MX, y);     gfx->print(label);
-    gfx->setTextColor(col,   C_BG); gfx->setCursor(MX + 42, y); gfx->print(valStr);
-    y += 11;
-    drawBar(MX, y, SAFE_W, 4, pct, col);
-    y += 8;
+  // ── Section: SYSTEM STATUS ────────────────────────────────────────────────
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+  gfx->setCursor(MX, y); gfx->print("SYSTEM STATUS");
+  gfx->drawFastHLine(MX + 13 * 6 + 4, y + 4, W - MX - (MX + 13 * 6 + 4), C2_ISEP);
+  y += 14;
+
+  // Status indicator rows (36 px each)
+  auto statusRow = [&](const char* label, const char* value, bool ok) {
+    gfx->fillRect(MX, y + 3, 2, 26, ok ? C2_TEAL : C2_RED);
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+    gfx->setCursor(MX + 8, y + 3); gfx->print(label);
+    gfx->setTextSize(2); gfx->setTextColor(ok ? C2_TEAL : C2_RED, C_BG);
+    gfx->setCursor(MX + 8, y + 14); gfx->print(value);
+    gfx->fillCircle(W - MX - 8, y + 16, 5, ok ? C2_TEAL : C2_RED);
+    y += 36;
   };
 
-  char buf[32];
-  snprintf(buf, sizeof(buf), "%.0f%%  %.1f\xB0 C", piCpuPct, piCpuTemp);
-  piRow("CPU", piCpuPct, buf, barColor(piCpuPct));
+  char buf[24];
+  statusRow("ADS-B RECEIVER", piAdsbMsgS > 0 ? "ACTIVE" : "OFFLINE", piAdsbMsgS > 0);
+  statusRow("PI UPLINK",      piOnline        ? "ONLINE" : "OFFLINE", piOnline);
+  snprintf(buf, sizeof(buf), "%d TRACKED", acCount);
+  statusRow("AIRCRAFT", buf, acCount > 0);
+  snprintf(buf, sizeof(buf), "%d MSG/S", piAdsbMsgS);
+  statusRow("ADS-B RATE", buf, piAdsbMsgS > 50);
 
-  snprintf(buf, sizeof(buf), "%.0f%%  %d / %d MB", piMemPct, piMemUsedMb, piMemTotalMb);
-  piRow("MEM", piMemPct, buf, barColor(piMemPct));
+  y += 4;
 
-  snprintf(buf, sizeof(buf), "%.0f%%  %.1f / %.1f GB", piDiskPct, piDiskUsedGb, piDiskTotalGb);
-  piRow("DISK", piDiskPct, buf, barColor(piDiskPct, 75, 90));
+  // ── Section: RESOURCE USAGE ───────────────────────────────────────────────
+  gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+  gfx->setCursor(MX, y); gfx->print("RESOURCE USAGE");
+  gfx->drawFastHLine(MX + 14 * 6 + 4, y + 4, W - MX - (MX + 14 * 6 + 4), C2_ISEP);
+  y += 14;
 
-  hline(y + 2, C_DIM); y += 10;
+  if (!piOnline) {
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+    gfx->setCursor(MX + 8, y + 4); gfx->print("WAITING FOR PI DATA...");
+  } else {
+    auto resRow = [&](const char* label, float pct, const char* val) {
+      uint16_t col = pct > 85.0f ? C2_RED : pct > 70.0f ? C2_AMB : C2_TEAL;
+      gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+      gfx->setCursor(MX, y); gfx->print(label);
+      gfx->setTextColor(col, C_BG); gfx->setCursor(MX + 42, y); gfx->print(val);
+      y += 11;
+      int filled = (int)((W - 2 * MX) * constrain(pct, 0.0f, 100.0f) / 100.0f);
+      gfx->fillRect(MX, y, W - 2 * MX, 5, C2_ISEP);
+      if (filled > 0) gfx->fillRect(MX, y, filled, 5, col);
+      y += 9;
+    };
 
-  gfx->setTextSize(1); gfx->setTextColor(C_DIM, C_BG);
+    snprintf(buf, sizeof(buf), "%.0f%%  %.1f\xB0C", piCpuPct, piCpuTemp);
+    resRow("CPU", piCpuPct, buf);
+    snprintf(buf, sizeof(buf), "%.0f%%  %d/%dMB", piMemPct, piMemUsedMb, piMemTotalMb);
+    resRow("MEM", piMemPct, buf);
+    snprintf(buf, sizeof(buf), "%.0f%%  %.1f/%.0fGB", piDiskPct, piDiskUsedGb, piDiskTotalGb);
+    resRow("DISK", piDiskPct, buf);
 
-  gfx->setCursor(MX, y); gfx->print("NET");
-  gfx->setTextColor(C_FG, C_BG); gfx->setCursor(MX + 30, y);
-  if (piNetRxBps < 1024)
-    gfx->printf("RX %ld B/s  TX %ld B/s",   piNetRxBps,       piNetTxBps);
-  else
-    gfx->printf("RX %ld kB/s  TX %ld kB/s", piNetRxBps/1024,  piNetTxBps/1024);
-  y += 12;
-
-  gfx->setTextColor(C_DIM, C_BG); gfx->setCursor(MX, y); gfx->print("ADS-B");
-  gfx->setTextColor(C_FG, C_BG);  gfx->setCursor(MX + 42, y);
-  gfx->printf("%d MSG/S  %d KM RANGE", piAdsbMsgS, piAdsbRange);
-  y += 12;
-
-  gfx->setTextColor(C_DIM, C_BG); gfx->setCursor(MX, y); gfx->print("UPTIME");
-  gfx->setTextColor(C_FG, C_BG);  gfx->setCursor(MX + 48, y);
-  gfx->print(piUptime);
-  y += 12;
-
-  gfx->setTextColor(C_DIM, C_BG); gfx->setCursor(MX, y);
-  unsigned long age = (millis() - lastVitalsMs) / 1000;
-  gfx->printf("(%s  %lus ago)", piHostname, age);
+    y += 4;
+    gfx->setTextSize(1); gfx->setTextColor(C2_DIM, C_BG);
+    unsigned long age = (millis() - lastVitalsMs) / 1000;
+    snprintf(buf, sizeof(buf), "%s  uptime %s  %lus ago", piHostname, piUptime, age);
+    if ((int)strlen(buf) * 6 > W - 2 * MX) buf[(W - 2 * MX) / 6] = '\0';
+    gfx->setCursor(MX, y); gfx->print(buf);
+  }
 }
 
 // ════════════════════════════════════════════════════════ SCREEN 6: ESP32 TELEMETRY
@@ -1174,18 +1356,16 @@ void renderCurrentView() {
 
 // ═════════════════════════════════════════════════════════════════ BUTTON ACTIONS
 
+// Main 4-tab cycle: BOARD → LIVE → RADAR → ALERTS → BOARD
+static const View CYCLE_VIEWS[] = {V_DASHBOARD, V_LIST, V_RADAR, V_PI};
+static const int  CYCLE_COUNT   = 4;
+
 void onSinglePress() {
-  if (currentView == V_SETTINGS) {
-    // Cycle highlighted setting; wrap exits to next screen
-    settingSelected++;
-    if (settingSelected >= SETTINGS_COUNT) {
-      settingSelected = 0;
-      currentView = (View)((currentView + 1) % V_COUNT);
-    }
-  } else {
-    currentView = (View)((currentView + 1) % V_COUNT);
-    if (currentView == V_SETTINGS) settingSelected = 0;
+  int ci = 0;
+  for (int i = 0; i < CYCLE_COUNT; i++) {
+    if (currentView == CYCLE_VIEWS[i]) { ci = i; break; }
   }
+  currentView = CYCLE_VIEWS[(ci + 1) % CYCLE_COUNT];
   renderCurrentView();
 }
 
@@ -1366,13 +1546,14 @@ void fetchAircraft() {
         e.vrate    = ac["baro_rate"].is<int>() ? (int)ac["baro_rate"] : 0;
         nc++;
       }
+
       memcpy(acList, fetchBuf, nc * sizeof(AcEntry));
       acCount = nc;
+
       sortByDist();
 
       if (selectedAcIdx >= acCount) selectedAcIdx = 0;
 
-      // Route data comes directly from enriched /api/aircraft response
       if (acCount > 0) {
         AcEntry& top = acList[0];
         strncpy(routeForCs,      top.callsign,    9);  routeForCs[9]      = '\0';
@@ -1518,17 +1699,27 @@ void loop() {
 
   btnWasLow = btnLow;
 
-  // ── List view touch: tap row → select aircraft → go to detail ────────
-  if (currentView == V_LIST && digitalRead(TOUCH_INT) == LOW
-      && (now - lastTouchMs) > 350) {
+  // ── Touch: tab bar (any view) or list rows (LIVE view) ───────────────
+  if (digitalRead(TOUCH_INT) == LOW && (now - lastTouchMs) > 350) {
     int16_t tx, ty;
-    if (readTouch(tx, ty) && ty >= LIST_ROW_Y0) {
-      int row = (ty - LIST_ROW_Y0) / LIST_ROW_H;
-      if (row >= 0 && row < acCount && row < (SB_Y - LIST_ROW_Y0) / LIST_ROW_H) {
-        selectedAcIdx = row;
-        currentView   = V_DETAIL;
-        renderCurrentView();
-        lastRenderMs = now;
+    if (readTouch(tx, ty)) {
+      if (ty >= R_TBY) {
+        // Tab bar tap → switch tab
+        int tabIdx = tx / (W / 4);
+        if (tabIdx >= 0 && tabIdx < CYCLE_COUNT) {
+          currentView = CYCLE_VIEWS[tabIdx];
+          renderCurrentView();
+          lastRenderMs = now;
+        }
+      } else if (currentView == V_LIST && ty >= LIST_ROW_Y0) {
+        // List row tap → select aircraft and show detail
+        int row = (ty - LIST_ROW_Y0) / LIST_ROW_H;
+        if (row >= 0 && row < acCount && row < (R_TBY - LIST_ROW_Y0) / LIST_ROW_H) {
+          selectedAcIdx = row;
+          currentView   = V_DETAIL;
+          renderCurrentView();
+          lastRenderMs = now;
+        }
       }
     }
     lastTouchMs = now;
@@ -1538,9 +1729,19 @@ void loop() {
   if (now - lastFetchMs >= 5000) {
     lastFetchMs = now;
     fetchAircraft();
+
+    Serial.println("Start fetchVitals");
     if (now - lastVitalsMs >= 10000) fetchVitals();
+    Serial.println("End fetchVitals");
+    
+    Serial.println("Start fetchWeather");
     if (now - lastWxMs     >= 300000) fetchWeather();
+    Serial.println("End fetchWeather");
+    
+    Serial.println("Start renderCurrentView");
     renderCurrentView();
+    Serial.println("End renderCurrentView");
+
     lastRenderMs = now;
   }
 

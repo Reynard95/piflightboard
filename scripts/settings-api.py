@@ -809,6 +809,56 @@ def _fmt_uptime(secs: float) -> str:
     return f"{hours:02d}h {mins:02d}m"
 
 
+READSB_STATS_JSON           = "/run/readsb/stats.json"
+READSB_AIRCRAFT_JSON_VITALS = "/run/readsb/aircraft.json"
+
+def _read_adsb_stats() -> dict:
+    """Read ADS-B stats from readsb stats.json, falling back to aircraft.json.
+    Returns dict: messages (per second), range_km, good_crc %, bad_crc %.
+    """
+    stats: dict = {"messages": 0, "range_km": 0, "good_crc": 0.0, "bad_crc": 0.0}
+    try:
+        with open(READSB_STATS_JSON) as fh:
+            data = json.load(fh)
+        # Prefer last1min bucket; fall back to total
+        bucket = data.get("last1min") or data.get("total") or {}
+        # readsb stores per-source sub-dicts; 'local' is the RTL-SDR source
+        src = bucket.get("local") or bucket
+
+        total_msgs = src.get("messages", 0) or 0
+        stats["messages"] = round(total_msgs / 60)  # per-second rate
+
+        accepted_raw = src.get("accepted", 0)
+        good = (sum(accepted_raw) if isinstance(accepted_raw, list) else int(accepted_raw or 0))
+        bad  = int(src.get("bad", 0) or 0)
+        total_crc = good + bad
+        if total_crc > 0:
+            stats["good_crc"] = round(good / total_crc * 100, 1)
+            stats["bad_crc"]  = round(bad  / total_crc * 100, 1)
+
+        # max_distance is in NM in readsb stats
+        max_dist_nmi = float(bucket.get("max_distance", 0) or 0)
+        stats["range_km"] = round(max_dist_nmi * 1.852)
+    except Exception:
+        pass
+
+    # Fallback: derive from aircraft.json when stats.json is absent/stale
+    if stats["range_km"] == 0 or stats["messages"] == 0:
+        try:
+            with open(READSB_AIRCRAFT_JSON_VITALS) as fh:
+                ac_data = json.load(fh)
+            aircraft = ac_data.get("aircraft", [])
+            if stats["messages"] == 0:
+                stats["messages"] = len(aircraft) * 8  # rough estimate
+            if stats["range_km"] == 0:
+                max_r = max((float(ac.get("r_dst", 0) or 0) for ac in aircraft), default=0.0)
+                stats["range_km"] = round(max_r * 1.852)
+        except Exception:
+            pass
+
+    return stats
+
+
 @app.route("/api/vitals", methods=["GET"])
 def api_vitals():
     """
@@ -899,6 +949,8 @@ def api_vitals():
     except Exception:
         pass
 
+    adsb = _read_adsb_stats()
+
     return jsonify({
         "cpu_pct":      cpu_pct,
         "cpu_temp":     cpu_temp,
@@ -914,6 +966,12 @@ def api_vitals():
         "load":         load,
         "hostname":     hostname,
         "cpu_cores":    os.cpu_count() or 1,
+        "adsb": {
+            "messages":  adsb["messages"],
+            "range":     adsb["range_km"],
+            "good_crc":  adsb["good_crc"],
+            "bad_crc":   adsb["bad_crc"],
+        },
     })
 
 
@@ -1179,10 +1237,120 @@ def api_weather():
 
 
 # ---------------------------------------------------------------------------
+# Aircraft flags — military / interesting / private / ATC phonetic callsign
+# ---------------------------------------------------------------------------
+
+TAR1090_DB_DIR = "/opt/flighttracker/db"
+
+# prefix -> parsed JSON dict (or None if missing/unparseable) — files are
+# static between install.sh reinstalls, so this never needs to expire.
+_dbfile_cache: dict = {}
+
+def _load_db_file(prefix: str) -> dict | None:
+    if prefix in _dbfile_cache:
+        return _dbfile_cache[prefix]
+    data = None
+    try:
+        with open(f"{TAR1090_DB_DIR}/{prefix}.js") as fh:
+            data = json.load(fh)
+    except Exception:
+        data = None
+    _dbfile_cache[prefix] = data
+    return data
+
+
+_DBFLAGS_EMPTY = {"military": False, "interesting": False, "pia": False, "ladd": False}
+
+def _lookup_dbflags(hex_code: str) -> dict:
+    """Look up military/interesting/PIA/LADD flags for an ICAO hex from the
+    tar1090-db. Mirrors www/main.js's lookupHex()/loadDbFile() 3->2->1-char
+    prefix fallback. Degrades to all-False on any missing/unexpected data —
+    this must never raise or block aircraft rendering.
+    """
+    h = (hex_code or "").strip().lower()
+    if not h:
+        return dict(_DBFLAGS_EMPTY)
+    for prefix_len in (3, 2, 1):
+        prefix = h[:prefix_len]
+        data = _load_db_file(prefix)
+        if not data or h not in data:
+            continue
+        row = data[h]
+        if not isinstance(row, list) or len(row) < 3:
+            return dict(_DBFLAGS_EMPTY)
+        try:
+            flags = int(row[2])
+        except (TypeError, ValueError):
+            return dict(_DBFLAGS_EMPTY)
+        return {
+            "military":    bool(flags & 1),
+            "interesting": bool(flags & 2),
+            "pia":         bool(flags & 4),
+            "ladd":        bool(flags & 8),
+        }
+    return dict(_DBFLAGS_EMPTY)
+
+
+# ICAO 3-letter airline code -> ATC telephony designator (ICAO Doc 8585).
+# Only entries we're confident about — an unmatched callsign just falls back
+# to the literal "CALLSIGN" label client-side, which is the intended degrade.
+ATC_PHONETIC = {
+    "AAL": "AMERICAN",     "AFR": "AIRFRANS",     "ANA": "ALL NIPPON",
+    "AUA": "AUSTRIAN",     "BAW": "SPEEDBIRD",     "BEL": "BEELINE",
+    "CLX": "CARGOLUX",     "DAL": "DELTA",         "DLH": "LUFTHANSA",
+    "EIN": "SHAMROCK",     "ETH": "ETHIOPIAN",     "EWG": "EUROWINGS",
+    "EZY": "EASY",         "FDX": "FEDEX",         "FIN": "FINNAIR",
+    "IBE": "IBERIA",       "JAL": "JAPANAIR",      "KLM": "KLM",
+    "QTR": "QATARI",       "RYR": "RYANAIR",       "SAS": "SCANDINAVIAN",
+    "SVA": "SAUDIA",       "SWR": "SWISS",         "TAP": "AIR PORTUGAL",
+    "THY": "TURKISH",      "TRA": "TRANSAVIA",     "UAE": "EMIRATES",
+    "UAL": "UNITED",       "UPS": "UPS",           "VLG": "VUELING",
+    "WZZ": "WIZZAIR",
+}
+
+def _atc_phonetic(icao_prefix: str) -> str:
+    return ATC_PHONETIC.get((icao_prefix or "").strip().upper(), "")
+
+
+def _is_emergency(ac: dict) -> str | None:
+    """Return 'HIJACK' / 'RADIO FAIL' / 'EMERGENCY' or None."""
+    squawk = ac.get("squawk") or ""
+    if squawk == "7500":
+        return "HIJACK"
+    if squawk == "7600":
+        return "RADIO FAIL"
+    if squawk == "7700":
+        return "EMERGENCY"
+    emergency = ac.get("emergency") or ""
+    if emergency and emergency != "none":
+        return "EMERGENCY"
+    return None
+
+
+def _is_private(callsign: str, reg: str, airline_known: bool) -> bool:
+    """Best-effort GA/private-jet heuristic: no recognised airline prefix and
+    the callsign is literally the tail number (the standard signature of a
+    flight not filing an airline-style callsign). Fuzzy by nature — review
+    against real traffic after first deploy.
+    """
+    cs, rg = (callsign or "").strip().upper(), (reg or "").strip().upper()
+    return (not airline_known) and bool(cs) and bool(rg) and cs == rg
+
+
+def _haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = (math.sin(d_lat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2)
+    return 3440.65 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+# ---------------------------------------------------------------------------
 # Aircraft data enrichment (airline / route info)
 # ---------------------------------------------------------------------------
 
-# callsign -> {"airline", "origin", "destination", "origin_city", "dest_city", "ts"}
+# callsign -> {"airline", "origin", "destination", "origin_city", "dest_city",
+#              "origin_lat", "origin_lon", "dest_lat", "dest_lon", "ts"}
 _route_cache: dict = {}
 _route_cache_lock = threading.Lock()
 ROUTE_CACHE_TTL = 3600   # 1 hour per callsign
@@ -1208,6 +1376,10 @@ def _fetch_route_adsbdb(callsign: str) -> dict | None:
             "destination": dest.get("iata_code")   or dest.get("iata")          or "",
             "origin_city": origin.get("municipality") or origin.get("name")     or "",
             "dest_city":   dest.get("municipality")   or dest.get("name")       or "",
+            "origin_lat":  origin.get("latitude")  or 0.0,
+            "origin_lon":  origin.get("longitude") or 0.0,
+            "dest_lat":    dest.get("latitude")    or 0.0,
+            "dest_lon":    dest.get("longitude")   or 0.0,
         }
     except Exception:
         return None
@@ -1236,13 +1408,22 @@ def _fetch_route_proxy(callsign: str) -> dict | None:
 def _fetch_route_bg(callsign: str) -> None:
     """Fetch route for callsign, trying adsbdb.com first then adsb.lol proxy."""
     result = _fetch_route_adsbdb(callsign) or _fetch_route_proxy(callsign)
-    entry = {**(result or _ROUTE_EMPTY), "ts": time.time()}
+    # _ROUTE_EMPTY first so lat/lon default to 0.0 even when the proxy
+    # fallback succeeds (route-proxy.py doesn't return airport coordinates).
+    entry = {**_ROUTE_EMPTY, **(result or {}), "ts": time.time()}
     with _route_cache_lock:
         _route_cache[callsign] = entry
 
 
 _ROUTE_EMPTY = {"airline": "", "origin": "", "destination": "",
-                "origin_city": "", "dest_city": ""}
+                "origin_city": "", "dest_city": "",
+                "origin_lat": 0.0, "origin_lon": 0.0,
+                "dest_lat": 0.0, "dest_lon": 0.0}
+
+# Subset used by /api/aircraft, which must keep its response shape unchanged
+# for the AMOLED board — the lat/lon keys above are new and epaper-only.
+_ROUTE_EMPTY_LEGACY = {"airline": "", "origin": "", "destination": "",
+                       "origin_city": "", "dest_city": ""}
 
 
 @app.route("/api/aircraft", methods=["GET"])
@@ -1264,7 +1445,7 @@ def api_aircraft():
 
         cs = ac.get("flight", "").strip()
         if not cs:
-            ac.update(_ROUTE_EMPTY)
+            ac.update(_ROUTE_EMPTY_LEGACY)
             continue
         with _route_cache_lock:
             entry = _route_cache.get(cs)
@@ -1276,7 +1457,7 @@ def api_aircraft():
             ac["origin_city"]  = entry["origin_city"]
             ac["dest_city"]    = entry["dest_city"]
         else:
-            ac.update(_ROUTE_EMPTY)
+            ac.update(_ROUTE_EMPTY_LEGACY)
             # Placeholder prevents a second thread from being spawned before the first finishes
             if not entry:
                 with _route_cache_lock:
@@ -1284,6 +1465,133 @@ def api_aircraft():
                 threading.Thread(target=_fetch_route_bg, args=(cs,), daemon=True).start()
 
     return jsonify(data)
+
+
+@app.route("/api/epaper", methods=["GET"])
+def api_epaper():
+    """Serve a single pre-selected, fully-enriched aircraft for the e-paper
+    board, so it only needs one plain-HTTP GET per refresh cycle — no TLS,
+    no adsbdb calls, no per-aircraft selection logic client-side.
+
+    Selection is a cascade: emergency squawk/status > "interesting" (rare
+    livery / notable aircraft, per tar1090-db) > military > closest by
+    distance. Route info reuses the same _route_cache as /api/aircraft.
+    """
+    try:
+        with open(READSB_AIRCRAFT_JSON) as fh:
+            data = json.load(fh)
+    except OSError:
+        return jsonify({"error": "aircraft data unavailable"}), 503
+
+    settings = load_settings()
+    loc = settings.get("location") or {}
+    recv_lat, recv_lon = loc.get("lat", 0.0), loc.get("lon", 0.0)
+
+    best = None  # (tier, dist_km, ac, flags, emergency)
+    visible = []  # (dist_km, callsign)
+
+    for ac in data.get("aircraft", []):
+        if "lat" not in ac or "lon" not in ac:
+            continue
+        cs = (ac.get("flight") or "").strip()
+        if not cs:
+            continue
+
+        if "r_dst" in ac:
+            dist_km = float(ac["r_dst"]) * 1.852
+        else:
+            dist_km = _haversine_nm(recv_lat, recv_lon, ac["lat"], ac["lon"]) * 1.852
+        visible.append((dist_km, cs))
+
+        flags = _lookup_dbflags(ac.get("hex", ""))
+        emerg = _is_emergency(ac)
+        tier = 0 if emerg else 1 if flags["interesting"] else 2 if flags["military"] else 3
+
+        if best is None or tier < best[0] or (tier == best[0] and dist_km < best[1]):
+            best = (tier, dist_km, ac, flags, emerg)
+
+    visible.sort(key=lambda t: t[0])
+    count = len(visible)
+    ac_list = [cs for _, cs in visible[:30]]
+
+    if best is None:
+        return jsonify({"ok": True, "count": count, "list": ac_list,
+                         "selection_reason": "closest", "aircraft": None})
+
+    tier, dist_km, ac, flags, emerg = best
+    reason = {0: "emergency", 1: "interesting", 2: "military"}.get(tier, "closest")
+
+    cs = ac.get("flight", "").strip()
+    reg = ac.get("r", "") or ""
+    now = time.time()
+    with _route_cache_lock:
+        entry = _route_cache.get(cs)
+    if not (entry and now - entry["ts"] < ROUTE_CACHE_TTL):
+        route = dict(_ROUTE_EMPTY)
+        if not entry:
+            with _route_cache_lock:
+                _route_cache[cs] = {**_ROUTE_EMPTY, "ts": now}
+            threading.Thread(target=_fetch_route_bg, args=(cs,), daemon=True).start()
+    else:
+        route = entry
+
+    icao_prefix = cs[:3].upper()
+    airline_known = bool(route["airline"]) or icao_prefix in ATC_PHONETIC
+    is_private = _is_private(cs, reg, airline_known)
+
+    eta_min = route_dur_min = -1.0
+    gs_kmh = (ac.get("gs") or 0) * 1.852
+    if (route["origin_lat"] and route["dest_lat"] and ac.get("lat") and gs_kmh > 50):
+        remain_km = _haversine_nm(ac["lat"], ac["lon"], route["dest_lat"], route["dest_lon"]) * 1.852
+        total_km  = _haversine_nm(route["origin_lat"], route["origin_lon"],
+                                   route["dest_lat"], route["dest_lon"]) * 1.852
+        eta_min       = (remain_km / gs_kmh) * 60.0
+        route_dur_min = (total_km  / gs_kmh) * 60.0
+
+    alt_baro = ac.get("alt_baro")
+    on_ground = isinstance(alt_baro, str) and alt_baro == "ground"
+
+    aircraft = {
+        "callsign":     cs,
+        "reg":          reg,
+        "type":         ac.get("t", "") or "",
+        "type_full":    ac.get("desc", "") or "",
+        "icao":         ac.get("hex", "") or "",
+        "squawk":       ac.get("squawk", "") or "",
+        "emergency":    emerg or "",
+        "src":          ac.get("type", "adsb") or "adsb",
+        "on_ground":    on_ground,
+        "alt_ft":       0 if on_ground else int(alt_baro) if isinstance(alt_baro, (int, float)) else 0,
+        "spd_kts":      int(ac.get("gs") or 0),
+        "track_deg":    int(ac.get("track") or 0),
+        "vrate":        int(ac["baro_rate"]) if isinstance(ac.get("baro_rate"), (int, float)) else 0,
+        "mach":         float(ac.get("mach") or 0.0),
+        "ias":          int(ac["ias"]) if isinstance(ac.get("ias"), (int, float)) else -1,
+        "rssi":         float(ac["rssi"]) if isinstance(ac.get("rssi"), (int, float)) else -99.0,
+        "nav_heading":  int(ac["nav_heading"]) if isinstance(ac.get("nav_heading"), (int, float)) else -1,
+        "messages":     int(ac.get("messages") or 0),
+        "seen":         float(ac.get("seen") or 0.0),
+        "wind_dir":     int(ac["wd"]) if isinstance(ac.get("wd"), (int, float)) else -1,
+        "wind_spd":     int(ac["ws"]) if isinstance(ac.get("ws"), (int, float)) else -1,
+        "oat":          float(ac["oat"]) if isinstance(ac.get("oat"), (int, float)) else -999.0,
+        "dist_km":      round(dist_km, 1),
+        "airline":      route["airline"],
+        "origin":       route["origin"],
+        "destination":  route["destination"],
+        "origin_city":  route["origin_city"],
+        "dest_city":    route["dest_city"],
+        "eta_min":      round(eta_min, 1),
+        "route_dur_min": round(route_dur_min, 1),
+        "military":     flags["military"],
+        "interesting":  flags["interesting"],
+        "pia":          flags["pia"],
+        "ladd":         flags["ladd"],
+        "private":      is_private,
+        "atc_callsign": _atc_phonetic(icao_prefix),
+    }
+
+    return jsonify({"ok": True, "count": count, "list": ac_list,
+                     "selection_reason": reason, "aircraft": aircraft})
 
 
 # ---------------------------------------------------------------------------
