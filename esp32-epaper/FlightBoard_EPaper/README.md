@@ -134,5 +134,28 @@ sections overlap, adjust these values; each unit = 1 pixel.
   emergency / interesting / military), route lookup, and military/private/
   ATC-callsign flagging happens server-side on the Pi (`scripts/settings-api.py`)
   — the ESP makes no other outbound calls (no TLS, no direct adsbdb.com calls).
+  The same response also carries `bearing_deg` (true bearing to the shown
+  aircraft, for the compass panel) and the board's current `facing_deg` /
+  `wifi_tx_power_dbm` config.
 - Airline logo: `http://<PI_IP>/airline_logos/airline_logo_<ICAO3>.png`
 - Display refresh: every 10 s, or only when the shown aircraft's state changes
+
+## Board settings (from the Pi)
+
+`http://flightboard.local/RLCDsettings.html` (PIN-gated, same PIN as
+`/setup.html`) lets you set, without re-flashing:
+
+- **Screen orientation** — the true compass heading (0-359°) the mounted
+  screen physically faces. The board's compass panel (right of the route
+  banner) points at each aircraft's bearing *relative to this*, so it
+  matches what you actually see when the panel isn't facing true north.
+- **WiFi TX power** — lower settings reduce the peak current draw during
+  transmit bursts, useful if the board resets/drops offline on a marginal
+  power supply. Takes effect on the board's next `/api/epaper` poll
+  (~10s), no reboot needed.
+
+The network SSID/password are **not** configurable from this page — they're
+compiled into `secrets.h` on the device. The board needs working WiFi to
+reach the Pi in the first place, so changing them remotely risks stranding
+it on a network it can no longer reach the Pi from, recoverable only by
+re-flashing over USB.

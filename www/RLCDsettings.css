@@ -1,0 +1,73 @@
+/* ============================================================
+   RLCDsettings.css — RLCD board settings page
+   Extends setup.css (same theme vars) with page-specific widgets.
+   ============================================================ */
+
+select.field-input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color var(--transition);
+  flex: 1;
+  min-width: 100px;
+}
+
+select.field-input:focus {
+  border-color: var(--accent);
+}
+
+.compass-preview-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.compass-preview {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  background: var(--surface2);
+}
+
+.compass-preview-n {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+/* Needle rotates around the dial center via transform: rotate(); its own
+   axis runs from the center outward, drawn with a border-based triangle
+   tip so it reads as a directional pointer rather than a plain line. */
+.compass-preview-needle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 42px;
+  background: var(--accent);
+  transform-origin: top center;
+  transform: translateX(-50%) rotate(150deg);
+  transition: transform var(--transition);
+}
+
+.compass-preview-needle::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--accent);
+}

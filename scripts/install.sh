@@ -8,7 +8,14 @@ set -e
 REPO_DIR="/opt/flighttracker"
 WEB_DIR="/var/www/flightboard"
 DB_DIR="$REPO_DIR/db"
-DEPLOY_USER="${SUDO_USER:-$(whoami)}"
+# $SUDO_USER is unset when this script runs via the flightboard-reinstall
+# systemd service (User=root, no sudo involved) instead of an interactive
+# `sudo bash install.sh`. In that case fall back to the existing owner of
+# $REPO_DIR (the deploy user who originally cloned it), not whoami/root —
+# otherwise the sudoers NOPASSWD grant below gets written for "root" and
+# every subsequent deploy.sh over SSH as the real deploy user starts
+# demanding a password.
+DEPLOY_USER="${SUDO_USER:-$(stat -c '%U' "$REPO_DIR" 2>/dev/null || echo root)}"
 
 echo "============================================"
 echo "  Flightboard Clean Install"

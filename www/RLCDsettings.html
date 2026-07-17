@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RLCD Board Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="setup.css">
+<link rel="stylesheet" href="RLCDsettings.css">
+</head>
+<body>
+
+<!-- PIN GATE — full-screen, shown until authenticated. Reuses the same
+     fb_token session as setup.html; if you're already logged in there,
+     this page skips straight past it. -->
+<div id="pin-gate" class="pin-gate">
+  <div class="pin-card">
+    <div class="pin-icon">&#128274;</div>
+    <h2>RLCD Board Settings</h2>
+    <p class="pin-subtitle" id="pin-gate-subtitle">Enter your PIN to continue</p>
+    <input
+      id="pin-input"
+      class="pin-input"
+      type="password"
+      inputmode="numeric"
+      maxlength="32"
+      placeholder="&#9679;&#9679;&#9679;&#9679;"
+      autocomplete="current-password"
+      autofocus
+    >
+    <div class="pin-error" id="pin-error"></div>
+    <button class="btn btn-primary mt-16" id="pin-submit">Unlock</button>
+    <p class="field-hint hidden" id="no-pin-hint">
+      No PIN set yet — <a href="/setup.html">complete setup</a> first.
+    </p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+
+  <div class="page-header">
+    <h1>&#129517; RLCD Board Settings</h1>
+    <a href="/" class="back-link">&#8592; Back to board</a>
+  </div>
+
+  <div class="setting-section">
+    <h3>Screen Orientation</h3>
+    <p class="field-hint">
+      The compass panel on the e-paper board (right of the route banner)
+      points toward each aircraft's true bearing. Tell it which way the
+      screen physically faces so "up" on that panel matches what you
+      actually see when you look at it.
+    </p>
+
+    <div class="compass-preview-wrap">
+      <div class="compass-preview">
+        <div class="compass-preview-n">N</div>
+        <div class="compass-preview-needle" id="facing-needle"></div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <label>Facing</label>
+      <div class="nudge-group">
+        <button class="btn-nudge" id="facing-minus" title="&#8722;5&deg;">&#8722;</button>
+        <input type="number" id="facing-input" step="1" min="0" max="359"
+               placeholder="150" class="field-input">
+        <button class="btn-nudge" id="facing-plus" title="+5&deg;">+</button>
+      </div>
+      <span class="field-hint" style="margin:0;">&deg; true, 0 = N, 90 = E, 180 = S, 270 = W</span>
+    </div>
+
+    <button class="btn btn-primary" id="save-facing-btn">Save</button>
+    <div class="pin-error" id="facing-error"></div>
+    <p class="field-hint ok-text hidden" id="facing-ok">&#10003; Saved</p>
+  </div>
+
+  <div class="setting-section">
+    <h3>WiFi</h3>
+    <p class="field-hint">
+      Transmit power the board uses once connected. Lower values draw less
+      peak current during transmit bursts, which matters if the board
+      resets or drops offline on a marginal power supply (battery/wall
+      charger rather than a laptop's regulated USB port). The board is
+      usually close to the router, so range is rarely the limiting factor.
+    </p>
+    <p class="field-hint">
+      The network name and password aren't editable here &mdash; they're
+      compiled into the board's firmware (<code>secrets.h</code>), not
+      pushed from the Pi. Changing them from this page would risk
+      stranding the board on a network it can no longer reach the Pi
+      from, with no way back except re-flashing over USB.
+    </p>
+
+    <div class="field-row">
+      <label>TX power</label>
+      <select id="txpower-select" class="field-input">
+        <option value="19.5">19.5 dBm &mdash; max range</option>
+        <option value="19">19 dBm</option>
+        <option value="18.5">18.5 dBm</option>
+        <option value="17">17 dBm</option>
+        <option value="15">15 dBm</option>
+        <option value="13">13 dBm</option>
+        <option value="11">11 dBm</option>
+        <option value="8.5">8.5 dBm &mdash; default</option>
+        <option value="7">7 dBm</option>
+        <option value="5">5 dBm</option>
+        <option value="2">2 dBm</option>
+        <option value="-1">&minus;1 dBm &mdash; lowest current draw</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" id="save-txpower-btn">Save</button>
+    <div class="pin-error" id="txpower-error"></div>
+    <p class="field-hint ok-text hidden" id="txpower-ok">&#10003; Saved</p>
+    <p class="field-hint">
+      Takes effect on the board's next data poll (within ~10s) &mdash; no
+      reboot needed.
+    </p>
+  </div>
+
+</div>
+
+<script src="RLCDsettings.js"></script>
+</body>
+</html>

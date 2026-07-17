@@ -41,7 +41,18 @@ DEFAULT_SETTINGS = {
     "pin_hash":       "",
     "location":       {"lat": 0.0, "lon": 0.0},
     "setup_complete": False,
+    # facing_deg: true compass heading the e-paper board's screen faces when
+    # mounted (0-359, 0=N). Lets /api/epaper hand the board a bearing that's
+    # already relative to what the viewer sees, instead of true north, so
+    # its on-screen compass panel points the right way. wifi_tx_power_dbm
+    # must be one of WIFI_TX_POWER_DBM_OPTIONS (mirrors the ESP32 WIFI_POWER_*
+    # enum) — lower values trade range for a lower current-draw TX peak.
+    "epaper":         {"facing_deg": 0, "wifi_tx_power_dbm": 8.5},
 }
+
+# Valid wifi_tx_power_dbm values — must match the WIFI_POWER_* enum steps
+# available via WiFi.setTxPower() in the ESP32 Arduino core.
+WIFI_TX_POWER_DBM_OPTIONS = [19.5, 19, 18.5, 17, 15, 13, 11, 8.5, 7, 5, 2, -1]
 
 # Allowed services for the generic restart endpoint
 ALLOWED_SERVICES = {"readsb", "lighttpd", "route-proxy", "fr24feed", "piaware"}
@@ -522,6 +533,41 @@ def api_settings_location():
     # Restart readsb
     ok, msg = restart_service("readsb")
     return jsonify({"ok": ok, "message": msg})
+
+
+@app.route("/api/settings/epaper", methods=["POST"])
+@require_auth
+def api_settings_epaper():
+    """Update e-paper board config: screen facing heading and WiFi TX power.
+    No service restart needed — the board picks both up on its next
+    GET /api/epaper poll (every ~10s) rather than needing a reboot/push.
+    """
+    data = request.get_json(silent=True) or {}
+    settings = load_settings()
+    epaper = dict(DEFAULT_SETTINGS["epaper"])
+    epaper.update(settings.get("epaper") or {})
+
+    if "facing_deg" in data:
+        try:
+            facing_deg = int(data["facing_deg"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "facing_deg must be an integer"}), 400
+        if not (0 <= facing_deg <= 359):
+            return jsonify({"error": "facing_deg must be 0-359"}), 400
+        epaper["facing_deg"] = facing_deg
+
+    if "wifi_tx_power_dbm" in data:
+        try:
+            tx_power = float(data["wifi_tx_power_dbm"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "wifi_tx_power_dbm must be a number"}), 400
+        if tx_power not in WIFI_TX_POWER_DBM_OPTIONS:
+            return jsonify({"error": f"wifi_tx_power_dbm must be one of {WIFI_TX_POWER_DBM_OPTIONS}"}), 400
+        epaper["wifi_tx_power_dbm"] = tx_power
+
+    settings["epaper"] = epaper
+    save_settings(settings)
+    return jsonify({"ok": True, "epaper": epaper})
 
 
 @app.route("/api/settings/readsb-restart", methods=["POST"])
@@ -1312,6 +1358,82 @@ def _atc_phonetic(icao_prefix: str) -> str:
     return ATC_PHONETIC.get((icao_prefix or "").strip().upper(), "")
 
 
+# ICAO codes with a pre-baked logo bitmap in the e-paper board's flash
+# (esp32-epaper/FlightBoard_EPaper/logos.h). Must stay in sync with that
+# sketch's gen_logos.py INCLUDE list — used only to detect logo gaps below,
+# not to serve anything (the Pi never reads logos.h itself).
+KNOWN_LOGO_ICAOS = {
+    "AAL","AAR","ABY","ACA","AEA","AEE","AFR","AHK","AMX","ANA","ANZ","ASA",
+    "ATN","AUA","AVA","AZA","AZU","BAW","BCY","BEE","BEL","BTI","CCA",
+    "CES","CFG","CPA","CSA","CSN","DAL","DLH","EIN","EJU","ELY","ETD",
+    "ETH","EVA","EWG","EXS","EZS","EZY","FDB","FDX","FIN","GIA",
+    "IBE","IBS","ICE","JAL","JBU","KAC","KAL","KLM","KQA","LAM","LAN",
+    "LBT","LOT","MAS","MEA","MSR","NOZ","OAL","OAW","PGT","QFA",
+    "QTR","RAM","RJA","ROT","RYR","SAA","SAS","SIA","SVA","SWA","SWR","SXS",
+    "TAP","TFL","THA","THY","TOM","TRA","TRS","TUI","UAE","UAL",
+    "UPS","VLG","WUK","WZZ",
+}
+
+
+# ---------------------------------------------------------------------------
+# Logo / airline gap tracking — records ICAO prefixes seen in real traffic
+# that we couldn't show a logo or airline name for, so the curated lists
+# above can be grown from evidence instead of guesswork.
+# ---------------------------------------------------------------------------
+
+LOGO_GAPS_FILE = "/opt/flighttracker/config/logo_gaps.json"
+LOGO_GAPS_FLUSH_INTERVAL = 60   # seconds — bounds SD-card writes in busy airspace
+
+_logo_gaps: dict = {"no_logo": {}, "no_airline": {}}
+_logo_gaps_lock = threading.Lock()
+_logo_gaps_last_flush = 0.0
+
+def _alpha_prefix(cs: str) -> str | None:
+    """Leading 3 alpha chars, uppercased, or None if the callsign isn't
+    shaped like a real ICAO airline code. Deliberately stricter than the
+    ESP's own logoForCallsign() (which accepts 2+ chars): a 2-letter prefix
+    is almost always a country registration remnant (e.g. "PH-ABC" bare-tail
+    GA/private callsigns, extremely common near this NL-based receiver),
+    not an airline — logging those would just pollute the gap file with
+    entries there's no real airline to add a logo for.
+    """
+    prefix = ""
+    for ch in (cs or ""):
+        if len(prefix) == 3 or not ch.isalpha():
+            break
+        prefix += ch.upper()
+    return prefix if len(prefix) == 3 else None
+
+
+def _record_gap(kind: str, icao_prefix: str, callsign: str) -> None:
+    if not icao_prefix:
+        return
+    now = time.time()
+    global _logo_gaps_last_flush
+    should_flush = False
+    snapshot = None
+    with _logo_gaps_lock:
+        bucket = _logo_gaps[kind]
+        entry = bucket.setdefault(icao_prefix, {"count": 0})
+        entry["count"] += 1
+        entry["last_seen"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+        entry["sample_callsign"] = callsign
+        if now - _logo_gaps_last_flush >= LOGO_GAPS_FLUSH_INTERVAL:
+            _logo_gaps_last_flush = now
+            should_flush = True
+            snapshot = json.loads(json.dumps(_logo_gaps))   # copy while holding the lock
+
+    if should_flush:
+        try:
+            os.makedirs(os.path.dirname(LOGO_GAPS_FILE), exist_ok=True)
+            tmp = LOGO_GAPS_FILE + ".tmp"
+            with open(tmp, "w") as fh:
+                json.dump(snapshot, fh, indent=2, sort_keys=True)
+            os.replace(tmp, LOGO_GAPS_FILE)
+        except OSError:
+            pass
+
+
 def _is_emergency(ac: dict) -> str | None:
     """Return 'HIJACK' / 'RADIO FAIL' / 'EMERGENCY' or None."""
     squawk = ac.get("squawk") or ""
@@ -1343,6 +1465,15 @@ def _haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     a = (math.sin(d_lat / 2) ** 2
          + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2)
     return 3440.65 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _bearing_deg(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Initial great-circle bearing from point 1 to point 2, true north = 0, clockwise."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_lambda = math.radians(lon2 - lon1)
+    y = math.sin(d_lambda) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(d_lambda)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
 # ---------------------------------------------------------------------------
@@ -1410,7 +1541,10 @@ def _fetch_route_bg(callsign: str) -> None:
     result = _fetch_route_adsbdb(callsign) or _fetch_route_proxy(callsign)
     # _ROUTE_EMPTY first so lat/lon default to 0.0 even when the proxy
     # fallback succeeds (route-proxy.py doesn't return airport coordinates).
-    entry = {**_ROUTE_EMPTY, **(result or {}), "ts": time.time()}
+    # resolved=True distinguishes "genuinely looked this up and got nothing"
+    # from the placeholder below, so gap-tracking doesn't log false misses
+    # while a lookup is still in flight.
+    entry = {**_ROUTE_EMPTY, **(result or {}), "ts": time.time(), "resolved": True}
     with _route_cache_lock:
         _route_cache[callsign] = entry
 
@@ -1461,7 +1595,7 @@ def api_aircraft():
             # Placeholder prevents a second thread from being spawned before the first finishes
             if not entry:
                 with _route_cache_lock:
-                    _route_cache[cs] = {**_ROUTE_EMPTY, "ts": now}
+                    _route_cache[cs] = {**_ROUTE_EMPTY, "ts": now, "resolved": False}
                 threading.Thread(target=_fetch_route_bg, args=(cs,), daemon=True).start()
 
     return jsonify(data)
@@ -1486,6 +1620,7 @@ def api_epaper():
     settings = load_settings()
     loc = settings.get("location") or {}
     recv_lat, recv_lon = loc.get("lat", 0.0), loc.get("lon", 0.0)
+    epaper_cfg = settings.get("epaper") or DEFAULT_SETTINGS["epaper"]
 
     best = None  # (tier, dist_km, ac, flags, emergency)
     visible = []  # (dist_km, callsign)
@@ -1503,6 +1638,13 @@ def api_epaper():
             dist_km = _haversine_nm(recv_lat, recv_lon, ac["lat"], ac["lon"]) * 1.852
         visible.append((dist_km, cs))
 
+        # Cheap (no network call) — flag any airline-shaped callsign whose
+        # ICAO prefix has no pre-baked logo, so KNOWN_LOGO_ICAOS/gen_logos.py
+        # can be grown from real traffic instead of guesswork.
+        alpha_pfx = _alpha_prefix(cs)
+        if alpha_pfx and alpha_pfx not in KNOWN_LOGO_ICAOS:
+            _record_gap("no_logo", alpha_pfx, cs)
+
         flags = _lookup_dbflags(ac.get("hex", ""))
         emerg = _is_emergency(ac)
         tier = 0 if emerg else 1 if flags["interesting"] else 2 if flags["military"] else 3
@@ -1516,10 +1658,13 @@ def api_epaper():
 
     if best is None:
         return jsonify({"ok": True, "count": count, "list": ac_list,
-                         "selection_reason": "closest", "aircraft": None})
+                         "selection_reason": "closest", "aircraft": None,
+                         "facing_deg": epaper_cfg.get("facing_deg", 0),
+                         "wifi_tx_power_dbm": epaper_cfg.get("wifi_tx_power_dbm", 8.5)})
 
     tier, dist_km, ac, flags, emerg = best
     reason = {0: "emergency", 1: "interesting", 2: "military"}.get(tier, "closest")
+    bearing_deg = _bearing_deg(recv_lat, recv_lon, ac["lat"], ac["lon"])
 
     cs = ac.get("flight", "").strip()
     reg = ac.get("r", "") or ""
@@ -1530,7 +1675,7 @@ def api_epaper():
         route = dict(_ROUTE_EMPTY)
         if not entry:
             with _route_cache_lock:
-                _route_cache[cs] = {**_ROUTE_EMPTY, "ts": now}
+                _route_cache[cs] = {**_ROUTE_EMPTY, "ts": now, "resolved": False}
             threading.Thread(target=_fetch_route_bg, args=(cs,), daemon=True).start()
     else:
         route = entry
@@ -1538,6 +1683,13 @@ def api_epaper():
     icao_prefix = cs[:3].upper()
     airline_known = bool(route["airline"]) or icao_prefix in ATC_PHONETIC
     is_private = _is_private(cs, reg, airline_known)
+
+    # Only log once a lookup has actually completed (resolved=True) — not
+    # during the few seconds one is still in flight for a newly-seen callsign.
+    if route.get("resolved") and not route["airline"]:
+        alpha_pfx = _alpha_prefix(cs)
+        if alpha_pfx:
+            _record_gap("no_airline", alpha_pfx, cs)
 
     eta_min = route_dur_min = -1.0
     gs_kmh = (ac.get("gs") or 0) * 1.852
@@ -1575,6 +1727,7 @@ def api_epaper():
         "wind_spd":     int(ac["ws"]) if isinstance(ac.get("ws"), (int, float)) else -1,
         "oat":          float(ac["oat"]) if isinstance(ac.get("oat"), (int, float)) else -999.0,
         "dist_km":      round(dist_km, 1),
+        "bearing_deg":  round(bearing_deg, 1),
         "airline":      route["airline"],
         "origin":       route["origin"],
         "destination":  route["destination"],
@@ -1591,7 +1744,9 @@ def api_epaper():
     }
 
     return jsonify({"ok": True, "count": count, "list": ac_list,
-                     "selection_reason": reason, "aircraft": aircraft})
+                     "selection_reason": reason, "aircraft": aircraft,
+                     "facing_deg": epaper_cfg.get("facing_deg", 0),
+                     "wifi_tx_power_dbm": epaper_cfg.get("wifi_tx_power_dbm", 8.5)})
 
 
 # ---------------------------------------------------------------------------

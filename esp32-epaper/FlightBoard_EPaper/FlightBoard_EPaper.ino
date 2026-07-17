@@ -8,14 +8,14 @@
   Layout (landscape 400×300): 
 
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │ FLIGHTBOARD              5 AC                                   12:34   │  ← status bar (inverted)
-  ├─────────┬─────────────────────────────────────┬───────────────────────┤
-  │         │╔═══════════════════════════════════╗ │┌─────────────────────┐│
-  │  KLM    │║  CALLSIGN                         ║ ││  TAIL               ││
-  │  logo   │║        KLM1234                    ║ ││      PH-BXA         ││  ← header (88 px tall)
-  │  bubble │║  KLM ROYAL DUTCH AIRLINES         ║ ││  BOEING 737-800     ││
-  │  (88px) │╚═══════════════════════════════════╝ │└─────────────────────┘│
-  ├─────────┴─────────────────────────────────────┴───────────────────────┤
+  │ FLIGHTBOARD                    12:34                  ▂▄▆█  [ ⚡ ]▷   │  ← status bar (title | clock | wifi bars + battery; bolt replaces the fill bar while charging)
+  ├─────────┬─────────────────────────────────────┬─────────────────────────┤
+  │         │┌───────────────────────────────────┐│ ┌─────────────────────┐ │
+  │  KLM    ││  CALLSIGN                         ││ │  TAIL               │ │
+  │  logo   ││        KLM1234                    ││ │      PH-BXA         │ │  ← header (88 px tall; sub-text row is MILITARY/PRIVATE only, no airline name)
+  │  bubble ││                                   ││ │  BOEING 737-800     │ │
+  │  (88px) │└───────────────────────────────────┘│ └─────────────────────┘ │
+  ├─────────┴─────────────────────────────────────┴─────────────────────────┤
   │ LIVE TELEMETRY ──────────────────────────────────────────────────────── │
   │ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                      │
   │ │  ALTITUDE    │ │  V-SPEED     │ │  GND SPD     │                      │  ← bubble grid row 1
@@ -27,17 +27,17 @@
   │ │    180°      │ │    59.4      │ │  CLIMBING    │                      │
   │ │     S        │ │     KM       │ │              │                      │
   │ └──────────────┘ └──────────────┘ └──────────────┘                      │
-  │ ┌─────────────────────────────────────────────────────────────────────┐  │
-  │ │                                ROUTE                                │  │
-  │ │ AMS ───────────────✈︎────────────────────────────────────────── LHR │  │  ← route banner
-  │ │ Amsterdam Schiphol              1:30                London Heathrow │  │
-  │ └─────────────────────────────────────────────────────────────────────┘  │
-  ├──────┬──────┬──────┬──────┬──────┬──────┬──────┬───────────────────────┤
-  │ SRC  │ SIG  │ SQK  │ MACH │ IAS  │ OAT  │ HDG  │ MSGS                 │  ← telem strip
-  │ADS-B │ -18  │ 2245 │.783  │280KT │ -42  │ 182° │ 12345                │
-  ├──────┴──────┴──────┴──────┴──────┴──────┴──────┴───────────────────────┤
-  │ 5 AC  KLM1234 · BAW456 · AFR789                                12:34   │  ← footer (inverted)
-  └─────────────────────────────────────────────────────────────────────────┘
+  │ ┌───────────────────────────────────────────────────────────┐ ┌───────┐ │
+  │ │                          ROUTE                              │ │  .N.  │ │
+  │ │ AMS ─────────────✈︎────────────────────────────────── LHR │ │ .  ↗  │ │  ← route banner (narrower) + compass panel
+  │ │ Amsterdam Schiphol         1:30            London Heathrow  │ │  ...  │ │     (needle = aircraft bearing, rotated
+  │ └───────────────────────────────────────────────────────────┘ └───────┘ │      by screen facing_deg from RLCDsettings.html)
+  ├──────┬──────┬──────┬──────┬──────┬──────┬──────┬────────────────────────┤
+  │ SRC  │ SIG  │ SQK  │ MACH │ IAS  │ OAT  │ HDG  │ MSGS                   │  ← telem strip
+  │ADS-B │ -18  │ 2245 │.783  │280KT │ -42  │ 182° │ 12345                  │
+  ├──────┴──────┴──────┴──────┴──────┴──────┴──────┴────────────────────────┤
+  │ 5 AC │          │ KLM1234 │[BAW456]│ AFR789 │ KLM1252 │ BAW460 │ AFR845 │  ← footer strip: callsign cells right-aligned to the bar edge (dead space, if any, sits after "N AC" instead of trailing off the end); on-screen aircraft ([BAW456]) punched out to normal colours
+  └──────┴──────────┴─────────┴────────┴────────┴─────────┴────────┴────────┘
 
   Boot button (GPIO 0): short press toggles display colour inversion.
 
@@ -54,10 +54,11 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <U8g2lib.h>
-#include <PNGdec.h>
+#include <math.h>
 #include "ST7305_U8g2.h"
 #include "A3_xbm.h"
 #include "plane_xbm.h"
+#include "logos.h"
 #include "secrets.h"
 
 // ── DISPLAY PINS ──────────────────────────────────────────────────────────────
@@ -110,9 +111,12 @@ static U8G2* u8g2 = nullptr;
 #define BCX(c)  (DS_M + (c) * (BW + DS_G))     // col x: 0→4, 1→136, 2→268
 #define BR2_Y   (BG_Y + BH + DS_G)             // 171 — row 2 top
 
-// Route banner
+// Route banner + compass panel (square, same height, right of the banner)
 #define RT_Y    (BR2_Y + BH + DS_G)             // 217
 #define RT_H    36
+#define CMP_SIZE RT_H                            // 36 — square, matches banner height
+#define CMP_X   (W - DS_M - CMP_SIZE)            // 360 — right-aligned
+#define RT_W    (CMP_X - DS_G - DS_M)            // 350 — banner shrinks to make room
 
 // Telem strip (flat, no card borders — like AMOLED's status bar content)
 #define TL_Y    (RT_Y + RT_H + 4)               // 257
@@ -148,6 +152,7 @@ struct AcEntry {
   bool  ladd;
   bool  is_private;       // JSON key "private" — "private" is a reserved C++ word
   float dist_km;
+  float bearing_deg;      // -1 = unknown; true bearing from receiver to aircraft
   float eta_min;          // -1 = unknown
   float route_dur_min;    // -1 = unknown
   bool  on_ground;
@@ -171,81 +176,24 @@ static char      acList[30][10] = {};
 static int       acListCount  = 0;
 static int       acCount      = 0;
 static char      lastKey[56]  = "";
-static char      lastLogoCs[10] = "";
 static bool      piOnline     = false;
 static unsigned long lastFetchMs = 0;
+static int       lastHttpCode = 0;   // last http.GET() result, for on-screen diagnostics
+
+// Configured from the Pi's RLCDsettings.html (GET /api/settings/epaper)
+// and echoed back on every /api/epaper poll — no separate fetch needed.
+static int   facingDeg       = 0;     // compass heading the mounted screen faces (0-359)
+static float wifiTxPowerDbm  = 8.5f;  // applied via WiFi.setTxPower() each fetch cycle
 
 // Boot button (GPIO 0) toggles display inversion
 static bool      invertColors = false;
 static bool      lastBtnState = true;   // HIGH = not pressed
 static unsigned long lastBtnMs = 0;
 
-// Airline logo fetched from Pi as PNG, decoded to 80×80 1-bit XBM in RAM.
-// 80 divides evenly by 8 so no row-padding needed.
-#define LOGO_XBM_W   80
-#define LOGO_XBM_H   80
-#define LOGO_XBM_BPR (LOGO_XBM_W / 8)   // 10 bytes per row
-static uint8_t  logoBuf[LOGO_XBM_H * LOGO_XBM_BPR];  // 800 bytes
-static bool     logoLoaded = false;
-static PNG      s_png;
-static int      s_srcW, s_srcH;
-
-static int pngRow(PNGDRAW* pDraw) {
-  uint16_t line[100];
-  // 0x00FFFFFF (white, format 00BBGGRR) instead of the disable-alpha
-  // sentinel 0xffffffff — composites transparent source pixels toward white
-  // so they luma-threshold as "not ink" and blend into the bubble's own
-  // light fill, instead of returning raw un-composited (often black) RGB.
-  ((PNG*)pDraw->pUser)->getLineAsRGB565(pDraw, line, PNG_RGB565_LITTLE_ENDIAN, 0x00FFFFFF);
-  int dstY = (int)pDraw->y * LOGO_XBM_H / s_srcH;
-  if (dstY < 0 || dstY >= LOGO_XBM_H) return 1;
-  uint8_t* row = logoBuf + dstY * LOGO_XBM_BPR;
-  memset(row, 0, LOGO_XBM_BPR);
-  for (int dstX = 0; dstX < LOGO_XBM_W; dstX++) {
-    int srcX = dstX * pDraw->iWidth / LOGO_XBM_W;
-    uint16_t px = line[srcX];
-    uint8_t r = (px >> 11) & 0x1F;
-    uint8_t g = (px >>  5) & 0x3F;
-    uint8_t b =  px        & 0x1F;
-    // Weighted luma; threshold at 50% (32768 in scaled units)
-    uint16_t luma = (uint16_t)(r << 3) * 77 + (uint16_t)(g << 2) * 150 + (uint16_t)(b << 3) * 29;
-    if (luma < 32768u) row[dstX / 8] |= (1 << (dstX % 8));
-  }
-  return 1;
-}
-
-// Reused across calls — avoids malloc/free churn (was up to 32KB per aircraft
-// change) that fragments the small internal heap on a PSRAM-disabled ESP32-S3.
-#define PNG_DL_BUF_SIZE 32768
-static uint8_t pngDlBuf[PNG_DL_BUF_SIZE];
-
-static void fetchLogo(const char* icao3) {
-  logoLoaded = false;
-  memset(logoBuf, 0, sizeof(logoBuf));
-  char url[80];
-  snprintf(url, sizeof(url), "http://%s/airline_logos/airline_logo_%s.png", PI_IP, icao3);
-  WiFiClient client;
-  HTTPClient http;
-  http.begin(client, url);
-  http.setTimeout(5000);
-  int code = http.GET();
-  if (code != 200) {
-    Serial.printf("[fetchLogo] GET %s failed: %d\n", icao3, code);
-    http.end();
-    return;
-  }
-  int len = http.getSize();
-  if (len <= 0 || len > PNG_DL_BUF_SIZE) { http.end(); return; }
-  int got = http.getStream().readBytes(pngDlBuf, len);
-  http.end();
-  if (got == len && s_png.openRAM(pngDlBuf, len, pngRow) == PNG_SUCCESS) {
-    s_srcW = s_png.getWidth();
-    s_srcH = s_png.getHeight();
-    s_png.decode(&s_png, 0);
-    s_png.close();
-    logoLoaded = true;
-  }
-}
+// Airline logos are pre-baked into flash by gen_logos.py (logos.h) — see
+// that script for why: fetching + decoding a PNG on-device needed PNGdec
+// and was the source of persistent "black blob" / "light logos vanish"
+// bugs. logoForCallsign() below is just a flash lookup, no network/decode.
 
 // ── TEXT HELPERS ──────────────────────────────────────────────────────────────
 
@@ -266,7 +214,6 @@ static void fitStr(char* dst, size_t len, const char* s, int max_px) {
 // Standard data bubble: label (small/top) → value (large/centre) → unit (small/bottom)
 static void drawBubble(int x, int y, int w, int h,
                        const char* label, const char* value, const char* unit) {
-  u8g2->setDrawColor(0); u8g2->drawRBox(x, y, w, h, DS_R); u8g2->setDrawColor(1);
   u8g2->drawRFrame(x, y, w, h, DS_R);
   u8g2->setFont(FONT_TINY);
   drawStrC(x + w/2, y + 9,  label);
@@ -284,7 +231,6 @@ static void drawBubble(int x, int y, int w, int h,
 static void drawIDBubble(int x, int y, int w, int h,
                          const char* label, const char* bigVal,
                          const char* subVal, bool accent) {
-  u8g2->setDrawColor(0); u8g2->drawRBox(x, y, w, h, DS_R); u8g2->setDrawColor(1);
   u8g2->drawRFrame(x, y, w, h, DS_R);
   if (accent) u8g2->drawRFrame(x + 1, y + 1, w - 2, h - 2, DS_R > 1 ? DS_R - 1 : 1);
 
@@ -333,6 +279,227 @@ static void drawChromeBar(int y, int h, int baseline,
   u8g2->setDrawColor(1); u8g2->setFontMode(0);
 }
 
+// ── STATUS ICONS (wifi bars + horizontal battery) ─────────────────────────────
+// Hand-drawn rather than a u8g2 icon font glyph — the built-in "battery"
+// icons are a fixed vertical shape with no proportional fill; we want a
+// horizontal battery whose fill tracks the live ADC reading.
+#define ICN_H       8    // shared icon height
+#define BATT_W      16
+#define BATT_NUB_W  2
+#define WIFI_BARS   4
+#define WIFI_BAR_W  2
+#define WIFI_GAP    1
+
+// GPIO4 = BAT_ADC per the Waveshare ESP32-S3-RLCD-4.2 pinout table (SYS
+// column). Board divides VBAT by 3 ahead of the ADC pin; cell range is a
+// standard 18650 Li-ion, 2.5V (empty) – 4.2V (full).
+#define BAT_ADC_PIN     4
+#define BAT_DIVIDER     3.0f
+#define BAT_VOLT_EMPTY  2.5f
+#define BAT_VOLT_FULL   4.2f
+
+// No dedicated CHRG status pin is broken out on this board's pinout table,
+// so "on power" is inferred from the battery trend: rising level means
+// something is actively charging it. Sampled at most once every ~8s so
+// back-to-back renders (e.g. the invert-toggle button) don't add noise,
+// and held steady (not re-evaluated) when the level is flat so it doesn't
+// flicker off once the battery tops out at 100% while still plugged in.
+static bool          batteryCharging  = false;
+static int           battTrendLastPct = -1;
+static unsigned long battTrendLastMs  = 0;
+
+static int readBatteryPercent() {
+  uint32_t mv   = analogReadMilliVolts(BAT_ADC_PIN);
+  float    vbat = (mv / 1000.0f) * BAT_DIVIDER;
+  float    pctF = (vbat - BAT_VOLT_EMPTY) / (BAT_VOLT_FULL - BAT_VOLT_EMPTY) * 100.0f;
+  if (pctF < 0)   pctF = 0;
+  if (pctF > 100) pctF = 100;
+  int pct = (int)(pctF + 0.5f);
+
+  unsigned long now = millis();
+  if (battTrendLastPct < 0) {
+    battTrendLastPct = pct;
+    battTrendLastMs  = now;
+  } else if (now - battTrendLastMs > 8000) {
+    if      (pct > battTrendLastPct) batteryCharging = true;
+    else if (pct < battTrendLastPct) batteryCharging = false;
+    battTrendLastPct = pct;
+    battTrendLastMs  = now;
+  }
+  return pct;
+}
+
+// Horizontal battery outline + end nub, right-aligned at rightX. Filled
+// left-to-right proportional to percent normally; while charging, the fill
+// is replaced with a lightning-bolt glyph instead — a proportional fill
+// bar would be invisible against itself once charge nears 100%, since both
+// bolt and fill would need the same single ink color on this 1-bit display.
+static void drawBatteryIcon(int rightX, int cy, int percent, bool charging) {
+  int x = rightX - BATT_W - BATT_NUB_W;
+  int y = cy - ICN_H / 2;
+  u8g2->drawFrame(x, y, BATT_W, ICN_H);
+  u8g2->drawBox(x + BATT_W, y + (ICN_H - 4) / 2, BATT_NUB_W, 4);
+  if (charging) {
+    int cx = x + BATT_W / 2;
+    u8g2->drawLine(cx + 1, y + 1,        cx - 2, y + ICN_H / 2);
+    u8g2->drawLine(cx - 2, y + ICN_H / 2, cx + 1, y + ICN_H / 2);
+    u8g2->drawLine(cx + 1, y + ICN_H / 2, cx - 2, y + ICN_H - 1);
+  } else {
+    int fillW = (BATT_W - 4) * percent / 100;
+    if (fillW > 0) u8g2->drawBox(x + 2, y + 2, fillW, ICN_H - 4);
+  }
+}
+
+// Classic ascending signal-strength bars, right-aligned at rightX. `bars`
+// (0-4) are filled solid; the rest are drawn as outlines.
+static void drawWifiIcon(int rightX, int cy, int bars) {
+  int totalW = WIFI_BARS * WIFI_BAR_W + (WIFI_BARS - 1) * WIFI_GAP;
+  int baseY  = cy + ICN_H / 2;
+  for (int i = 0; i < WIFI_BARS; i++) {
+    int h  = (ICN_H * (i + 1)) / WIFI_BARS;
+    int bx = rightX - totalW + i * (WIFI_BAR_W + WIFI_GAP);
+    int by = baseY - h;
+    if (i < bars) u8g2->drawBox(bx, by, WIFI_BAR_W, h);
+    else          u8g2->drawFrame(bx, by, WIFI_BAR_W, h);
+  }
+}
+
+static int wifiBars() {
+  if (WiFi.status() != WL_CONNECTED) return 0;
+  int rssi = WiFi.RSSI();
+  if (rssi >= -55) return 4;
+  if (rssi >= -65) return 3;
+  if (rssi >= -75) return 2;
+  return 1;
+}
+
+// Battery (rightmost) + wifi bars (to its left), right-aligned at rightX.
+static void drawStatusIcons(int rightX, int cy) {
+  int pct = readBatteryPercent();
+  drawBatteryIcon(rightX, cy, pct, batteryCharging);
+  int wifiRightX = rightX - BATT_W - BATT_NUB_W - 6;
+  drawWifiIcon(wifiRightX, cy, wifiBars());
+}
+
+// Main dashboard status bar: title | clock (centred) | wifi + battery icons.
+// Distinct from drawChromeBar() — used for the top bar on the two live
+// screens (renderNoAircraft / renderAircraftScreen), which always want a
+// live clock and live radio/power state, not caller-supplied centre text.
+static void drawTopBar() {
+  u8g2->setDrawColor(1);
+  u8g2->drawBox(0, 0, W, SB_H);
+  u8g2->setDrawColor(0); u8g2->setFontMode(1);
+  u8g2->setFont(FONT_TINY);
+  u8g2->drawStr(DS_M, SB_BASE, "FLIGHTBOARD");
+
+  struct tm t;
+  char tb[6] = "--:--";
+  if (getLocalTime(&t, 0)) snprintf(tb, sizeof(tb), "%02d:%02d", t.tm_hour, t.tm_min);
+  drawStrC(W/2, SB_BASE, tb);
+
+  drawStatusIcons(W - DS_M, SB_H / 2);
+
+  u8g2->setDrawColor(1); u8g2->setFontMode(0);
+}
+
+// Footer strip: "N AC" cell at the left, then one cell per tracked callsign
+// right-aligned against the bar's right edge (rather than left-packed,
+// which left dead space trailing after the last callsign whenever the list
+// didn't fill the bar). All cells are inverted (chrome-bar style) except
+// the one matching the aircraft currently on screen, which is punched out
+// to normal colours so it stands out from the rest of the list.
+static void drawFooterStrip() {
+  u8g2->setDrawColor(1);
+  u8g2->drawBox(0, FT_Y, W, 18);
+  u8g2->setFont(FONT_TINY);
+
+  const int pad = 6;
+
+  char cnt[12]; snprintf(cnt, sizeof(cnt), "%d AC", acCount);
+  int cntW = u8g2->getStrWidth(cnt) + pad * 2;
+  if (cntW > W) cntW = W;
+
+  // First pass: how many callsigns (from the start of the list) fit in the
+  // space right of the count cell — needed up front so the list can be
+  // placed flush against the right edge instead of left-packed.
+  int cellW[30];
+  int fitCount = 0, usedW = 0;
+  for (int i = 0; i < acListCount; i++) {
+    int cw = u8g2->getStrWidth(acList[i]) + pad * 2;
+    if (cntW + usedW + cw > W) break;
+    cellW[fitCount++] = cw;
+    usedW += cw;
+  }
+
+  u8g2->setDrawColor(0); u8g2->setFontMode(1);
+  drawStrC(cntW / 2, FT_BASE, cnt);
+
+  int  x = W - usedW;
+  bool prevHighlighted = false;   // "N AC" cell is never highlighted
+  for (int i = 0; i < fitCount; i++) {
+    const char* cs = acList[i];
+    int  cw = cellW[i];
+    bool isCurrent = closest.callsign[0] && strcmp(cs, closest.callsign) == 0;
+
+    // A divider is only needed between two same-colour (inverted) cells —
+    // the highlighted cell's own fill already reads as a boundary.
+    if (!isCurrent && !prevHighlighted) {
+      u8g2->setDrawColor(0);
+      u8g2->drawVLine(x, FT_Y, 18);
+    }
+
+    if (isCurrent) {
+      u8g2->setDrawColor(0); u8g2->drawBox(x, FT_Y, cw, 18);
+      u8g2->setDrawColor(1); u8g2->setFontMode(0);
+      drawStrC(x + cw/2, FT_BASE, cs);
+    } else {
+      u8g2->setDrawColor(0); u8g2->setFontMode(1);
+      drawStrC(x + cw/2, FT_BASE, cs);
+    }
+    x += cw;
+    prevHighlighted = isCurrent;
+  }
+
+  u8g2->setDrawColor(1); u8g2->setFontMode(0);
+}
+
+// ── COMPASS PANEL (right of the route banner) ─────────────────────────────────
+// Screen "up" is wherever the board is physically mounted to face
+// (facingDeg, 0-359 true heading, set from the Pi's RLCDsettings.html) —
+// not true north — so every angle drawn here is first converted from a
+// true bearing into "degrees clockwise from screen-up" by subtracting
+// facingDeg, matching what a viewer standing in front of the mounted
+// screen actually sees.
+static void polarOffset(float angleFromUpDeg, int r, int* dx, int* dy) {
+  float rad = angleFromUpDeg * (float)PI / 180.0f;
+  *dx = (int)roundf(r * sinf(rad));
+  *dy = -(int)roundf(r * cosf(rad));
+}
+
+static void drawCompassPanel(int x, int y, int size, float bearingDeg) {
+  u8g2->drawRFrame(x, y, size, size, DS_R);
+  int cx = x + size / 2;
+  int cy = y + size / 2;
+  int r  = size / 2 - 6;   // ring radius, leaves margin inside the frame
+
+  u8g2->drawCircle(cx, cy, r);
+
+  // North tick (short radial line, not a label — no room for text at this
+  // panel size without it colliding with the ring).
+  int nx1, ny1, nx2, ny2;
+  polarOffset(-facingDeg, r,     &nx1, &ny1);
+  polarOffset(-facingDeg, r - 4, &nx2, &ny2);
+  u8g2->drawLine(cx + nx2, cy + ny2, cx + nx1, cy + ny1);
+
+  if (bearingDeg < 0) return;   // unknown — bare ring + N tick only
+
+  // Aircraft bearing as a needle from center, with a small dot at the tip.
+  int bx, by;
+  polarOffset(bearingDeg - facingDeg, r - 2, &bx, &by);
+  u8g2->drawLine(cx, cy, cx + bx, cy + by);
+  u8g2->drawDisc(cx + bx, cy + by, 2);
+}
+
 // ── LOOKUP TABLES ─────────────────────────────────────────────────────────────
 
 static const char* compass8(int deg) {
@@ -377,6 +544,7 @@ static bool fetchAircraft() {
   http.begin(url);
   http.setTimeout(8000);
   int code = http.GET();
+  lastHttpCode = code;
   if (code != HTTP_CODE_OK) {
     Serial.printf("[fetchAircraft] GET failed: %d (heap=%u)\n", code, ESP.getFreeHeap());
     http.end();
@@ -396,6 +564,10 @@ static bool fetchAircraft() {
 
   acCount = doc["count"] | 0;
   piOnline = true;
+
+  facingDeg      = doc["facing_deg"]        | 0;
+  wifiTxPowerDbm = doc["wifi_tx_power_dbm"] | 8.5f;
+  WiFi.setTxPower(dbmToWifiPower(wifiTxPowerDbm));
 
   acListCount = 0;
   for (JsonVariant cs : doc["list"].as<JsonArray>()) {
@@ -431,6 +603,7 @@ static bool fetchAircraft() {
   best.is_private   = ac["private"]     | false;
 
   best.dist_km       = ac["dist_km"]       | 0.0f;
+  best.bearing_deg   = ac["bearing_deg"]   | -1.0f;
   best.eta_min       = ac["eta_min"]       | -1.0f;
   best.route_dur_min = ac["route_dur_min"] | -1.0f;
 
@@ -456,24 +629,23 @@ static bool fetchAircraft() {
 // ── RENDERING ─────────────────────────────────────────────────────────────────
 
 static void renderNoAircraft() {
-  u8g2->clearBuffer();
-  u8g2->setDrawColor(1); u8g2->drawBox(0, 0, W, H);
+  bool wifiDown = WiFi.status() != WL_CONNECTED;
 
-  char cnt[16];
-  if (piOnline) snprintf(cnt, sizeof(cnt), "%d AC", acCount);
-  else          strncpy(cnt, "OFFLINE", sizeof(cnt));
-  drawChromeBar(0, SB_H, SB_BASE, "FLIGHTBOARD", cnt);
+  u8g2->clearBuffer();
+  drawTopBar();
   drawChromeBar(FT_Y, 18, FT_BASE, nullptr, nullptr, false);
 
-  u8g2->setDrawColor(0);
   u8g2->setFont(FONT_LG);
-  drawStrC(W/2, H/2, piOnline ? "SCANNING..." : "PI OFFLINE");
+  drawStrC(W/2, H/2, wifiDown ? "WIFI LOST" : (piOnline ? "SCANNING..." : "PI OFFLINE"));
   u8g2->setFont(FONT_SM);
   char sub[48];
-  if (piOnline) snprintf(sub, sizeof(sub), "Awaiting aircraft data");
-  else          snprintf(sub, sizeof(sub), "Cannot reach %s", PI_IP);
+  // Diagnostics shown on-device since there's no way to attach a serial
+  // cable while reproducing the "flight briefly appears then drops" bug on
+  // battery/wall power — this line is the only signal we get in that case.
+  if      (wifiDown) snprintf(sub, sizeof(sub), "status=%d  RSSI=%ddBm", (int)WiFi.status(), WiFi.RSSI());
+  else if (piOnline)  snprintf(sub, sizeof(sub), "Awaiting aircraft data");
+  else                snprintf(sub, sizeof(sub), "%s  HTTP %d  RSSI %ddBm", PI_IP, lastHttpCode, WiFi.RSSI());
   drawStrC(W/2, H/2 + 20, sub);
-  u8g2->setDrawColor(1);
   applyAndSend();
 }
 
@@ -481,21 +653,19 @@ static void renderAircraftScreen() {
   const AcEntry& a = closest;
   u8g2->clearBuffer();
   u8g2->setDrawColor(1); u8g2->setFontMode(0);
-  u8g2->drawBox(0, 0, W, H);   // dark page — bubbles below punch light cards into it
 
   // ── STATUS BAR (top chrome, inverted) ──────────────────────────────────────
-  char cnt[12]; snprintf(cnt, sizeof(cnt), "%d AC", acCount);
-  drawChromeBar(0, SB_H, SB_BASE, "FLIGHTBOARD", cnt);
+  drawTopBar();
 
   // ── HEADER ─────────────────────────────────────────────────────────────────
 
-  // Logo bubble: PNG fetched from Pi, decoded to 1-bit; fallback to ICAO text.
-  u8g2->setDrawColor(0); u8g2->drawRBox(DS_M, HDR_Y, LOGO_W, HDR_H, DS_R); u8g2->setDrawColor(1);
+  // Logo bubble: pre-baked flash lookup (logos.h); fallback to ICAO text.
   u8g2->drawRFrame(DS_M, HDR_Y, LOGO_W, HDR_H, DS_R);
-  if (logoLoaded) {
-    int lx = DS_M + (LOGO_W - LOGO_XBM_W) / 2;
-    int ly = HDR_Y + (HDR_H  - LOGO_XBM_H) / 2;
-    u8g2->drawXBM(lx, ly, LOGO_XBM_W, LOGO_XBM_H, logoBuf);
+  const uint8_t* logo = a.callsign[0] ? logoForCallsign(a.callsign) : nullptr;
+  if (logo) {
+    int lx = DS_M + (LOGO_W - LOGO_SIZE) / 2;
+    int ly = HDR_Y + (HDR_H  - LOGO_SIZE) / 2;
+    u8g2->drawXBM(lx, ly, LOGO_SIZE, LOGO_SIZE, logo);
   } else if (a.callsign[0]) {
     char pfx[4] = { a.callsign[0], a.callsign[1], a.callsign[2], '\0' };
     u8g2->setFont(FONT_LG);
@@ -505,25 +675,11 @@ static void renderAircraftScreen() {
   // Callsign bubble (double-border = AMOLED teal-accent equivalent)
   // Placed to the right of the logo, full header height.
   // Top label: ATC phonetic callsign when known (e.g. "SPEEDBIRD"), else
-  // literal "CALLSIGN". Sub-text: MILITARY/PRIVATE flag takes precedence
-  // over the airline name.
+  // literal "CALLSIGN". Sub-text is reserved for MILITARY/PRIVATE flags
+  // only — the airline name is redundant with the logo bubble to its left.
   {
     const char* label = a.atc_callsign[0] ? a.atc_callsign : "CALLSIGN";
-    const char* sub;
-    char airline_upper[52] = "";
-    if (a.military) {
-      sub = "MILITARY";
-    } else if (a.is_private) {
-      sub = "PRIVATE";
-    } else {
-      if (a.airline[0]) {
-        strncpy(airline_upper, a.airline, 51);
-        for (size_t i = 0; i < strlen(airline_upper); i++)
-          if (airline_upper[i] >= 'a' && airline_upper[i] <= 'z')
-            airline_upper[i] -= 32;
-      }
-      sub = airline_upper[0] ? airline_upper : "---";
-    }
+    const char* sub = a.military ? "MILITARY" : (a.is_private ? "PRIVATE" : nullptr);
     drawIDBubble(ID_X, HDR_Y, CS_W, HDR_H,
                  label,
                  a.callsign[0] ? a.callsign : "------",
@@ -544,14 +700,11 @@ static void renderAircraftScreen() {
   }
 
   // ── SECTION LABEL (AMOLED style: label text + extending horizontal rule) ───
-  // Drawn directly on the dark page (not inside a bubble) — light ink.
-  u8g2->setDrawColor(0);
   u8g2->setFont(FONT_TINY);
   const char* sl = "LIVE TELEMETRY";
   int slW = u8g2->getStrWidth(sl);
   u8g2->drawStr(DS_M, SL_Y + 9, sl);
   u8g2->drawHLine(DS_M + slW + 4, SL_Y + 5, W - DS_M - (DS_M + slW + 4));
-  u8g2->setDrawColor(1);
 
   // ── BUBBLE GRID 2×3 (mirrors AMOLED dashboard telemetry grid) ─────────────
   char vb[16];
@@ -588,11 +741,14 @@ static void renderAircraftScreen() {
   drawBubble(BCX(2), BR2_Y, BW, BH, "STATUS", st, "");
 
   // ── ROUTE BANNER (3 rows: centered ROUTE label / codes+line+plane / city+ETA) ─
-  u8g2->setDrawColor(0); u8g2->drawRBox(DS_M, RT_Y, W - 2*DS_M, RT_H, DS_R); u8g2->setDrawColor(1);
-  u8g2->drawRFrame(DS_M, RT_Y, W - 2*DS_M, RT_H, DS_R);
+  // Width trimmed to RT_W (was full-width) to leave room for the compass
+  // panel to its right — every "center on screen" position below now
+  // centers on the banner's own midpoint (DS_M + RT_W/2) instead of W/2.
+  u8g2->drawRFrame(DS_M, RT_Y, RT_W, RT_H, DS_R);
 
+  int rtMidX = DS_M + RT_W / 2;
   u8g2->setFont(FONT_TINY);
-  drawStrC(W/2, RT_Y + 8, "ROUTE");
+  drawStrC(rtMidX, RT_Y + 8, "ROUTE");
 
   if (a.origin[0] && a.destination[0]) {
     // Row 2: airport IATA codes (origin left, destination right) + connecting
@@ -601,12 +757,21 @@ static void renderAircraftScreen() {
     int ox    = DS_M + 8;
     int origW = u8g2->getStrWidth(a.origin);
     int destW = u8g2->getStrWidth(a.destination);
-    int dx    = W - DS_M - 8 - destW;
+    int dx    = DS_M + RT_W - 8 - destW;
     u8g2->drawStr(ox, RT_Y + 25, a.origin);
     u8g2->drawStr(dx, RT_Y + 25, a.destination);
     int lx1 = ox + origW + 4, lx2 = dx - 4;
     if (lx2 > lx1) u8g2->drawHLine(lx1, RT_Y + 18, lx2 - lx1);
-    int px = (lx1 + lx2) / 2 - PLANE_XBM_W / 2;
+    // Plane position = fraction of the route already flown (elapsed / total
+    // duration), so it sits a quarter of the way along the line at 25% done
+    // etc. Falls back to the line's midpoint when duration isn't known.
+    float progress = 0.5f;
+    if (a.eta_min >= 0 && a.route_dur_min > 0) {
+      progress = 1.0f - (a.eta_min / a.route_dur_min);
+      if (progress < 0.0f) progress = 0.0f;
+      if (progress > 1.0f) progress = 1.0f;
+    }
+    int px = lx1 + (int)(progress * (lx2 - lx1)) - PLANE_XBM_W / 2;
     int py = RT_Y + 18 - PLANE_XBM_H / 2;
     u8g2->drawXBM(px, py, PLANE_XBM_W, PLANE_XBM_H, PLANE_XBM);
 
@@ -617,24 +782,25 @@ static void renderAircraftScreen() {
     int cityGap = haveEta ? 20 : 0;
     if (haveEta) {
       char eb[8]; fmtHM(eb, sizeof(eb), a.eta_min);
-      drawStrC(W/2, RT_Y + 33, eb);
+      drawStrC(rtMidX, RT_Y + 33, eb);
     }
     if (a.origin_name[0]) {
       char onb[22], dnb[22];
-      fitStr(onb, sizeof(onb), a.origin_name, (W/2 - cityGap) - ox - 4);
-      fitStr(dnb, sizeof(dnb), a.dest_name,   dx - (W/2 + cityGap) - 4);
+      fitStr(onb, sizeof(onb), a.origin_name, (rtMidX - cityGap) - ox - 4);
+      fitStr(dnb, sizeof(dnb), a.dest_name,   dx - (rtMidX + cityGap) - 4);
       u8g2->drawStr(ox, RT_Y + 33, onb);
       drawStrR(dx + destW, RT_Y + 33, dnb);
     }
   } else {
     u8g2->setFont(FONT_SM);
-    drawStrC(W/2, RT_Y + 21, "ROUTE UNAVAILABLE");
+    drawStrC(rtMidX, RT_Y + 21, "ROUTE UNAVAILABLE");
   }
+
+  // ── COMPASS PANEL (square, right of route banner) ───────────────────────────
+  drawCompassPanel(CMP_X, RT_Y, CMP_SIZE, a.bearing_deg);
 
   // ── TELEMETRY STRIP ────────────────────────────────────────────────────────
   // 8 cells separated by vertical rules, framed by horizontal lines at top/bottom.
-  // Drawn directly on the dark page (not inside a bubble) — light ink.
-  u8g2->setDrawColor(0);
   u8g2->drawHLine(0, TL_Y,        W);
   u8g2->drawHLine(0, TL_Y + TL_H, W);
 
@@ -663,36 +829,44 @@ static void renderAircraftScreen() {
     drawStrC(cx, TL_Y + 15, vt);
     if (i > 0) u8g2->drawVLine(i * TL_CW, TL_Y, TL_H + 1);
   }
-  u8g2->setDrawColor(1);
 
-  // ── FOOTER BAR (bottom chrome, inverted — mirrors AMOLED tab bar) ──────────
-  {
-    char fc[8]; snprintf(fc, sizeof(fc), "%d AC", acCount);
-    char list[100] = "";
-    for (int i = 0; i < acListCount && i < 20; i++) {
-      if (i > 0) strncat(list, "\xB7", sizeof(list) - strlen(list) - 1);
-      strncat(list, acList[i], sizeof(list) - strlen(list) - 1);
-    }
-    char footer[120];
-    snprintf(footer, sizeof(footer), "%s  %s", fc, list);
-    // Truncate so it doesn't overlap the clock (clock is ~30px)
-    u8g2->setFont(FONT_TINY);
-    fitStr(footer, sizeof(footer), footer, W - 36);
-    drawChromeBar(FT_Y, 18, FT_BASE, footer, nullptr);
-  }
+  // ── FOOTER BAR (bottom chrome, per-callsign cells) ──────────────────────────
+  drawFooterStrip();
 
   applyAndSend();
 }
 
 // ── WIFI ──────────────────────────────────────────────────────────────────────
 
+// Maps the Pi-configurable dBm setting (RLCDsettings.html -> wifi_tx_power_dbm)
+// onto the nearest WIFI_POWER_* step the ESP32 Arduino core actually accepts.
+// Lower power trades range for a lower current-draw TX peak — see the
+// brownout-mitigation note below.
+static wifi_power_t dbmToWifiPower(float dbm) {
+  if (dbm >= 19.5f) return WIFI_POWER_19_5dBm;
+  if (dbm >= 19.0f) return WIFI_POWER_19dBm;
+  if (dbm >= 18.5f) return WIFI_POWER_18_5dBm;
+  if (dbm >= 17.0f) return WIFI_POWER_17dBm;
+  if (dbm >= 15.0f) return WIFI_POWER_15dBm;
+  if (dbm >= 13.0f) return WIFI_POWER_13dBm;
+  if (dbm >= 11.0f) return WIFI_POWER_11dBm;
+  if (dbm >=  8.5f) return WIFI_POWER_8_5dBm;
+  if (dbm >=  7.0f) return WIFI_POWER_7dBm;
+  if (dbm >=  5.0f) return WIFI_POWER_5dBm;
+  if (dbm >=  2.0f) return WIFI_POWER_2dBm;
+  return WIFI_POWER_MINUS_1dBm;
+}
+
 static bool connectWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(true);
   delay(100);
-  // Reduce TX power to lower peak current draw and prevent brownout resets.
-  // The board is close to the router so signal strength is not a concern.
-  WiFi.setTxPower(WIFI_POWER_8_5dBm);
+  // Default (8.5dBm) reduces TX power to lower peak current draw and
+  // prevent brownout resets on marginal power supplies; the board is close
+  // to the router so signal strength is not a concern. Configurable from
+  // the Pi (RLCDsettings.html) since wifiTxPowerDbm starts at that same
+  // 8.5dBm default and is only overridden once a fetch succeeds.
+  WiFi.setTxPower(dbmToWifiPower(wifiTxPowerDbm));
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   unsigned long t = millis();
   while (WiFi.status() != WL_CONNECTED) {
@@ -715,10 +889,8 @@ void setup() {
   // Show a full splash so there's no garbage outside the status bar
   auto splash = [](const char* status, const char* sub = nullptr) {
     u8g2->clearBuffer();
-    u8g2->setDrawColor(1); u8g2->drawBox(0, 0, W, H);
     drawChromeBar(0, SB_H, SB_BASE, "FLIGHTBOARD", status, false);
-    // Aircraft graphic + title text drawn directly on the dark page — light ink.
-    u8g2->setDrawColor(0);
+    // Aircraft graphic above the title text
     {
       int ix = (W - A3_XBM_SM_W) / 2;
       int iy = H/2 - A3_XBM_SM_H - 18;
@@ -730,7 +902,6 @@ void setup() {
       u8g2->setFont(FONT_SM);
       drawStrC(W/2, H/2 + 22, sub);
     }
-    u8g2->setDrawColor(1);
     applyAndSend();
   };
 
@@ -745,11 +916,6 @@ void setup() {
   configTime(TZ_OFFSET_SEC, 0, "pool.ntp.org", "time.google.com");
 
   fetchAircraft();
-  if (acCount > 0 && closest.callsign[0]) {
-    char icao3[4] = { closest.callsign[0], closest.callsign[1], closest.callsign[2], '\0' };
-    fetchLogo(icao3);
-    strncpy(lastLogoCs, closest.callsign, 9);
-  }
 
   if (acCount == 0) renderNoAircraft();
   else              renderAircraftScreen();
@@ -777,18 +943,23 @@ void loop() {
   if (now - lastFetchMs < 10000) return;
   lastFetchMs = now;
 
+  // WiFi has no built-in recovery in this sketch — if the radio dropped
+  // (e.g. a brownout blip from a marginal power supply during a TX burst),
+  // every subsequent fetch would otherwise fail forever with no retry.
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.printf("[loop] WiFi down (status=%d), reconnecting...\n", (int)WiFi.status());
+    piOnline = false;
+    renderNoAircraft();
+    connectWifi();   // blocks up to 20s; harmless since we're already offline
+    return;
+  }
+
   Serial.printf("[loop] fetch, heap=%u\n", ESP.getFreeHeap());
 
   if (!fetchAircraft()) {
     piOnline = false;
     renderNoAircraft();
     return;
-  }
-
-  if (closest.callsign[0] && strcmp(closest.callsign, lastLogoCs) != 0) {
-    char icao3[4] = { closest.callsign[0], closest.callsign[1], closest.callsign[2], '\0' };
-    fetchLogo(icao3);
-    strncpy(lastLogoCs, closest.callsign, 9);
   }
 
   char newKey[56];
